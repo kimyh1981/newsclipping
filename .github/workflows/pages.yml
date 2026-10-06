@@ -1,0 +1,51 @@
+# 뉴스클리핑 웹(기사 목록·음성 원고)을 GitHub Pages에 배포한다: kimyh1981.github.io/newsclipping/
+name: Deploy news site
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+  schedule:
+    # 한국 시간 새벽 5시에 오늘의 원고를 만든다 (앱은 6~8시에 읽는다). GitHub 일정이 늦어질 때를 대비해 5시 40분에 한 번 더
+    - cron: '0 20 * * *'
+    - cron: '40 20 * * *'
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Test
+        run: npm test
+      - name: Site files
+        run: |
+          mkdir -p _site
+          cp -r index.html manifest.webmanifest js icons _site/
+      # 신문사·농업·비료·국제/경제 헤드라인 → briefing.json(화면), briefing.txt(앱이 읽는 원고, 주말·공휴일엔 빈 파일)
+      - name: News briefing
+        timeout-minutes: 4
+        continue-on-error: true
+        env:
+          DATA_GO_KR_KEY: ${{ secrets.DATA_GO_KR_KEY }}
+        run: node tools/collect.js _site
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+      - id: deployment
+        uses: actions/deploy-pages@v4
