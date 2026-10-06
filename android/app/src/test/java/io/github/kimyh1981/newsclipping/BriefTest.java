@@ -57,6 +57,18 @@ public class BriefTest {
         for (Brief.Line l : b.lines(null)) assertFalse(l.text.startsWith("또,"));
     }
 
+    @Test public void oldBriefingIsReadWithTodaysDate() throws Exception {
+        Brief b = Brief.parse(read("briefing.json"));
+        // 2026-10-06T22:30Z = 서울 10월 7일 수요일 아침 7시 반
+        String today = Brief.koreanDate(java.time.Instant.parse("2026-10-06T22:30:00Z").toEpochMilli());
+        assertEquals("10월 7일 수요일", today);
+        assertEquals(b.lines(null).size(), b.lines(null, b.dateLabel).size());
+        java.util.List<Brief.Line> stale = b.lines(null, today);
+        assertEquals(Brief.opening(today), stale.get(0).text);
+        assertEquals(Brief.STALE, stale.get(1).text);
+        assertEquals(Brief.closing(today), stale.get(stale.size() - 1).text);
+    }
+
     @Test public void sentenceKeepsEndingMarks() {
         assertEquals("쌀값 급등.", Brief.sentence("쌀값 급등"));
         assertEquals("어떻습니까?", Brief.sentence("어떻습니까?"));

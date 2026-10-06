@@ -11,6 +11,7 @@ import android.content.pm.ServiceInfo;
 import android.media.AudioAttributes;
 import android.media.AudioFocusRequest;
 import android.media.AudioManager;
+import android.media.AudioPlaybackConfiguration;
 import android.media.MediaMetadata;
 import android.media.MediaPlayer;
 import android.media.audiofx.Equalizer;
@@ -35,6 +36,7 @@ import java.io.FileOutputStream;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
@@ -86,6 +88,14 @@ public class NewsService extends Service {
     private final Runnable afterSilence = this::advance;
     /** 차 연결로 저절로 시작했다 (자막 화면을 띄운다) */
     private boolean autoStart;
+    /** 읽기 시작한 때. 차 연결 직후 저절로 켜진 음악 앱이 소리를 가져가면 이 안에서는 되찾는다 */
+    private long startedAt;
+    private int retakes;
+    private static final long RETAKE_WINDOW_MS = 2 * 60 * 1000L;
+    /** 내비 안내 음성이 나오는 동안 멈췄다 (끝나면 이어 읽는다) */
+    private boolean navPaused;
+    private AudioManager.AudioPlaybackCallback playbackWatch;
+    private final Runnable navResume = () -> { if (this.paused && this.navPaused) { this.navPaused = false; resume(); } };
     /** 지금 읽는 원고 줄 번호 */
     private volatile int current;
     /** 통화·다른 앱 소리로 멈춘 상태. 다시 들으면 멈춘 기사 처음부터 이어 읽는다 */
@@ -250,7 +260,7 @@ public class NewsService extends Service {
             main.post(this::finish); // 주말·공휴일: 자동으로는 읽지 않는다
             return;
         } else {
-            script = brief.lines(new Prefs(this).sources());
+            script = brief.lines(new Prefs(this).sources(), Brief.koreanDate(System.currentTimeMillis()));
         }
         if (!manual) new Prefs(this).markPlayed();
         if (brief != null) fetchClips(brief, script);
@@ -346,6 +356,8 @@ public class NewsService extends Service {
                     .setOnAudioFocusChangeListener(this::onFocus, main).build();
             audio.requestAudioFocus(focus); // 라디오·음악은 잠시 멈췄다가 끝나면 다시 나온다
             soften(audio.generateAudioSessionId());
+            startedAt = System.currentTimeMillis();
+            watchNavigation();
             tts.setOnUtteranceProgressListener(new UtteranceProgressListener() {
                 @Override public void onStart(String id) { }
                 @Override public void onDone(String id) { main.post(() -> done(id)); }
@@ -515,11 +527,43 @@ public class NewsService extends Service {
     private void onFocus(int change) {
         if (change == AudioManager.AUDIOFOCUS_GAIN) {
             if (paused && resumeOnGain) resume();
+        } else if (change == AudioManager.AUDIOFOCUS_LOSS && autoStart && retakes < 3 && System.currentTimeMillis() - startedAt < RETAKE_WINDOW_MS) {
+            // 차에 연결되자마자 애플 뮤직·삼성 뮤직 같은 앱이 저절로 재생을 시작함: 소리를 되찾고 자막 화면을 다시 맨 위로
+            retakes++;
+            Log.i(TAG, "다른 앱이 소리를 가져가서 되찾음 " + retakes);
+            main.postDelayed(() -> {
+                if (stopped || audio == null) return;
+                audio.requestAudioFocus(focus);
+                if (session != null) session.setActive(true);
+                openCaptions();
+            }, 700);
         } else if (change == AudioManager.AUDIOFOCUS_LOSS) {
             pause(false); // 다른 앱이 소리를 가져감: 이어 듣기(앱·알림·핸들 재생 버튼)를 기다린다
         } else if (change == AudioManager.AUDIOFOCUS_LOSS_TRANSIENT || change == AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK) {
             pause(true); // 통화·내비 안내: 끝나면 저절로 이어 읽는다
         }
+    }
+
+    /** 내비 앱 가운데에는 안내 음성을 낼 때 소리 차례(오디오 포커스)를 요청하지 않고 그냥 섞어 내는 것이 있다.
+     *  재생 중인 소리 목록에서 '내비 안내' 용도의 소리가 보이면 멈추고, 사라지면 1초 뒤 이어 읽는다 */
+    private void watchNavigation() {
+        playbackWatch = new AudioManager.AudioPlaybackCallback() {
+            @Override public void onPlaybackConfigChanged(List<AudioPlaybackConfiguration> configs) {
+                boolean nav = false;
+                for (AudioPlaybackConfiguration c : configs) {
+                    AudioAttributes a = c.getAudioAttributes();
+                    if (a != null && a.getUsage() == AudioAttributes.USAGE_ASSISTANCE_NAVIGATION_GUIDANCE) nav = true;
+                }
+                if (nav) {
+                    main.removeCallbacks(navResume);
+                    if (!paused) { pause(true); navPaused = true; }
+                } else if (navPaused) {
+                    main.removeCallbacks(navResume);
+                    main.postDelayed(navResume, 1000);
+                }
+            }
+        };
+        audio.registerAudioPlaybackCallback(playbackWatch, main);
     }
 
     private void pause(boolean autoResume) {
@@ -630,6 +674,8 @@ public class NewsService extends Service {
         if (eq != null) { eq.release(); eq = null; }
         if (tts != null) { tts.stop(); tts.shutdown(); tts = null; }
         if (session != null) { session.setActive(false); session.release(); session = null; }
+        main.removeCallbacks(navResume);
+        if (audio != null && playbackWatch != null) audio.unregisterAudioPlaybackCallback(playbackWatch);
         if (audio != null && focus != null) audio.abandonAudioFocusRequest(focus);
         if (running == this) running = null;
         caption = null;

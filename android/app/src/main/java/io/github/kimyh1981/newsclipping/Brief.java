@@ -89,6 +89,17 @@ final class Brief {
         return "지금까지 " + date + " 아침 뉴스였습니다. 오늘도 안전 운전하시고, 좋은 하루 보내세요.";
     }
 
+    /** 서버가 오늘 원고를 아직 못 만들어 어제 원고를 읽을 때 인사 뒤에 붙인다 (js/brief.js STALE과 같은 문장) */
+    static final String STALE = "오늘 아침 소식은 아직 정리되지 않아, 어제 모은 뉴스로 전해 드립니다.";
+    private static final String[] DAYS = {"일", "월", "화", "수", "목", "금", "토"};
+
+    /** 서울 날짜 '10월 7일 수요일' (서버의 dateLabel과 같은 모양) */
+    static String koreanDate(long now) {
+        java.util.Calendar c = java.util.Calendar.getInstance(java.util.TimeZone.getTimeZone("Asia/Seoul"));
+        c.setTimeInMillis(now);
+        return (c.get(java.util.Calendar.MONTH) + 1) + "월 " + c.get(java.util.Calendar.DAY_OF_MONTH) + "일 " + DAYS[c.get(java.util.Calendar.DAY_OF_WEEK) - 1] + "요일";
+    }
+
     final String dateLabel;
     /** 서버가 정한 오늘 자동 재생 여부: 주말·공휴일이면 false */
     final boolean playToday;
@@ -172,16 +183,22 @@ final class Brief {
     }
 
     /** 원고를 줄 단위로: 앱은 줄마다 읽고, 기사 줄에서 '자세히'를 받으면 그 기사 요약을 읽는다 */
-    List<Line> lines(Set<String> enabled) {
+    List<Line> lines(Set<String> enabled) { return lines(enabled, null); }
+
+    /** today: 오늘 서울 날짜. 원고 날짜와 다르면(서버가 오늘 원고를 아직 못 만듦) 인사·맺음말은 오늘 날짜로, 어제 뉴스라고 알린다 */
+    List<Line> lines(Set<String> enabled, String today) {
+        boolean stale = today != null && !today.equals(dateLabel);
+        String date = stale ? today : dateLabel;
         List<Picked> secs = select(enabled);
         boolean any = false;
         for (Picked p : secs) any |= !p.items.isEmpty();
         List<Line> lines = new ArrayList<>();
         if (!any) {
-            lines.add(new Line("좋은 아침입니다. " + dateLabel + "입니다. 오늘은 뉴스를 가져오지 못했습니다. 안전 운전하세요.", null));
+            lines.add(new Line("좋은 아침입니다. " + date + "입니다. 오늘은 뉴스를 가져오지 못했습니다. 안전 운전하세요.", null));
             return lines;
         }
-        lines.add(new Line(opening(dateLabel), null));
+        lines.add(new Line(opening(date), null));
+        if (stale) lines.add(new Line(STALE, null));
         for (int i = 0; i < secs.size(); i++) {
             Picked sec = secs.get(i);
             lines.add(new Line("", null));
@@ -195,7 +212,7 @@ final class Brief {
             }
         }
         lines.add(new Line("", null));
-        lines.add(new Line(closing(dateLabel), null));
+        lines.add(new Line(closing(date), null));
         return lines;
     }
 
