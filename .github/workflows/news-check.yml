@@ -17,12 +17,19 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+      - run: npm ci
       - run: npm test
       - name: Live collection
-        timeout-minutes: 4
+        timeout-minutes: 8
+        env:
+          SUMMARY_LIMIT: '8' # 요약은 앞의 8건만 시험한다 (기본 리드 방식, 무료)
         run: |
           node tools/collect.js out
           echo '----- 원고 -----'
           cat out/briefing.txt
           echo '----- 번역 원문 -----'
-          node -e "const b=require('./out/briefing.json');for(const s of b.sections)for(const i of s.items)if(i.original)console.log(i.source+' | '+i.original+' => '+i.title)"
+          node -e "const b=require('./out/briefing.json');for(const s of b.sections)for(const x of s.sources)for(const i of x.items)if(i.original)console.log(i.source+' | '+i.original+' => '+i.title)"
+          echo '----- 자세히 (요약) -----'
+          node -e "const b=require('./out/briefing.json');for(const s of b.sections)for(const x of s.sources)for(const i of x.items)if(i.summary)console.log('* '+i.title+'\n  '+i.summary)"
+          echo '----- 수집 기록 -----'
+          node -e "require('./out/briefing.json').log.forEach((l)=>console.log(l))"
