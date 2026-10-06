@@ -11,6 +11,7 @@
   let queue = []; // { text, sec, el }
   let pos = 0;
   let playing = false;
+  let gen = 0; // 말하기를 새로 시작할 때마다 바뀐다: 취소된 문장의 onend가 뒤늦게 와도 무시한다
   let voice = null;
   let data = null; // 오늘 briefing.json
   let enabled = null; // 고른 언론사 id 목록, null이면 기본값
@@ -33,7 +34,7 @@
       (b.autoPlay && !b.autoPlay.play ? ` · 오늘은 ${b.autoPlay.reason}이라 차에서 자동 재생은 쉬어요` : '');
     const sections = Brief.select(b, enabled);
     $('list').innerHTML = sections.map((s, si) => `<section><h2>${esc(s.title)}</h2>` + (s.items.length
-      ? `<ol>${s.items.map((it, ii) => `<li id="i${si}-${ii}"><a href="${esc(it.link)}" target="_blank" rel="noopener">${esc(it.title)}</a><small>${esc(it.source)}${it.original ? ` · 원문: ${esc(it.original)}` : ''}</small></li>`).join('')}</ol>`
+      ? `<ol>${s.items.map((it, ii) => `<li id="i${si}-${ii}"><a href="${esc(it.link)}" target="_blank" rel="noopener">${esc(it.title)}</a><small>${esc(it.source)}${it.original ? ` · 원문: ${esc(it.original)}` : ''}</small>${it.summary ? `<details><summary>자세히</summary><p class="sum">${esc(it.summary)}</p></details>` : ''}</li>`).join('')}</ol>`
       : '<p class="empty">새 소식 없음</p>') + '</section>').join('') || '<p class="empty">고른 언론사가 없어요. 아래에서 언론사를 골라 주세요.</p>';
 
     // 원고 줄을 화면의 섹션·기사와 짝지어, 읽는 중인 기사를 표시하고 섹션 단위로 건너뛴다
@@ -43,7 +44,7 @@
       if (hs >= 0) sec = hs;
       const s = sections[sec];
       const ii = s ? s.items.findIndex((it) => text === Brief.sentence(it.spoken)) : -1;
-      return { text, sec, el: ii >= 0 ? $(`i${sec}-${ii}`) : null };
+      return { text, sec, el: ii >= 0 ? $(`i${sec}-${ii}`) : null, summary: ii >= 0 ? s.items[ii].summary || '' : '' };
     });
   }
 
@@ -83,15 +84,34 @@
     if (pos >= queue.length) { pos = 0; mark(null); setPlaying(false); return; }
     const line = queue[pos];
     mark(line.el);
+    const g = ++gen;
     const u = new SpeechSynthesisUtterance(line.text);
     u.lang = 'ko-KR';
     if (voice) u.voice = voice;
     u.rate = rate;
-    u.onend = () => { if (playing) { pos++; speak(); } };
+    u.onend = () => { if (playing && g === gen) { pos++; speak(); } };
     u.onerror = (e) => {
       if (e.error === 'interrupted' || e.error === 'canceled') return;
       setPlaying(false); // 'not-allowed': 화면을 한 번 눌러야 소리를 낼 수 있는 브라우저
     };
+    synth.speak(u);
+  }
+
+  // '자세히': 지금(또는 방금) 읽은 기사의 요약을 읽고, 다음 헤드라인으로 이어 간다
+  function more() {
+    let i = pos;
+    while (i > 0 && !queue[i].summary && !queue[i].el) i--;
+    const line = queue[i];
+    if (!synth || !line || !line.summary) return;
+    synth.cancel();
+    setPlaying(true);
+    mark(line.el);
+    const g = ++gen;
+    const u = new SpeechSynthesisUtterance(line.summary);
+    u.lang = 'ko-KR';
+    if (voice) u.voice = voice;
+    u.rate = rate;
+    u.onend = () => { if (playing && g === gen) { pos = i + 1; speak(); } };
     synth.speak(u);
   }
 
@@ -122,6 +142,7 @@
 
   $('play').onclick = () => (playing ? stop() : play());
   $('next').onclick = () => jump(1);
+  $('more').onclick = more;
   $('back').onclick = () => jump(-1);
   const showRate = () => { $('rate').textContent = `${rate}×`; };
   showRate();

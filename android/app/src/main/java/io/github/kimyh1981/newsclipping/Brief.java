@@ -16,8 +16,17 @@ import org.json.JSONObject;
  */
 final class Brief {
     static final class Item {
-        final String spoken, source, group;
-        Item(String spoken, String source, String group) { this.spoken = spoken; this.source = source; this.group = group; }
+        final String title, spoken, source, group, summary;
+        Item(String title, String spoken, String source, String group, String summary) {
+            this.title = title; this.spoken = spoken; this.source = source; this.group = group; this.summary = summary;
+        }
+    }
+
+    /** 원고 한 줄. 기사 헤드라인 줄이면 item이 있다 ('자세히'에서 요약을 읽는다). 빈 줄은 잠깐 쉰다 */
+    static final class Line {
+        final String text;
+        final Item item;
+        Line(String text, Item item) { this.text = text; this.item = item; }
     }
 
     static final class Source {
@@ -73,7 +82,8 @@ final class Brief {
                 JSONArray its = src.getJSONArray("items");
                 for (int k = 0; k < its.length(); k++) {
                     JSONObject it = its.getJSONObject(k);
-                    items.add(new Item(it.getString("spoken"), it.optString("source", src.getString("name")), it.optString("group", "i" + i + "-" + j + "-" + k)));
+                    items.add(new Item(it.optString("title", it.getString("spoken")), it.getString("spoken"), it.optString("source", src.getString("name")),
+                            it.optString("group", "i" + i + "-" + j + "-" + k), it.optString("summary", "")));
                 }
                 sources.add(new Source(src.getString("id"), src.getString("name"), src.optString("lang", "ko"), src.optBoolean("default", true), src.optInt("take", 3), items));
             }
@@ -112,29 +122,39 @@ final class Brief {
         return out;
     }
 
-    String script(Set<String> enabled) {
+    /** 원고를 줄 단위로: 앱은 줄마다 읽고, 기사 줄에서 '자세히'를 받으면 그 기사 요약을 읽는다 */
+    List<Line> lines(Set<String> enabled) {
         List<Picked> secs = select(enabled);
         boolean any = false;
         for (Picked p : secs) any |= !p.items.isEmpty();
-        if (!any) return "좋은 아침입니다. " + dateLabel + "입니다. 오늘은 뉴스를 가져오지 못했습니다. 안전 운전하세요.\n";
-        List<String> lines = new ArrayList<>();
-        lines.add("좋은 아침입니다. " + dateLabel + " 아침 뉴스 브리핑입니다.");
+        List<Line> lines = new ArrayList<>();
+        if (!any) {
+            lines.add(new Line("좋은 아침입니다. " + dateLabel + "입니다. 오늘은 뉴스를 가져오지 못했습니다. 안전 운전하세요.", null));
+            return lines;
+        }
+        lines.add(new Line("좋은 아침입니다. " + dateLabel + " 아침 뉴스 브리핑입니다.", null));
         for (int i = 0; i < secs.size(); i++) {
             Picked sec = secs.get(i);
             String lead = i == secs.size() - 1 && secs.size() > 1 ? ORDINAL[3] : ORDINAL[Math.min(i, 2)];
-            lines.add("");
-            lines.add(lead + " " + sec.title + "입니다.");
-            if (sec.items.isEmpty()) { lines.add("오늘은 새 소식이 없습니다."); continue; }
+            lines.add(new Line("", null));
+            lines.add(new Line(lead + " " + sec.title + "입니다.", null));
+            if (sec.items.isEmpty()) { lines.add(new Line("오늘은 새 소식이 없습니다.", null)); continue; }
             String last = null;
             for (Item it : sec.items) {
-                if (sec.perSourceLabel && !it.source.equals(last)) lines.add(it.source + ".");
+                if (sec.perSourceLabel && !it.source.equals(last)) lines.add(new Line(it.source + ".", null));
                 last = it.source;
-                lines.add(sentence(it.spoken));
+                lines.add(new Line(sentence(it.spoken), it));
             }
         }
-        lines.add("");
-        lines.add("이상으로 오늘 아침 브리핑을 마칩니다. 오늘도 안전 운전하세요.");
-        return String.join("\n", lines) + "\n";
+        lines.add(new Line("", null));
+        lines.add(new Line("이상으로 오늘 아침 브리핑을 마칩니다. 오늘도 안전 운전하세요.", null));
+        return lines;
+    }
+
+    String script(Set<String> enabled) {
+        StringBuilder sb = new StringBuilder();
+        for (Line l : lines(enabled)) sb.append(l.text).append('\n');
+        return sb.toString();
     }
 
     static String sentence(String s) {

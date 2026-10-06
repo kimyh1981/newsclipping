@@ -9,6 +9,7 @@ const path = require('path');
 const rss = require('./rss.js');
 const brief = require('../js/brief.js');
 const holidays = require('./holidays.js');
+const { summarize } = require('./summarize.js');
 
 const SPARE = 2; // 언론사마다 take보다 2건 더 모은다: 다른 언론사와 겹치는 기사를 빼고도 take건을 채우도록
 const UA = 'Mozilla/5.0 (compatible; news-briefing/1.0; +https://github.com/kimyh1981/Personal-Project)';
@@ -161,7 +162,7 @@ function speechText(b) {
   return b.autoPlay.play ? b.script : '';
 }
 
-async function collect(config, now = Date.now(), key = '') {
+async function collect(config, now = Date.now(), key = '', opts = {}) {
   const log = [];
   const autoPlay = await holidays.playDay(now, key);
   const sections = await Promise.all(config.sections.map(async (sec) => ({
@@ -188,6 +189,9 @@ async function collect(config, now = Date.now(), key = '') {
   if (foreign.length) log.push(`번역기: ${Object.entries(used).map(([k, n]) => `${k} ${n}번`).join(', ') || '없음'}${blocked.size ? ` (429로 막힘: ${[...blocked].join(', ')})` : ''}`);
   group(sections);
   const b = { version: 2, generatedAt: new Date(now).toISOString(), dateLabel: rss.koreanDate(now), autoPlay, sections, log };
+  // 기본 언론사 원고에 든 기사부터 요약한다 (같은 기사 객체에 summary가 붙는다)
+  const run = limiter(4);
+  if (opts.summaryLimit) await summarize(brief.select(b).flatMap((s) => s.items), { mode: opts.summaryMode, get, translate, decodeEntities: rss.decodeEntities, log, run, key: opts.summaryKey, limit: opts.summaryLimit });
   b.script = brief.script(b); // 기본 언론사로 만든 원고: briefing.txt(아이폰 단축어, 옛 앱)
   return b;
 }
@@ -197,13 +201,19 @@ if (require.main === module) {
     const out = path.resolve(process.argv[2] || 'dist');
     fs.mkdirSync(out, { recursive: true });
     const config = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'feeds.json'), 'utf8'));
-    const b = await collect(config, Date.now(), process.env.DATA_GO_KR_KEY || '');
+    const b = await collect(config, Date.now(), process.env.DATA_GO_KR_KEY || '', {
+      summaryMode: process.env.SUMMARY_MODE || 'lead', // 저장소 Variables에서 SUMMARY_MODE=claude로 바꾸면 Claude 요약
+      summaryKey: process.env.ANTHROPIC_API_KEY || '',
+      summaryLimit: process.env.SUMMARY_LIMIT === undefined ? 40 : Number(process.env.SUMMARY_LIMIT),
+    });
     fs.writeFileSync(path.join(out, 'briefing.json'), JSON.stringify(b, null, 1));
     fs.writeFileSync(path.join(out, 'briefing.txt'), speechText(b));
     console.log(`뉴스 브리핑 ${b.dateLabel} (기본 언론사): ` + brief.select(b).map((s) => `${s.title} ${s.items.length}건`).join(' · '));
     console.log(`언론사 ${b.sections.reduce((n, s) => n + s.sources.length, 0)}곳, 기사 ${b.sections.reduce((n, s) => n + s.sources.reduce((m, x) => m + x.items.length, 0), 0)}건`);
     b.log.forEach((l) => console.log('  ' + l));
     console.log(`자동 재생: ${b.autoPlay.play ? '함' : '안 함'} (${b.autoPlay.ymd} ${b.autoPlay.reason}, ${b.autoPlay.source})`);
+    const sums = b.sections.flatMap((s) => s.sources.flatMap((x) => x.items)).filter((i) => i.summary);
+    if (sums.length) console.log(`요약 ${sums.length}건, 예: ${sums[0].title} → ${sums[0].summary}`);
     console.log(`원고 ${b.script.length}자 (약 ${Math.ceil(b.script.length / 330)}분)`);
     process.exit(0); // 남은 연결이 있어도 배포를 막지 않는다
   })();

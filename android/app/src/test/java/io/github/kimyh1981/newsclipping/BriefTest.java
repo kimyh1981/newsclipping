@@ -36,6 +36,14 @@ public class BriefTest {
         assertEquals(read("script-none.txt"), b.script(Collections.emptySet()));
     }
 
+    @Test public void headlineLinesCarryTheirSummary() throws Exception {
+        Brief b = Brief.parse(read("briefing.json"));
+        Brief.Line withSummary = null;
+        for (Brief.Line l : b.lines(null)) if (l.item != null && !l.item.summary.isEmpty()) withSummary = l;
+        assertEquals("가 기사.", withSummary.text);
+        assertTrue(withSummary.item.summary.startsWith("가 기사의 자세한 내용"));
+    }
+
     @Test public void sentenceKeepsEndingMarks() {
         assertEquals("쌀값 급등.", Brief.sentence("쌀값 급등"));
         assertEquals("어떻습니까?", Brief.sentence("어떻습니까?"));
