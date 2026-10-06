@@ -46,10 +46,9 @@
       }
       let last = null;
       for (const it of sec.items) {
-        const same = sec.perSourceLabel && it.source === last;
-        if (sec.perSourceLabel && !same) lines.push(`${it.source} 소식입니다.`);
+        if (sec.perSourceLabel && it.source !== last) lines.push(`${it.source} 소식입니다.`);
         last = it.source;
-        lines.push((same ? '또, ' : '') + sentence(it.spoken));
+        lines.push(sentence(it.spoken));
       }
     });
     lines.push('');
@@ -114,7 +113,7 @@
       }
       if (!items.length) return '';
       const head = sec.perSourceLabel ? `${src.name} 소식입니다.` : `${sec.title}입니다.`;
-      return [head, ...items.map((it, i) => (i ? '또, ' : '') + sentence(it.spoken))].join('\n') + '\n';
+      return [head, ...items.map((it) => sentence(it.spoken))].join('\n') + '\n';
     }
     return '';
   }

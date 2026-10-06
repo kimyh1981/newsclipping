@@ -4,14 +4,17 @@ import android.app.Activity;
 import android.graphics.Typeface;
 import android.os.Bundle;
 import android.util.TypedValue;
+import android.view.GestureDetector;
 import android.view.Gravity;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.WindowManager;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
 /**
- * 자막 화면: 지금 읽는 헤드라인을 큰 글씨로 보여 준다. 화면 아무 데나 누르면 그 기사 전체를 읽고, 다 읽으면 다음 헤드라인으로 넘어간다.
+ * 자막 화면: 지금 읽는 헤드라인(전체 듣기 중이면 지금 읽는 문장)을 큰 글씨로 보여 준다. 화면 아무 데나 누르면 그 기사 전체를 읽고,
+ * 다 읽거나 왼쪽으로 쓸어 넘기면 다음 헤드라인으로 넘어간다.
  * 차 연결로 자동 재생이 시작되면 잠금 화면 위에도 뜨고, 읽는 동안 화면을 켜 둔다. 읽기가 끝나면 저절로 닫힌다.
  */
 public class CaptionActivity extends Activity {
@@ -46,10 +49,23 @@ public class CaptionActivity extends Activity {
         hint.setGravity(Gravity.CENTER);
         col.addView(hint);
 
-        col.setOnClickListener(v -> {
-            if (NewsService.isRunning()) NewsService.control(NewsService.ACTION_MORE);
-            else NewsService.start(this, true);
+        // 누르면 전체 듣기, 오른쪽에서 왼쪽으로 쓸면 다음 기사(전체 듣기 중이면 끝내고 다음 헤드라인), 반대로 쓸면 이전 기사
+        GestureDetector gestures = new GestureDetector(this, new GestureDetector.SimpleOnGestureListener() {
+            @Override public boolean onDown(MotionEvent e) { return true; }
+            @Override public boolean onSingleTapUp(MotionEvent e) {
+                if (NewsService.isRunning()) NewsService.control(NewsService.ACTION_MORE);
+                else NewsService.start(CaptionActivity.this, true);
+                return true;
+            }
+            @Override public boolean onFling(MotionEvent a, MotionEvent b, float vx, float vy) {
+                if (a == null || !NewsService.isRunning()) return false;
+                float dx = b.getX() - a.getX();
+                if (Math.abs(dx) < dp(60) || Math.abs(dx) < Math.abs(b.getY() - a.getY())) return false;
+                NewsService.control(dx < 0 ? NewsService.ACTION_NEXT : NewsService.ACTION_PREV);
+                return true;
+            }
         });
+        col.setOnTouchListener((v, e) -> gestures.onTouchEvent(e));
         setContentView(col);
     }
 
@@ -83,11 +99,10 @@ public class CaptionActivity extends Activity {
             return;
         }
         boolean paused = NewsService.state() == NewsService.PAUSED;
-        head.setText(c.title.isEmpty() ? c.source : c.source + (c.full ? " · 전체 듣는 중" : ""));
-        // 헤드라인은 읽는 글 그대로, 본문(전체 듣기)처럼 긴 글은 기사 제목을 띄운다
-        // '또, '는 같은 언론사 두 번째 기사를 소리로 잇는 말이라 화면에는 띄우지 않는다
-        body.setText(c.full || c.text.length() > 140 ? c.title : c.text.replaceFirst("^또, ", ""));
-        hint.setText(paused ? "멈춤" : c.title.isEmpty() ? "" : c.full ? "다 읽으면 다음 헤드라인으로 넘어갑니다" : "화면을 누르면 이 기사 전체를 읽어 드립니다");
+        head.setText(c.full ? c.source + " · 전체 듣기 · " + c.title : c.source);
+        // 헤드라인은 읽는 글 그대로, 전체 듣기는 지금 읽는 문장. 너무 긴 글(옛 원고의 본문 통째)은 기사 제목
+        body.setText(c.text.length() > 240 ? c.title : c.text);
+        hint.setText(paused ? "멈춤" : c.title.isEmpty() ? "" : c.full ? "왼쪽으로 넘기면 다음 헤드라인으로 갑니다" : "누르면 전체 듣기 · 왼쪽으로 넘기면 다음 기사");
     }
 
     private TextView text(int sp, int color) {

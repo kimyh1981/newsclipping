@@ -209,6 +209,11 @@ async function collect(config, now = Date.now(), key = '', opts = {}) {
   // 기본 언론사 원고에 든 기사부터 요약한다 (같은 기사 객체에 summary가 붙는다)
   const run = limiter(4);
   if (opts.summaryLimit) await summarize(brief.select(b).flatMap((s) => s.items), { mode: opts.summaryMode, get, translate, decodeEntities: rss.decodeEntities, log, run, key: opts.summaryKey, limit: opts.summaryLimit });
+  // '전체 듣기'로 읽을 문장들: 소리 내어 읽기 좋게 다듬어 문장마다 나눈다 (앱 자막·녹음 단위)
+  for (const sec of sections) for (const src of sec.sources) for (const it of src.items) {
+    const say = rss.speechSentences(it.body || it.summary);
+    if (say.length) it.say = say;
+  }
   b.script = brief.script(b); // 기본 언론사로 만든 원고: briefing.txt(아이폰 단축어, 옛 앱)
   return b;
 }

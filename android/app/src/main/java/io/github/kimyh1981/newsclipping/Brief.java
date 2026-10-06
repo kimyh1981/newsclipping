@@ -18,12 +18,24 @@ final class Brief {
     static final class Item {
         /** summary: 첫 두세 문장('자세히'), body: 본문 앞부분('전체 듣기'). 없으면 "" */
         final String title, spoken, source, group, summary, body;
+        /** 서버가 소리 내어 읽기 좋게 다듬어 문장마다 나눈 '전체 듣기' 글 (문장마다 녹음·자막). 옛 briefing.json이면 비어 있다 */
+        final List<String> say;
         Item(String title, String spoken, String source, String group, String summary, String body) {
-            this.title = title; this.spoken = spoken; this.source = source; this.group = group; this.summary = summary; this.body = body;
+            this(title, spoken, source, group, summary, body, Collections.<String>emptyList());
+        }
+        Item(String title, String spoken, String source, String group, String summary, String body, List<String> say) {
+            this.title = title; this.spoken = spoken; this.source = source; this.group = group; this.summary = summary; this.body = body; this.say = say;
         }
 
         /** '전체 듣기'로 읽을 글: 본문이 없으면 요약 */
         String full() { return body.isEmpty() ? summary : body; }
+
+        /** '전체 듣기'로 읽을 문장들: 서버가 나눠 둔 것, 없으면 본문(요약) 통째로 한 덩어리 */
+        List<String> fullSentences() {
+            if (!say.isEmpty()) return say;
+            String f = full();
+            return f.isEmpty() ? Collections.<String>emptyList() : Collections.singletonList(f);
+        }
     }
 
     /** 원고 한 줄. 기사 헤드라인 줄이면 item이 있다 ('자세히'에서 요약을 읽는다). 빈 줄은 잠깐 쉰다 */
@@ -116,7 +128,7 @@ final class Brief {
                 for (int k = 0; k < its.length(); k++) {
                     JSONObject it = its.getJSONObject(k);
                     items.add(new Item(it.optString("title", it.getString("spoken")), it.getString("spoken"), it.optString("source", src.getString("name")),
-                            it.optString("group", "i" + i + "-" + j + "-" + k), it.optString("summary", ""), it.optString("body", "")));
+                            it.optString("group", "i" + i + "-" + j + "-" + k), it.optString("summary", ""), it.optString("body", ""), strings(it.optJSONArray("say"))));
                 }
                 sources.add(new Source(src.getString("id"), src.getString("name"), src.optString("lang", "ko"), src.optBoolean("default", true), src.optInt("take", 3), items));
             }
@@ -177,10 +189,9 @@ final class Brief {
             if (sec.items.isEmpty()) { lines.add(new Line("오늘은 새로 들어온 소식이 없습니다.", null)); continue; }
             String last = null;
             for (Item it : sec.items) {
-                boolean same = sec.perSourceLabel && it.source.equals(last);
-                if (sec.perSourceLabel && !same) lines.add(new Line(it.source + " 소식입니다.", null));
+                if (sec.perSourceLabel && !it.source.equals(last)) lines.add(new Line(it.source + " 소식입니다.", null));
                 last = it.source;
-                lines.add(new Line((same ? "또, " : "") + sentence(it.spoken), it));
+                lines.add(new Line(sentence(it.spoken), it));
             }
         }
         lines.add(new Line("", null));
@@ -203,5 +214,12 @@ final class Brief {
         List<String[]> rows = new ArrayList<>();
         for (Section s : sections) for (Source src : s.sources) rows.add(new String[] {s.title, src.name, src.id, "ko".equals(src.lang) ? "" : "번역"});
         return Collections.unmodifiableList(rows);
+    }
+
+    private static List<String> strings(JSONArray a) throws JSONException {
+        if (a == null || a.length() == 0) return Collections.emptyList();
+        List<String> out = new ArrayList<>();
+        for (int i = 0; i < a.length(); i++) if (!a.getString(i).trim().isEmpty()) out.add(a.getString(i).trim());
+        return out;
     }
 }
