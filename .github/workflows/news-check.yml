@@ -25,4 +25,4 @@ jobs:
           echo '----- 원고 -----'
           cat out/briefing.txt
           echo '----- 번역 원문 -----'
-          node -e "const b=require('./out/briefing.json');for(const s of b.sections)for(const i of s.items)if(i.original)console.log(i.source+' | '+i.original+' => '+i.title)"
+          node -e "const b=require('./out/briefing.json');for(const s of b.sections)for(const x of s.sources)for(const i of x.items)if(i.original)console.log(i.source+' | '+i.original+' => '+i.title)"
