@@ -16,10 +16,14 @@ import org.json.JSONObject;
  */
 final class Brief {
     static final class Item {
-        final String title, spoken, source, group, summary;
-        Item(String title, String spoken, String source, String group, String summary) {
-            this.title = title; this.spoken = spoken; this.source = source; this.group = group; this.summary = summary;
+        /** summary: 첫 두세 문장('자세히'), body: 본문 앞부분('전체 듣기'). 없으면 "" */
+        final String title, spoken, source, group, summary, body;
+        Item(String title, String spoken, String source, String group, String summary, String body) {
+            this.title = title; this.spoken = spoken; this.source = source; this.group = group; this.summary = summary; this.body = body;
         }
+
+        /** '전체 듣기'로 읽을 글: 본문이 없으면 요약 */
+        String full() { return body.isEmpty() ? summary : body; }
     }
 
     /** 원고 한 줄. 기사 헤드라인 줄이면 item이 있다 ('자세히'에서 요약을 읽는다). 빈 줄은 잠깐 쉰다 */
@@ -97,7 +101,7 @@ final class Brief {
                 for (int k = 0; k < its.length(); k++) {
                     JSONObject it = its.getJSONObject(k);
                     items.add(new Item(it.optString("title", it.getString("spoken")), it.getString("spoken"), it.optString("source", src.getString("name")),
-                            it.optString("group", "i" + i + "-" + j + "-" + k), it.optString("summary", "")));
+                            it.optString("group", "i" + i + "-" + j + "-" + k), it.optString("summary", ""), it.optString("body", "")));
                 }
                 sources.add(new Source(src.getString("id"), src.getString("name"), src.optString("lang", "ko"), src.optBoolean("default", true), src.optInt("take", 3), items));
             }

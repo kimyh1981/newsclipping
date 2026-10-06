@@ -12,9 +12,11 @@ import android.media.AudioAttributes;
 import android.media.AudioFocusRequest;
 import android.media.AudioManager;
 import android.media.MediaMetadata;
+import android.media.audiofx.Equalizer;
 import android.media.session.MediaSession;
 import android.media.session.PlaybackState;
 import android.os.Build;
+import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
@@ -34,7 +36,13 @@ import java.util.Locale;
 public class NewsService extends Service {
     static final String ACTION_PLAY = "play";
     static final String ACTION_STOP = "stop";
-    static final String ACTION_MORE = "more";
+    static final String ACTION_MORE = "more"; // 전체 듣기 (예전 알림의 '자세히'도 같은 동작)
+    static final String ACTION_PREV = "prev";
+    static final String ACTION_NEXT = "next";
+    static final String ACTION_PAUSE = "pause";
+    static final String ACTION_RESUME = "resume";
+    /** 멈춘 채로 이만큼 지나면 끝낸다 */
+    private static final long PAUSE_LIMIT_MS = 30 * 60 * 1000L;
     static final String EXTRA_MANUAL = "manual";
     private static final String TAG = "newsclipping";
     private static final String CHANNEL = "news";
@@ -53,6 +61,13 @@ public class NewsService extends Service {
     private List<Brief.Line> lines = new ArrayList<>();
     /** 지금 읽는 원고 줄 번호 */
     private volatile int current;
+    /** 통화·다른 앱 소리로 멈춘 상태. 다시 들으면 멈춘 기사 처음부터 이어 읽는다 */
+    private boolean paused;
+    /** 잠깐 빼앗긴 소리(통화·내비 안내)라 돌려받으면 저절로 이어 읽는다 */
+    private boolean resumeOnGain;
+    private final Bundle speakParams = new Bundle();
+    private Equalizer eq;
+    private final Runnable pauseLimit = this::finish;
 
     /** 자동(차 연결) 또는 수동(앱의 '지금 듣기')으로 읽기 시작. 백그라운드 시작이 막히면 탭해서 듣는 알림을 띄운다. */
     static void start(Context c, boolean manual) {
@@ -79,6 +94,24 @@ public class NewsService extends Service {
 
     static boolean isRunning() { return running != null; }
 
+    /** 앱 화면의 이전·전체 듣기·다음 버튼 */
+    static void control(String action) {
+        NewsService s = running;
+        if (s != null) s.main.post(() -> s.handle(action));
+    }
+
+    private void handle(String action) {
+        if (running != this || tts == null) return;
+        switch (action) {
+            case ACTION_PREV: jump(prevTarget()); break;
+            case ACTION_NEXT: jump(nextTarget()); break;
+            case ACTION_MORE: full(); break;
+            case ACTION_PAUSE: pause(false); break;
+            case ACTION_RESUME: resume(); break;
+            default: break;
+        }
+    }
+
     static void ensureChannel(Context c) {
         NotificationChannel ch = new NotificationChannel(CHANNEL, "뉴스 읽기", NotificationManager.IMPORTANCE_LOW);
         c.getSystemService(NotificationManager.class).createNotificationChannel(ch);
@@ -90,30 +123,49 @@ public class NewsService extends Service {
             finish();
             return START_NOT_STICKY;
         }
-        if (intent != null && ACTION_MORE.equals(intent.getAction())) {
-            if (running == this) more();
+        String action = intent == null ? null : intent.getAction();
+        if (ACTION_MORE.equals(action) || ACTION_PREV.equals(action) || ACTION_NEXT.equals(action) || ACTION_PAUSE.equals(action) || ACTION_RESUME.equals(action)) {
+            handle(action);
+            return START_NOT_STICKY;
+        }
+        if (running == this) { // 이미 가져오거나 읽는 중: 멈춰 있었으면 이어 읽는다
+            if (paused) resume();
+            else startInForeground(tts == null ? "오늘의 뉴스를 가져오는 중" : PLAYING_TEXT); // startForegroundService마다 필요
             return START_NOT_STICKY;
         }
         startInForeground("오늘의 뉴스를 가져오는 중");
-        if (running == this) return START_NOT_STICKY; // 이미 가져오거나 읽는 중
         running = this;
         boolean manual = intent != null && intent.getBooleanExtra(EXTRA_MANUAL, false);
         new Thread(() -> prepare(manual), "news-fetch").start();
         return START_NOT_STICKY;
     }
 
+    private PendingIntent act(int code, String action) {
+        return PendingIntent.getService(this, code, new Intent(this, NewsService.class).setAction(action), PendingIntent.FLAG_IMMUTABLE);
+    }
+
     private void startInForeground(String text) {
         ensureChannel(this);
         PendingIntent open = PendingIntent.getActivity(this, 0, new Intent(this, MainActivity.class), PendingIntent.FLAG_IMMUTABLE);
-        PendingIntent stop = PendingIntent.getService(this, 1, new Intent(this, NewsService.class).setAction(ACTION_STOP), PendingIntent.FLAG_IMMUTABLE);
-        Notification n = new Notification.Builder(this, CHANNEL)
+        Notification.Builder b = new Notification.Builder(this, CHANNEL)
                 .setSmallIcon(android.R.drawable.ic_lock_silent_mode_off)
                 .setContentTitle("뉴스클리핑")
                 .setContentText(text)
                 .setContentIntent(open)
-                .addAction(new Notification.Action.Builder(null, "자세히", PendingIntent.getService(this, 2, new Intent(this, NewsService.class).setAction(ACTION_MORE), PendingIntent.FLAG_IMMUTABLE)).build())
-                .addAction(new Notification.Action.Builder(null, "멈춤", stop).build())
-                .setOngoing(true).build();
+                .setOngoing(true);
+        if (tts != null) { // 읽는 중: 잠금 화면에서도 이전 · 전체 듣기 · 다음 · 멈춤/이어 듣기
+            b.addAction(new Notification.Action.Builder(null, "이전", act(3, ACTION_PREV)).build())
+             .addAction(new Notification.Action.Builder(null, "전체 듣기", act(2, ACTION_MORE)).build())
+             .addAction(new Notification.Action.Builder(null, "다음", act(4, ACTION_NEXT)).build())
+             .addAction(paused ? new Notification.Action.Builder(null, "이어 듣기", act(5, ACTION_RESUME)).build()
+                               : new Notification.Action.Builder(null, "멈춤", act(1, ACTION_STOP)).build());
+            Notification.MediaStyle style = new Notification.MediaStyle().setShowActionsInCompactView(0, 1, 2);
+            if (session != null) style.setMediaSession(session.getSessionToken());
+            b.setStyle(style);
+        } else {
+            b.addAction(new Notification.Action.Builder(null, "멈춤", act(1, ACTION_STOP)).build());
+        }
+        Notification n = b.build();
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) startForeground(NOTIFY_ID, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK);
         else startForeground(NOTIFY_ID, n);
     }
@@ -159,8 +211,12 @@ public class NewsService extends Service {
                     .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH).build();
             tts.setAudioAttributes(attrs);
             audio = getSystemService(AudioManager.class);
-            focus = new AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT).setAudioAttributes(attrs).build();
+            // 통화·내비 안내·다른 앱 소리가 끼어들면 멈추고, 끝나면 멈춘 기사부터 이어 읽는다
+            focus = new AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT).setAudioAttributes(attrs)
+                    .setWillPauseWhenDucked(true)
+                    .setOnAudioFocusChangeListener(this::onFocus, main).build();
             audio.requestAudioFocus(focus); // 라디오·음악은 잠시 멈췄다가 끝나면 다시 나온다
+            soften(audio.generateAudioSessionId());
             tts.setOnUtteranceProgressListener(new UtteranceProgressListener() {
                 @Override public void onStart(String id) {
                     if (id.startsWith("L")) {
@@ -169,30 +225,36 @@ public class NewsService extends Service {
                         main.post(() -> showLine(i));
                     }
                 }
-                @Override public void onDone(String id) { if (id.equals(last)) main.post(NewsService.this::finish); }
-                @Override public void onError(String id) { if (id.equals(last)) main.post(NewsService.this::finish); }
+                @Override public void onDone(String id) { if (id.equals(last)) main.post(() -> { if (!paused) finish(); }); }
+                @Override public void onError(String id) { if (id.equals(last)) main.post(() -> { if (!paused) finish(); }); }
             });
             startSession();
-            startInForeground("읽는 중 · 핸들의 다음(▶▶) 버튼이나 '자세히'로 기사 요약을 듣습니다");
+            startInForeground(PLAYING_TEXT);
             queueFrom(0, TextToSpeech.QUEUE_ADD);
         });
     }
 
-    /** start번째 줄부터 끝까지 읽기 예약. 긴 줄은 음성 엔진 한도에 맞춰 나눈다 */
+    private static final String PLAYING_TEXT = "읽는 중 · 이전 / 전체 듣기 / 다음";
+
+    /** start번째 줄부터 끝까지 읽기 예약. 긴 줄은 음성 엔진 한도에 맞춰 나누고, 기사 사이는 잠깐 쉰다 */
     private void queueFrom(int start, int mode) {
         int max = Math.min(3900, TextToSpeech.getMaxSpeechInputLength());
         last = null;
         for (int i = start; i < lines.size(); i++) {
-            String text = lines.get(i).text;
-            if (text.isEmpty()) {
+            Brief.Line line = lines.get(i);
+            if (line.text.isEmpty()) {
                 last = "P" + i;
                 tts.playSilentUtterance(700, mode, last);
             } else {
-                List<String> parts = Rules.chunks(text, max);
+                List<String> parts = Rules.chunks(line.text, max);
                 for (int k = 0; k < parts.size(); k++) {
                     last = "L" + i + "." + k;
-                    tts.speak(parts.get(k), mode, null, last);
+                    tts.speak(parts.get(k), mode, speakParams, last);
                     mode = TextToSpeech.QUEUE_ADD;
+                }
+                if (line.item != null) { // 헤드라인 뒤에 숨 한 번: 기사끼리 붙어 들리지 않게
+                    last = "P" + i + ".h";
+                    tts.playSilentUtterance(450, TextToSpeech.QUEUE_ADD, last);
                 }
             }
             mode = TextToSpeech.QUEUE_ADD;
@@ -200,34 +262,124 @@ public class NewsService extends Service {
         if (last == null) finish();
     }
 
-    /** '자세히': 지금(또는 방금) 읽은 기사의 요약을 읽고, 그다음 줄부터 이어 읽는다 */
-    private void more() {
+    private boolean[] itemFlags() {
+        boolean[] f = new boolean[lines.size()];
+        for (int i = 0; i < f.length; i++) f[i] = lines.get(i).item != null;
+        return f;
+    }
+
+    /** 이전 기사 (멈춤 중이면 멈춘 기사 기준) */
+    private int prevTarget() {
+        return Rules.prevItem(itemFlags(), current);
+    }
+
+    /** 다음 기사. 'OO 소식입니다.'를 읽는 중이면 바로 뒤 기사가 지금 기사이므로 그다음 */
+    private int nextTarget() {
+        boolean[] f = itemFlags();
+        int i = Rules.nextItem(f, current);
+        if (i == current + 1 && current < lines.size() && lines.get(current).text.endsWith("소식입니다.")) i = Rules.nextItem(f, i);
+        return i;
+    }
+
+    /** 기사 줄 i부터 다시 읽는다. 앞줄이 'OO 소식입니다.'면 그 줄부터 */
+    private void jump(int i) {
+        if (i >= lines.size()) i = Math.max(0, lines.size() - 1); // 다음 기사가 없으면 맺음말
+        int start = i;
+        if (i > 0 && lines.get(i).item != null && lines.get(i - 1).item == null && lines.get(i - 1).text.endsWith("소식입니다.")) start = i - 1;
+        current = i;
+        if (paused) { showLine(i); return; } // 멈춤 중에는 위치만 옮기고, 이어 듣기로 거기서 시작
+        tts.stop();
+        queueFrom(start, TextToSpeech.QUEUE_FLUSH);
+    }
+
+    /** '전체 듣기': 지금(또는 방금) 읽은 기사의 본문 앞부분을 읽고, 그다음 줄부터 이어 읽는다 */
+    private void full() {
         if (tts == null || stopped || lines.isEmpty()) return;
         int i = Math.min(current, lines.size() - 1);
         while (i > 0 && lines.get(i).item == null) i--;
         Brief.Item it = lines.get(i).item;
-        String text = it == null ? "" : it.summary;
-        if (text.isEmpty()) text = it == null ? "자세히 들을 기사가 아직 없습니다." : "이 기사는 자세한 내용이 없습니다.";
+        String text = it == null ? "" : it.full();
+        if (text.isEmpty()) text = it == null ? "전체로 들을 기사가 아직 없습니다." : "이 기사는 본문을 가져오지 못했습니다.";
+        if (paused) { paused = false; main.removeCallbacks(pauseLimit); audio.requestAudioFocus(focus); setState(PlaybackState.STATE_PLAYING); startInForeground(PLAYING_TEXT); }
         tts.stop();
         int max = Math.min(3900, TextToSpeech.getMaxSpeechInputLength());
         List<String> parts = Rules.chunks(text, max);
-        for (int k = 0; k < parts.size(); k++) tts.speak(parts.get(k), k == 0 ? TextToSpeech.QUEUE_FLUSH : TextToSpeech.QUEUE_ADD, null, "S" + i + "." + k);
-        tts.playSilentUtterance(500, TextToSpeech.QUEUE_ADD, "S" + i + ".p");
+        for (int k = 0; k < parts.size(); k++) tts.speak(parts.get(k), k == 0 ? TextToSpeech.QUEUE_FLUSH : TextToSpeech.QUEUE_ADD, speakParams, "S" + i + "." + k);
+        tts.playSilentUtterance(600, TextToSpeech.QUEUE_ADD, "S" + i + ".p");
         queueFrom(i + 1, TextToSpeech.QUEUE_ADD);
         if (last == null) last = "S" + i + ".p";
     }
 
-    /** 차의 미디어 버튼(핸들 리모컨)을 받는다: 다음 = 자세히, 일시정지·정지 = 멈춤. 차 화면에는 지금 기사 제목이 뜬다 */
+    private void onFocus(int change) {
+        if (change == AudioManager.AUDIOFOCUS_GAIN) {
+            if (paused && resumeOnGain) resume();
+        } else if (change == AudioManager.AUDIOFOCUS_LOSS) {
+            pause(false); // 다른 앱이 소리를 가져감: 이어 듣기(앱·알림·핸들 재생 버튼)를 기다린다
+        } else if (change == AudioManager.AUDIOFOCUS_LOSS_TRANSIENT || change == AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK) {
+            pause(true); // 통화·내비 안내: 끝나면 저절로 이어 읽는다
+        }
+    }
+
+    private void pause(boolean autoResume) {
+        if (tts == null || stopped) return;
+        resumeOnGain = autoResume;
+        if (paused) return;
+        paused = true;
+        tts.stop();
+        setState(PlaybackState.STATE_PAUSED);
+        startInForeground(autoResume ? "잠깐 멈춤 · 통화나 안내가 끝나면 이어 읽습니다" : "멈춤 · '이어 듣기'를 누르면 멈춘 기사부터 읽습니다");
+        main.removeCallbacks(pauseLimit);
+        main.postDelayed(pauseLimit, PAUSE_LIMIT_MS);
+    }
+
+    private void resume() {
+        if (tts == null || stopped || !paused) return;
+        paused = false;
+        main.removeCallbacks(pauseLimit);
+        audio.requestAudioFocus(focus);
+        setState(PlaybackState.STATE_PLAYING);
+        startInForeground(PLAYING_TEXT);
+        jump(Math.min(current, lines.size() - 1));
+    }
+
+    /** 치찰음 줄이기: 이 서비스의 음성만 이퀄라이저로 고음을 낮춘다. 기기가 지원하지 않으면 그냥 읽는다 */
+    private void soften(int sessionId) {
+        if (sessionId <= 0) return;
+        speakParams.putInt(TextToSpeech.Engine.KEY_PARAM_SESSION_ID, sessionId);
+        if (!new Prefs(this).soften()) return;
+        try {
+            eq = new Equalizer(0, sessionId);
+            short[] range = eq.getBandLevelRange();
+            for (short band = 0; band < eq.getNumberOfBands(); band++) {
+                eq.setBandLevel(band, Rules.softenLevel(eq.getCenterFreq(band) / 1000, range[0], range[1]));
+            }
+            eq.setEnabled(true);
+        } catch (RuntimeException e) {
+            Log.w(TAG, "이퀄라이저를 쓸 수 없음: " + e);
+            eq = null;
+        }
+    }
+
+    private void setState(int state) {
+        if (session == null) return;
+        session.setPlaybackState(new PlaybackState.Builder()
+                .setActions(PlaybackState.ACTION_SKIP_TO_NEXT | PlaybackState.ACTION_SKIP_TO_PREVIOUS | PlaybackState.ACTION_PLAY
+                        | PlaybackState.ACTION_PAUSE | PlaybackState.ACTION_STOP | PlaybackState.ACTION_PLAY_PAUSE | PlaybackState.ACTION_FAST_FORWARD)
+                .setState(state, PlaybackState.PLAYBACK_POSITION_UNKNOWN, state == PlaybackState.STATE_PLAYING ? 1f : 0f).build());
+    }
+
+    /** 차의 미디어 버튼(핸들 리모컨): 다음·이전 = 다음·이전 기사, 일시정지·재생 = 멈춤·이어 듣기, 빨리 감기 = 전체 듣기. 차 화면에는 지금 기사 제목이 뜬다 */
     private void startSession() {
         session = new MediaSession(this, "newsclipping");
         session.setCallback(new MediaSession.Callback() {
-            @Override public void onSkipToNext() { more(); }
-            @Override public void onPause() { finish(); }
+            @Override public void onSkipToNext() { handle(ACTION_NEXT); }
+            @Override public void onSkipToPrevious() { handle(ACTION_PREV); }
+            @Override public void onFastForward() { full(); }
+            @Override public void onPause() { pause(false); }
+            @Override public void onPlay() { resume(); }
             @Override public void onStop() { finish(); }
         }, main);
-        session.setPlaybackState(new PlaybackState.Builder()
-                .setActions(PlaybackState.ACTION_SKIP_TO_NEXT | PlaybackState.ACTION_PAUSE | PlaybackState.ACTION_STOP | PlaybackState.ACTION_PLAY_PAUSE)
-                .setState(PlaybackState.STATE_PLAYING, PlaybackState.PLAYBACK_POSITION_UNKNOWN, 1f).build());
+        setState(PlaybackState.STATE_PLAYING);
         showLine(0);
         session.setActive(true);
     }
@@ -238,7 +390,7 @@ public class NewsService extends Service {
         if (l.item == null && i > 0) return; // 기사 제목만 차 화면에 띄운다
         session.setMetadata(new MediaMetadata.Builder()
                 .putString(MediaMetadata.METADATA_KEY_TITLE, l.item == null ? "오늘의 뉴스" : l.item.title)
-                .putString(MediaMetadata.METADATA_KEY_ARTIST, l.item == null ? "뉴스클리핑" : l.item.source + " · 다음 버튼: 자세히")
+                .putString(MediaMetadata.METADATA_KEY_ARTIST, l.item == null ? "뉴스클리핑" : l.item.source)
                 .build());
     }
 
@@ -266,6 +418,8 @@ public class NewsService extends Service {
 
     private void finish() {
         stopped = true;
+        main.removeCallbacks(pauseLimit);
+        if (eq != null) { eq.release(); eq = null; }
         if (tts != null) { tts.stop(); tts.shutdown(); tts = null; }
         if (session != null) { session.setActive(false); session.release(); session = null; }
         if (audio != null && focus != null) audio.abandonAudioFocusRequest(focus);

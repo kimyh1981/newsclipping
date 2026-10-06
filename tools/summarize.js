@@ -1,6 +1,6 @@
 /*
  * 기사 요약: 기본 언론사 원고에 든 기사마다 본문을 받아 '자세히' 내용을 미리 만들어 둔다.
- * 앱은 헤드라인을 읽는 중에 핸들의 '다음' 버튼을 누르면 이 내용을 읽는다.
+ * 앱은 헤드라인을 읽는 중에 '자세히'를 누르면 이 내용을, '전체 듣기'를 누르면 본문 앞부분(body)을 읽는다.
  *  - lead (기본, 무료): 기사 첫 두세 문장(리드). 외국 기사는 구글 번역으로 옮긴다
  *  - claude: Claude가 본문을 우리말 3~4문장으로 요약 (ANTHROPIC_API_KEY 필요, 유료)
  */
@@ -56,16 +56,33 @@ function articleText(html, decodeEntities) {
   return text.slice(0, 12000); // 기사 본문은 이 안에 든다. 이보다 길면 목록·댓글이 섞인 페이지
 }
 
-// 리드: 본문 첫 문장들. 기자 이름·통신사 머리말·사진 설명·전자우편은 뺀다
-function lead(text, max = 320) {
-  const first = text.split('\n').map((p) => p
+// 본문 문단에서 기자 이름·통신사 머리말·사진 설명·전자우편·주소를 뺀다
+function cleanParas(text) {
+  return text.split('\n').map((p) => p
     .replace(/^\s*[\[(【][^\])】]{1,40}[\])】]\s*/, '') // [서울=뉴시스], (사진=연합뉴스)
     .replace(/^[가-힣]{2,4}\s*(?:기자|특파원|객원기자)\s*=?\s*/, '')
     .replace(/[\w.+-]+@[\w-]+\.[\w.]+/g, '')
     .replace(/\([^)]{0,30}(?:사진|제공|=)[^)]{0,30}\)/g, '')
     .replace(/https?:\/\/\S+/g, '')
-    .trim()).filter((p) => p.length >= 40);
-  const sentences = first.join(' ').match(/[^.?!。]+[.?!。]+["'”’)]*\s*/g) || [];
+    .trim()).filter((p) => p.length >= 40 && !/무단\s*전재|재배포\s*금지|저작권자|Copyright|ⓒ|©/i.test(p));
+}
+
+const sentencesOf = (paras) => paras.join(' ').match(/[^.?!。]+[.?!。]+["'”’)]*\s*/g) || [];
+
+// '전체 듣기'용 본문: 앞에서부터 문장 단위로 max자까지 (사이트가 공개라 기사 전문을 그대로 옮기지는 않는다)
+function body(text, max = 1200) {
+  let out = '';
+  for (const sen of sentencesOf(cleanParas(text))) {
+    if (out && out.length + sen.length > max) break;
+    out += sen;
+  }
+  out = out.replace(/\s+/g, ' ').trim();
+  return out.length > max * 1.3 ? `${out.slice(0, max)}.` : out;
+}
+
+// 리드: 본문 첫 문장들
+function lead(text, max = 320) {
+  const sentences = sentencesOf(cleanParas(text));
   let out = '';
   for (const sen of sentences.slice(0, 3)) { // 두세 문장
     if (out && out.length + sen.length > max) break;
@@ -112,6 +129,11 @@ async function summarize(items, { mode = 'lead', get, translate, decodeEntities,
       }
       if (!s || s.length < 30) throw new Error('요약할 본문 아님');
       it.summary = s;
+      let full = body(text);
+      if (full.length > s.length + 40) {
+        if (it.lang && it.lang !== 'ko') full = await translate(full, it.lang).catch(() => '');
+        if (full) it.body = full;
+      }
       ok++;
     } catch (err) {
       if (err instanceof Anthropic.AuthenticationError || err instanceof Anthropic.PermissionDeniedError) {
@@ -126,4 +148,4 @@ async function summarize(items, { mode = 'lead', get, translate, decodeEntities,
   log.push(`요약(${client ? 'claude' : 'lead'}): ${Math.min(items.length, limit)}건 중 ${ok}건`);
 }
 
-module.exports = { summarize, resolveGoogle, articleText, lead, MODEL };
+module.exports = { summarize, resolveGoogle, articleText, lead, body, MODEL };

@@ -42,6 +42,8 @@ public class BriefTest {
         for (Brief.Line l : b.lines(null)) if (l.item != null && !l.item.summary.isEmpty()) withSummary = l;
         assertEquals("가 기사.", withSummary.text);
         assertTrue(withSummary.item.summary.startsWith("가 기사의 자세한 내용"));
+        assertTrue(withSummary.item.full().endsWith("본문 세 번째 문장까지 이어집니다."));
+        for (Brief.Line l : b.lines(null)) if (l.item != null && l.item.body.isEmpty()) assertEquals(l.item.summary, l.item.full());
     }
 
     @Test public void sentenceKeepsEndingMarks() {
