@@ -11,6 +11,13 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.res.ColorStateList;
 import android.content.res.Configuration;
+import android.graphics.Canvas;
+import android.graphics.ColorFilter;
+import android.graphics.Paint;
+import android.graphics.Path;
+import android.graphics.PixelFormat;
+import android.graphics.Rect;
+import android.graphics.RectF;
 import android.graphics.Typeface;
 import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.Drawable;
@@ -26,6 +33,7 @@ import android.speech.tts.Voice;
 import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.View;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.Switch;
@@ -87,10 +95,10 @@ public class MainActivity extends Activity {
         // 지금 듣기 / 멈춤
         LinearLayout play = new LinearLayout(this);
         play.setOrientation(LinearLayout.HORIZONTAL);
-        play.addView(pill("▶  지금 듣기", tint, 0xFFFFFFFF, v -> NewsService.start(this, true)), new LinearLayout.LayoutParams(0, dp(50), 2f));
+        play.addView(iconPill(true, "지금 듣기", tint, 0xFFFFFFFF, v -> NewsService.start(this, true)), new LinearLayout.LayoutParams(0, dp(50), 1f));
         View gap = new View(this);
         play.addView(gap, new LinearLayout.LayoutParams(dp(10), 1));
-        play.addView(pill("■  멈춤", card, red, v -> NewsService.stopIfRunning()), new LinearLayout.LayoutParams(0, dp(50), 1f));
+        play.addView(iconPill(false, "멈춤", card, red, v -> NewsService.stopIfRunning()), new LinearLayout.LayoutParams(0, dp(50), 1f));
         col.addView(play);
 
         LinearLayout setup = section(col, "처음 한 번만", "두 가지를 허용해야 차에 탔을 때 앱을 열지 않아도 자동으로 읽습니다.");
@@ -167,13 +175,51 @@ public class MainActivity extends Activity {
         return new RippleDrawable(ColorStateList.valueOf(dark ? 0x33FFFFFF : 0x1F000000), content, null);
     }
 
-    private TextView pill(String s, int fill, int textColor, View.OnClickListener l) {
-        TextView t = text(s, 17, textColor);
-        t.setTypeface(Typeface.DEFAULT_BOLD);
-        t.setGravity(Gravity.CENTER);
-        t.setBackground(pressable(rounded(fill, dp(14))));
-        t.setOnClickListener(l);
-        return t;
+    /** 글자 없이 재생(▶)·멈춤(■) 기호만 그린 버튼. 글꼴마다 ▶와 ■ 크기가 달라서 직접 같은 크기로 그린다 */
+    private ImageView iconPill(boolean playIcon, String label, int fill, int color, View.OnClickListener l) {
+        ImageView v = new ImageView(this);
+        v.setImageDrawable(new Glyph(playIcon, color, dp(22)));
+        v.setScaleType(ImageView.ScaleType.CENTER);
+        v.setContentDescription(label);
+        v.setBackground(pressable(rounded(fill, dp(14))));
+        v.setOnClickListener(l);
+        return v;
+    }
+
+    /** size×size 칸에 꽉 차는 재생 삼각형, 또는 같은 칸 안에서 눈으로 보기에 같은 크기인 정사각형 */
+    private static final class Glyph extends Drawable {
+        private final boolean play;
+        private final int size;
+        private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
+
+        Glyph(boolean play, int color, int size) {
+            this.play = play;
+            this.size = size;
+            paint.setColor(color);
+        }
+
+        @Override
+        public void draw(Canvas c) {
+            Rect b = getBounds();
+            float s = size, x = b.left, y = b.top;
+            if (play) {
+                Path p = new Path();
+                p.moveTo(x + s * 0.12f, y);
+                p.lineTo(x + s, y + s / 2f);
+                p.lineTo(x + s * 0.12f, y + s);
+                p.close();
+                c.drawPath(p, paint);
+            } else {
+                float in = s * 0.1f;
+                c.drawRoundRect(new RectF(x + in, y + in, x + s - in, y + s - in), s * 0.08f, s * 0.08f, paint);
+            }
+        }
+
+        @Override public int getIntrinsicWidth() { return size; }
+        @Override public int getIntrinsicHeight() { return size; }
+        @Override public void setAlpha(int a) { paint.setAlpha(a); }
+        @Override public void setColorFilter(ColorFilter f) { paint.setColorFilter(f); }
+        @Override public int getOpacity() { return PixelFormat.TRANSLUCENT; }
     }
 
     /** 회색 소제목 + 흰 둥근 묶음 + 회색 설명. 묶음(행을 담는 곳)을 돌려준다 */
