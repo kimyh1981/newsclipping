@@ -53,6 +53,7 @@ public class MainActivity extends Activity {
     private Prefs prefs;
     private TextView footer, permVal, batteryVal, carVal, timeVal, sourcesVal, voiceVal, rateVal;
     private Switch enabledSw, weekdaysSw, softenSw;
+    private ImageView playBtn;
     private TextToSpeech preview; // 목소리·빠르기를 고를 때 미리 들려준다
     private boolean previewReady;
     private Runnable afterPreview;
@@ -95,7 +96,14 @@ public class MainActivity extends Activity {
         // 지금 듣기 / 멈춤
         LinearLayout play = new LinearLayout(this);
         play.setOrientation(LinearLayout.HORIZONTAL);
-        play.addView(iconPill(Glyph.PLAY, "지금 듣기", tint, 0xFFFFFFFF, v -> NewsService.start(this, true)), new LinearLayout.LayoutParams(0, dp(50), 1f));
+        // 재생 버튼은 누를 때마다 재생 ↔ 일시정지 (일시정지하면 멈춘 기사부터 이어 읽는다)
+        playBtn = iconPill(Glyph.PLAY, "지금 듣기", tint, 0xFFFFFFFF, v -> {
+            int st = NewsService.state();
+            if (st == NewsService.PLAYING) NewsService.control(NewsService.ACTION_PAUSE);
+            else if (st == NewsService.PAUSED) NewsService.control(NewsService.ACTION_RESUME);
+            else NewsService.start(this, true);
+        });
+        play.addView(playBtn, new LinearLayout.LayoutParams(0, dp(50), 1f));
         play.addView(new View(this), new LinearLayout.LayoutParams(dp(10), 1));
         play.addView(iconPill(Glyph.STOP, "멈춤", card, red, v -> NewsService.stopIfRunning()), new LinearLayout.LayoutParams(0, dp(50), 1f));
         col.addView(play);
@@ -116,6 +124,10 @@ public class MainActivity extends Activity {
         nav.addView(iconPill(Glyph.NEXT, "다음 기사", card, tint, v -> NewsService.control(NewsService.ACTION_NEXT)), new LinearLayout.LayoutParams(0, dp(46), 1f));
         col.addView(nav);
 
+        LinearLayout today = section(col, "오늘 뉴스", null);
+        sourcesVal = row(today, "들을 언론사", v -> pickSources(), true);
+        row(today, "오늘 기사 목록 (웹)", v -> startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(SITE))), false).setText("");
+
         LinearLayout setup = section(col, "처음 한 번만", "두 가지를 허용해야 차에 탔을 때 앱을 열지 않아도 자동으로 읽습니다.");
         permVal = row(setup, "블루투스·알림 권한", v -> askPermissions(), true);
         batteryVal = row(setup, "배터리 사용 제한 없음", v -> askBattery(), false);
@@ -127,13 +139,9 @@ public class MainActivity extends Activity {
         weekdaysSw = switchRow(auto, "평일에만", on -> prefs.setWeekdaysOnly(on), false);
 
         LinearLayout listen = section(col, "듣기", "목소리와 빠르기는 고르는 동안 미리 들려 드립니다.");
-        sourcesVal = row(listen, "들을 언론사", v -> pickSources(), true);
         voiceVal = row(listen, "목소리", v -> withPreview(this::pickVoice), true);
         rateVal = row(listen, "말 빠르기", v -> withPreview(this::pickRate), true);
         softenSw = switchRow(listen, "치찰음 줄이기 (차 블루투스)", on -> prefs.setSoften(on), false);
-
-        LinearLayout more = section(col, "더 보기", null);
-        row(more, "오늘 기사 목록 (웹)", v -> startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(SITE))), false).setText("");
 
         footer = text("", 13, secondary);
         footer.setGravity(Gravity.CENTER);
@@ -155,7 +163,21 @@ public class MainActivity extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
+        NewsService.onStateChange = this::showPlayState;
+        showPlayState();
         refresh();
+    }
+
+    @Override
+    protected void onPause() {
+        NewsService.onStateChange = null;
+        super.onPause();
+    }
+
+    private void showPlayState() {
+        boolean playing = NewsService.state() == NewsService.PLAYING;
+        playBtn.setImageDrawable(new Glyph(playing ? Glyph.PAUSE : Glyph.PLAY, 0xFFFFFFFF, dp(22)));
+        playBtn.setContentDescription(playing ? "일시정지" : NewsService.state() == NewsService.PAUSED ? "이어 듣기" : "지금 듣기");
     }
 
     private void refresh() {
@@ -205,7 +227,7 @@ public class MainActivity extends Activity {
 
     /** size×size 칸에 그리는 기호: 재생 삼각형, 같은 칸에서 같은 크기로 보이는 정사각형, 이전·다음(막대 + 삼각형) */
     private static final class Glyph extends Drawable {
-        static final int PLAY = 0, STOP = 1, PREV = 2, NEXT = 3;
+        static final int PLAY = 0, STOP = 1, PREV = 2, NEXT = 3, PAUSE = 4;
         private final int kind;
         private final int size;
         private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -227,6 +249,10 @@ public class MainActivity extends Activity {
                 p.lineTo(x + s * 0.12f, y + s);
                 p.close();
                 c.drawPath(p, paint);
+            } else if (kind == PAUSE) {
+                float w = s * 0.3f;
+                c.drawRoundRect(new RectF(x + s * 0.14f, y + s * 0.06f, x + s * 0.14f + w, y + s * 0.94f), s * 0.06f, s * 0.06f, paint);
+                c.drawRoundRect(new RectF(x + s * 0.86f - w, y + s * 0.06f, x + s * 0.86f, y + s * 0.94f), s * 0.06f, s * 0.06f, paint);
             } else if (kind == PREV || kind == NEXT) {
                 float bar = s * 0.16f, top = y + s * 0.1f, bottom = y + s * 0.9f;
                 Path p = new Path();

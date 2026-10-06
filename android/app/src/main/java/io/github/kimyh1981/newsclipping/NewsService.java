@@ -106,6 +106,20 @@ public class NewsService extends Service {
 
     static boolean isRunning() { return running != null; }
 
+    static final int IDLE = 0, PLAYING = 1, PAUSED = 2;
+    /** 앱 화면의 재생 버튼 모양(재생 ↔ 일시정지)을 맞추려고 상태가 바뀔 때마다 부른다 */
+    static Runnable onStateChange;
+
+    static int state() {
+        NewsService s = running;
+        return s == null ? IDLE : s.paused ? PAUSED : PLAYING;
+    }
+
+    private static void stateChanged() {
+        Runnable r = onStateChange;
+        if (r != null) new Handler(Looper.getMainLooper()).post(r);
+    }
+
     /** 앱 화면의 이전·전체 듣기·다음 버튼 */
     static void control(String action) {
         NewsService s = running;
@@ -147,6 +161,7 @@ public class NewsService extends Service {
         }
         startInForeground("오늘의 뉴스를 가져오는 중");
         running = this;
+        stateChanged();
         boolean manual = intent != null && intent.getBooleanExtra(EXTRA_MANUAL, false);
         new Thread(() -> prepare(manual), "news-fetch").start();
         return START_NOT_STICKY;
@@ -384,7 +399,7 @@ public class NewsService extends Service {
         Brief.Item it = lines.get(i).item;
         String text = it == null ? "" : it.full();
         if (text.isEmpty()) text = it == null ? "전체로 들을 기사가 아직 없습니다." : "이 기사는 본문을 가져오지 못했습니다.";
-        if (paused) { paused = false; main.removeCallbacks(pauseLimit); audio.requestAudioFocus(focus); setState(PlaybackState.STATE_PLAYING); startInForeground(PLAYING_TEXT); }
+        if (paused) { paused = false; stateChanged(); main.removeCallbacks(pauseLimit); audio.requestAudioFocus(focus); setState(PlaybackState.STATE_PLAYING); startInForeground(PLAYING_TEXT); }
         tts.stop();
         int max = Math.min(3900, TextToSpeech.getMaxSpeechInputLength());
         List<String> parts = Rules.chunks(text, max);
@@ -409,6 +424,7 @@ public class NewsService extends Service {
         resumeOnGain = autoResume;
         if (paused) return;
         paused = true;
+        stateChanged();
         tts.stop();
         setState(PlaybackState.STATE_PAUSED);
         startInForeground(autoResume ? "잠깐 멈춤 · 통화나 안내가 끝나면 이어 읽습니다" : "멈춤 · '이어 듣기'를 누르면 멈춘 기사부터 읽습니다");
@@ -419,6 +435,7 @@ public class NewsService extends Service {
     private void resume() {
         if (tts == null || stopped || !paused) return;
         paused = false;
+        stateChanged();
         main.removeCallbacks(pauseLimit);
         audio.requestAudioFocus(focus);
         setState(PlaybackState.STATE_PLAYING);
@@ -508,6 +525,7 @@ public class NewsService extends Service {
         if (session != null) { session.setActive(false); session.release(); session = null; }
         if (audio != null && focus != null) audio.abandonAudioFocusRequest(focus);
         if (running == this) running = null;
+        stateChanged();
         stopForeground(STOP_FOREGROUND_REMOVE);
         stopSelf();
     }
