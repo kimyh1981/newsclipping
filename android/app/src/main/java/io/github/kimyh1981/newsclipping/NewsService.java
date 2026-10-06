@@ -12,6 +12,7 @@ import android.media.AudioAttributes;
 import android.media.AudioFocusRequest;
 import android.media.AudioManager;
 import android.media.MediaMetadata;
+import android.media.MediaPlayer;
 import android.media.audiofx.Equalizer;
 import android.media.session.MediaSession;
 import android.media.session.PlaybackState;
@@ -31,12 +32,14 @@ import java.nio.charset.StandardCharsets;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.List;
 import java.util.Locale;
@@ -65,12 +68,21 @@ public class NewsService extends Service {
     private AudioManager audio;
     private AudioFocusRequest focus;
     private volatile boolean stopped;
-    private String last;
     private MediaSession session;
     private List<Brief.Line> lines = new ArrayList<>();
-    /** 구글 음성으로 녹음된 줄 글자 → 받아 둔 파일. 여기 있는 글자는 음성 엔진이 파일을 튼다 (addSpeech) */
-    private Map<String, File> clips = new HashMap<>();
-    private final Set<String> recorded = new HashSet<>();
+    /** 서버가 녹음해 둔 줄 글자 → 받아 둔 파일. 읽는 중에도 계속 받아 채운다. 있으면 앱이 직접 틀고, 없으면 폰 음성.
+     *  (음성 엔진의 addSpeech는 엔진 앱이 이 앱의 파일을 읽지 못해 소리 없이 건너뛴다) */
+    private final Map<String, File> clips = new ConcurrentHashMap<>();
+    private ExecutorService pool;
+    /** 읽을 차례들과 지금 차례. 한 차례가 끝나면 다음 차례를 튼다 */
+    private List<Step> queue = new ArrayList<>();
+    private int pos;
+    /** 멈추거나 건너뛸 때마다 올린다. 예전 차례의 '끝남' 알림은 버린다 */
+    private int gen;
+    private MediaPlayer player;
+    private AudioAttributes attrs;
+    private int sessionId;
+    private final Runnable afterSilence = this::advance;
     /** 지금 읽는 원고 줄 번호 */
     private volatile int current;
     /** 통화·다른 앱 소리로 멈춘 상태. 다시 들으면 멈춘 기사 처음부터 이어 읽는다 */
@@ -221,48 +233,53 @@ public class NewsService extends Service {
             script = brief.lines(new Prefs(this).sources());
         }
         if (!manual) new Prefs(this).markPlayed();
-        Map<String, File> got = brief == null ? new HashMap<>() : fetchClips(brief, script);
-        main.post(() -> { clips = got; speak(script); });
+        if (brief != null) fetchClips(brief, script);
+        main.post(() -> speak(script));
     }
 
-    /** 원고 줄(과 요약·본문) 가운데 서버가 녹음해 둔 것을 받아 둔다. 늦어도 25초 안에 받은 것만 쓰고 나머지는 폰 음성 */
-    private Map<String, File> fetchClips(Brief brief, List<Brief.Line> script) {
-        Map<String, File> out = new java.util.concurrent.ConcurrentHashMap<>();
-        if (brief.audioIds.isEmpty()) return out;
-        Set<String> texts = new java.util.LinkedHashSet<>();
+    /** 원고 줄(과 요약·본문) 가운데 서버가 녹음해 둔 것을 원고 순서대로 받는다. 앞 몇 줄만 기다리고(최대 8초) 나머지는 읽는 동안 받는다.
+     *  아직 못 받은 줄은 폰 음성으로 읽는다 */
+    private void fetchClips(Brief brief, List<Brief.Line> script) {
+        if (brief.audioIds.isEmpty()) return;
+        Set<String> texts = new LinkedHashSet<>();
         texts.add("또,");
-        for (Brief.Line l : script) {
+        for (Brief.Line l : script) { // 원고 줄을 먼저, 요약·본문(전체 듣기)은 그 뒤에
             if (!l.text.isEmpty()) texts.add(l.text.startsWith("또, ") ? l.text.substring(3) : l.text);
+        }
+        for (Brief.Line l : script) {
             if (l.item != null) { texts.add(l.item.summary); texts.add(l.item.body); }
         }
         File dir = new File(getCacheDir(), "audio");
         dir.mkdirs();
         String base = BuildConfig.NEWS_URL.substring(0, BuildConfig.NEWS_URL.lastIndexOf('/') + 1) + brief.audioBase;
         Set<String> keep = new HashSet<>();
-        ExecutorService pool = Executors.newFixedThreadPool(4);
+        List<Future<?>> first = new ArrayList<>();
+        pool = Executors.newFixedThreadPool(4);
         for (String t : texts) {
             if (t.isEmpty()) continue;
             String id = Brief.audioId(t);
             if (!brief.audioIds.contains(id)) continue;
             File f = new File(dir, id + ".mp3");
             keep.add(f.getName());
-            pool.execute(() -> {
+            Future<?> job = pool.submit(() -> {
                 if (stopped) return;
                 try {
                     if (!f.exists() || f.length() == 0) download(base + id + ".mp3", f);
-                    out.put(t, f);
+                    clips.put(t, f);
                 } catch (Exception e) {
                     Log.w(TAG, "녹음 파일 받기 실패 " + id + ": " + e);
                 }
             });
+            if (first.size() < 4) first.add(job);
         }
         pool.shutdown();
-        try { pool.awaitTermination(25, TimeUnit.SECONDS); } catch (InterruptedException ignored) { Thread.currentThread().interrupt(); }
-        pool.shutdownNow();
+        long end = System.currentTimeMillis() + 8000;
+        for (Future<?> job : first) {
+            try { job.get(Math.max(1, end - System.currentTimeMillis()), TimeUnit.MILLISECONDS); } catch (Exception ignored) { }
+        }
         File[] old = dir.listFiles(); // 어제 받은 파일은 지운다
-        if (old != null) for (File f : old) if (!keep.contains(f.getName())) f.delete();
-        Log.i(TAG, "구글 음성 파일 " + out.size() + "개");
-        return out;
+        if (old != null) for (File f : old) if (!keep.contains(f.getName()) && !f.getName().endsWith(".part")) f.delete();
+        Log.i(TAG, "녹음 " + keep.size() + "줄 중 " + clips.size() + "줄 받고 시작");
     }
 
     private static void download(String url, File to) throws Exception {
@@ -283,14 +300,11 @@ public class NewsService extends Service {
         }
     }
 
-    /** 한 줄을 읽기 예약: 녹음 파일이 있으면 그 파일, '또, '만 빠진 녹음이 있으면 '또,' + 그 녹음, 없으면 폰 음성 */
-    private void say(String text, int mode, String id) {
-        if (!recorded.contains(text) && text.startsWith("또, ") && recorded.contains(text.substring(3)) && recorded.contains("또,")) {
-            tts.speak("또,", mode, speakParams, id + "a");
-            tts.speak(text.substring(3), TextToSpeech.QUEUE_ADD, speakParams, id);
-        } else {
-            tts.speak(text, mode, speakParams, id);
-        }
+    /** 읽을 차례 하나: 글자(녹음이 있으면 그 파일, 없으면 폰 음성) 또는 silence 밀리초 쉼. id가 L로 시작하면 원고 줄 번호 */
+    private static final class Step {
+        final String id, text;
+        final int silence;
+        Step(String id, String text, int silence) { this.id = id; this.text = text; this.silence = silence; }
     }
 
     private void speak(List<Brief.Line> script) {
@@ -302,10 +316,7 @@ public class NewsService extends Service {
             int lang = tts.setLanguage(Locale.KOREAN);
             if (lang == TextToSpeech.LANG_MISSING_DATA || lang == TextToSpeech.LANG_NOT_SUPPORTED) Log.w(TAG, "한국어 음성 데이터 없음");
             Voices.apply(tts, new Prefs(this));
-            for (Map.Entry<String, File> e : clips.entrySet()) {
-                if (tts.addSpeech(e.getKey(), e.getValue()) == TextToSpeech.SUCCESS) recorded.add(e.getKey());
-            }
-            AudioAttributes attrs = new AudioAttributes.Builder()
+            attrs = new AudioAttributes.Builder()
                     .setUsage(AudioAttributes.USAGE_MEDIA)
                     .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH).build();
             tts.setAudioAttributes(attrs);
@@ -317,48 +328,103 @@ public class NewsService extends Service {
             audio.requestAudioFocus(focus); // 라디오·음악은 잠시 멈췄다가 끝나면 다시 나온다
             soften(audio.generateAudioSessionId());
             tts.setOnUtteranceProgressListener(new UtteranceProgressListener() {
-                @Override public void onStart(String id) {
-                    if (id.startsWith("L")) {
-                        int i = Integer.parseInt(id.substring(1, id.indexOf('.')));
-                        current = i;
-                        main.post(() -> showLine(i));
-                    }
-                }
-                @Override public void onDone(String id) { if (id.equals(last)) main.post(() -> { if (!paused) finish(); }); }
-                @Override public void onError(String id) { if (id.equals(last)) main.post(() -> { if (!paused) finish(); }); }
+                @Override public void onStart(String id) { }
+                @Override public void onDone(String id) { main.post(() -> done(id)); }
+                @Override public void onError(String id) { main.post(() -> done(id)); }
             });
             startSession();
             startInForeground(PLAYING_TEXT);
-            queueFrom(0, TextToSpeech.QUEUE_ADD);
+            play(stepsFrom(0));
         });
     }
 
     private static final String PLAYING_TEXT = "읽는 중 · 이전 / 전체 듣기 / 다음";
 
-    /** start번째 줄부터 끝까지 읽기 예약. 긴 줄은 음성 엔진 한도에 맞춰 나누고, 기사 사이는 잠깐 쉰다 */
-    private void queueFrom(int start, int mode) {
+    /** 지금 읽던 것을 끊고 steps를 처음부터 읽는다 */
+    private void play(List<Step> steps) {
+        halt();
+        queue = steps;
+        pos = 0;
+        advance();
+    }
+
+    /** 지금 차례(폰 음성·녹음·쉼)를 끊는다. 끊긴 차례의 '끝남'은 gen이 달라 무시된다 */
+    private void halt() {
+        gen++;
+        main.removeCallbacks(afterSilence);
+        releasePlayer();
+        if (tts != null) tts.stop();
+    }
+
+    private void releasePlayer() {
+        if (player != null) { player.release(); player = null; }
+    }
+
+    /** 다음 차례를 튼다. 다 읽었으면 끝낸다 */
+    private void advance() {
+        if (stopped || paused || tts == null) return;
+        if (pos >= queue.size()) { finish(); return; }
+        Step s = queue.get(pos++);
+        if (s.id.startsWith("L")) {
+            int i = Integer.parseInt(s.id.substring(1, s.id.indexOf('.')));
+            current = i;
+            showLine(i);
+        }
+        if (s.silence > 0) { main.postDelayed(afterSilence, s.silence); return; }
+        File f = clips.get(s.text);
+        if (f == null && s.text.startsWith("또, ") && clips.containsKey(s.text.substring(3)) && clips.containsKey("또,")) {
+            queue.add(pos, new Step(s.id + "b", s.text.substring(3), 0)); // '또,'와 기사 제목을 따로 녹음해 두었다
+            f = clips.get("또,");
+        }
+        if (f != null && playClip(f)) return;
+        tts.speak(s.text, TextToSpeech.QUEUE_FLUSH, speakParams, gen + ":" + s.id);
+    }
+
+    /** 녹음 파일을 앱에서 직접 튼다. 치찰음 줄이기(이퀄라이저)가 걸리도록 같은 오디오 세션으로 */
+    private boolean playClip(File f) {
+        int g = gen;
+        MediaPlayer mp = new MediaPlayer();
+        try {
+            mp.setAudioAttributes(attrs);
+            if (sessionId > 0) mp.setAudioSessionId(sessionId);
+            mp.setDataSource(f.getPath());
+            mp.setOnCompletionListener(p -> done(g + ":"));
+            mp.setOnErrorListener((p, what, extra) -> { done(g + ":"); return true; });
+            mp.prepare();
+            mp.start();
+            player = mp;
+            return true;
+        } catch (Exception e) {
+            Log.w(TAG, "녹음 재생 실패, 폰 음성으로: " + e);
+            mp.release();
+            f.delete();
+            clips.values().remove(f);
+            return false;
+        }
+    }
+
+    /** 한 차례가 끝남 ("세대:id"). 지금 세대의 것만 다음 차례로 넘어간다 */
+    private void done(String id) {
+        if (!id.startsWith(gen + ":")) return;
+        releasePlayer();
+        advance();
+    }
+
+    /** start번째 줄부터 끝까지의 차례. 긴 줄은 음성 엔진 한도에 맞춰 나누고, 기사 사이는 잠깐 쉰다 */
+    private List<Step> stepsFrom(int start) {
+        List<Step> out = new ArrayList<>();
         int max = Math.min(3900, TextToSpeech.getMaxSpeechInputLength());
-        last = null;
         for (int i = start; i < lines.size(); i++) {
             Brief.Line line = lines.get(i);
             if (line.text.isEmpty()) {
-                last = "P" + i;
-                tts.playSilentUtterance(700, mode, last);
+                out.add(new Step("P" + i, "", 700));
             } else {
                 List<String> parts = Rules.chunks(line.text, max);
-                for (int k = 0; k < parts.size(); k++) {
-                    last = "L" + i + "." + k;
-                    say(parts.get(k), mode, last);
-                    mode = TextToSpeech.QUEUE_ADD;
-                }
-                if (line.item != null) { // 헤드라인 뒤에 숨 한 번: 기사끼리 붙어 들리지 않게
-                    last = "P" + i + ".h";
-                    tts.playSilentUtterance(450, TextToSpeech.QUEUE_ADD, last);
-                }
+                for (int k = 0; k < parts.size(); k++) out.add(new Step("L" + i + "." + k, parts.get(k), 0));
+                if (line.item != null) out.add(new Step("P" + i + ".h", "", 450)); // 헤드라인 뒤에 숨 한 번: 기사끼리 붙어 들리지 않게
             }
-            mode = TextToSpeech.QUEUE_ADD;
         }
-        if (last == null) finish();
+        return out;
     }
 
     private boolean[] itemFlags() {
@@ -387,8 +453,7 @@ public class NewsService extends Service {
         if (i > 0 && lines.get(i).item != null && lines.get(i - 1).item == null && lines.get(i - 1).text.endsWith("소식입니다.")) start = i - 1;
         current = i;
         if (paused) { showLine(i); return; } // 멈춤 중에는 위치만 옮기고, 이어 듣기로 거기서 시작
-        tts.stop();
-        queueFrom(start, TextToSpeech.QUEUE_FLUSH);
+        play(stepsFrom(start));
     }
 
     /** '전체 듣기': 지금(또는 방금) 읽은 기사의 본문 앞부분을 읽고, 그다음 줄부터 이어 읽는다 */
@@ -400,13 +465,13 @@ public class NewsService extends Service {
         String text = it == null ? "" : it.full();
         if (text.isEmpty()) text = it == null ? "전체로 들을 기사가 아직 없습니다." : "이 기사는 본문을 가져오지 못했습니다.";
         if (paused) { paused = false; stateChanged(); main.removeCallbacks(pauseLimit); audio.requestAudioFocus(focus); setState(PlaybackState.STATE_PLAYING); startInForeground(PLAYING_TEXT); }
-        tts.stop();
         int max = Math.min(3900, TextToSpeech.getMaxSpeechInputLength());
+        List<Step> steps = new ArrayList<>();
         List<String> parts = Rules.chunks(text, max);
-        for (int k = 0; k < parts.size(); k++) say(parts.get(k), k == 0 ? TextToSpeech.QUEUE_FLUSH : TextToSpeech.QUEUE_ADD, "S" + i + "." + k);
-        tts.playSilentUtterance(600, TextToSpeech.QUEUE_ADD, "S" + i + ".p");
-        queueFrom(i + 1, TextToSpeech.QUEUE_ADD);
-        if (last == null) last = "S" + i + ".p";
+        for (int k = 0; k < parts.size(); k++) steps.add(new Step("S" + i + "." + k, parts.get(k), 0));
+        steps.add(new Step("S" + i + ".p", "", 600));
+        steps.addAll(stepsFrom(i + 1));
+        play(steps);
     }
 
     private void onFocus(int change) {
@@ -425,7 +490,7 @@ public class NewsService extends Service {
         if (paused) return;
         paused = true;
         stateChanged();
-        tts.stop();
+        halt();
         setState(PlaybackState.STATE_PAUSED);
         startInForeground(autoResume ? "잠깐 멈춤 · 통화나 안내가 끝나면 이어 읽습니다" : "멈춤 · '이어 듣기'를 누르면 멈춘 기사부터 읽습니다");
         main.removeCallbacks(pauseLimit);
@@ -446,6 +511,7 @@ public class NewsService extends Service {
     /** 치찰음 줄이기: 이 서비스의 음성만 이퀄라이저로 고음을 낮춘다. 기기가 지원하지 않으면 그냥 읽는다 */
     private void soften(int sessionId) {
         if (sessionId <= 0) return;
+        this.sessionId = sessionId;
         speakParams.putInt(TextToSpeech.Engine.KEY_PARAM_SESSION_ID, sessionId);
         if (!new Prefs(this).soften()) return;
         try {
@@ -520,6 +586,9 @@ public class NewsService extends Service {
     private void finish() {
         stopped = true;
         main.removeCallbacks(pauseLimit);
+        main.removeCallbacks(afterSilence);
+        releasePlayer();
+        if (pool != null) pool.shutdownNow();
         if (eq != null) { eq.release(); eq = null; }
         if (tts != null) { tts.stop(); tts.shutdown(); tts = null; }
         if (session != null) { session.setActive(false); session.release(); session = null; }
