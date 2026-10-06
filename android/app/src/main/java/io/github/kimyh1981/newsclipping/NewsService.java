@@ -274,6 +274,13 @@ public class NewsService extends Service {
         stopSelf();
     }
 
+    /** 최근 앱 화면에서 뉴스클리핑을 쓸어 올려 닫으면 읽기도 멈춘다 (다음 날 자동 재생은 그대로) */
+    @Override
+    public void onTaskRemoved(Intent rootIntent) {
+        finish();
+        super.onTaskRemoved(rootIntent);
+    }
+
     @Override
     public void onDestroy() {
         if (!stopped) finish();
