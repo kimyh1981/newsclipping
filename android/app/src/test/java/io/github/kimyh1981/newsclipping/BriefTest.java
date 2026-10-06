@@ -66,4 +66,10 @@ public class BriefTest {
         assertEquals("이어서 가입니다.", Brief.intro("가", 2, 4));
         assertEquals("끝으로 가입니다.", Brief.intro("가", 3, 4));
     }
+
+    @Test public void audioIdMatchesServer() throws Exception {
+        assertEquals("69cc2877f7639e2b", Brief.audioId("좋은 아침입니다.")); // tests/tts.test.js와 같은 값
+        assertEquals("69cc2877f7639e2b", Brief.audioId(" 좋은 아침입니다. "));
+        assertTrue(Brief.parse(read("briefing.json")).audioIds.isEmpty());
+    }
 }

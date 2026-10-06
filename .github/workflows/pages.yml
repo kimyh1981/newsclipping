@@ -37,15 +37,28 @@ jobs:
         run: |
           mkdir -p _site
           cp -r index.html manifest.webmanifest js icons _site/
+      # 원고 녹음용 무료 신경망 음성(MS 엣지 '소리 내어 읽기', edge-tts)
+      - run: python3 -m pip install --user edge-tts==7.2.8
+      # 음성 녹음 캐시: 같은 날 다시 배포해도 이미 녹음한 줄은 다시 녹음하지 않는다
+      - uses: actions/cache@v4
+        with:
+          path: tts-cache
+          key: tts-${{ github.run_id }}
+          restore-keys: tts-
       # 신문사·농업·비료·국제/경제 헤드라인 → briefing.json(화면), briefing.txt(앱이 읽는 원고, 주말·공휴일엔 빈 파일)
       - name: News briefing
-        timeout-minutes: 8
+        timeout-minutes: 14 # 수집 몇 분 + 음성 녹음 (첫 녹음은 몇 분 걸리고, 같은 날 다시 하면 캐시로 금방)
         continue-on-error: true
         env:
           DATA_GO_KR_KEY: ${{ secrets.DATA_GO_KR_KEY }}
           # 기사 '자세히': 기본은 본문 첫 문장(무료). 저장소 Settings → Variables에서 SUMMARY_MODE=claude로 바꾸면 Claude 요약(유료)
           SUMMARY_MODE: ${{ vars.SUMMARY_MODE }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          # 원고 녹음: 기본은 무료 엣지 음성. 비밀값 GOOGLE_TTS_KEY가 있으면 구글 클라우드 음성, Variables의 TTS_ENGINE=off면 녹음 안 함
+          GOOGLE_TTS_KEY: ${{ secrets.GOOGLE_TTS_KEY }}
+          TTS_ENGINE: ${{ vars.TTS_ENGINE }}
+          TTS_VOICE: ${{ vars.TTS_VOICE }}
+          TTS_CACHE: tts-cache
         run: node tools/collect.js _site
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3

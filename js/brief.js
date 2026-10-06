@@ -126,5 +126,5 @@
     return ['open', ...ids, 'close'].join(' ');
   }
 
-  return { koreanDate, sentence, buildScript, defaults, select, script, piece, iosCode };
+  return { koreanDate, sentence, buildScript, defaults, select, script, piece, iosCode, opening, intro, closing, EMPTY };
 });
