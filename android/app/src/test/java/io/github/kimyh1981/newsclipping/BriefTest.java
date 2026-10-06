@@ -55,4 +55,13 @@ public class BriefTest {
         assertEquals(4, b.catalog().size());
         assertEquals("번역", b.catalog().get(3)[3]);
     }
+
+    @Test public void greetingFollowsTheWeekday() {
+        assertTrue(Brief.opening("10월 5일 월요일").endsWith("새로운 한 주, 힘차게 시작해 보시죠."));
+        assertTrue(Brief.opening("10월 9일 금요일").endsWith("한 주의 마무리, 오늘도 힘내세요."));
+        assertEquals("좋은 아침입니다. 10월 6일 화요일, 출근길 뉴스 브리핑입니다.", Brief.opening("10월 6일 화요일"));
+        assertEquals("다음은 가입니다.", Brief.intro("가", 1, 4));
+        assertEquals("이어서 가입니다.", Brief.intro("가", 2, 4));
+        assertEquals("끝으로 가입니다.", Brief.intro("가", 3, 4));
+    }
 }

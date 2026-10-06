@@ -18,28 +18,42 @@
     return /[.?!]$/.test(s) ? s : `${s}.`;
   }
 
-  const ORDINAL = ['먼저', '다음은', '이어서', '마지막으로'];
+  // 아나운서처럼: 요일에 맞춘 인사, 섹션마다 다른 연결 말, 언론사 소개, 맺음말 (안드로이드 Brief.java와 같은 문장)
+  function opening(date) {
+    const extra = date.endsWith('월요일') ? ' 새로운 한 주, 힘차게 시작해 보시죠.' : date.endsWith('금요일') ? ' 한 주의 마무리, 오늘도 힘내세요.' : '';
+    return `좋은 아침입니다. ${date}, 출근길 뉴스 브리핑입니다.${extra}`;
+  }
+
+  function intro(title, i, n) {
+    if (i === 0) return `먼저 ${title}부터 전해 드립니다.`;
+    if (i === n - 1) return `끝으로 ${title}입니다.`;
+    return `${i % 2 ? '다음은' : '이어서'} ${title}입니다.`;
+  }
+
+  const EMPTY = '오늘은 새로 들어온 소식이 없습니다.';
+  const closing = (date) => `지금까지 ${date} 아침 뉴스였습니다. 오늘도 안전 운전하시고, 좋은 하루 보내세요.`;
 
   // 차에서 들을 원고. 문장 끝마다 마침표를 넣어 음성이 잠깐 쉬게 한다
   function buildScript(sections, now) {
-    const lines = [`좋은 아침입니다. ${koreanDate(now)} 아침 뉴스 브리핑입니다.`];
+    const date = koreanDate(now);
+    const lines = [opening(date)];
     sections.forEach((sec, i) => {
-      const lead = i === sections.length - 1 && sections.length > 1 ? ORDINAL[3] : ORDINAL[Math.min(i, 2)];
       lines.push('');
-      lines.push(`${lead} ${sec.title}입니다.`);
+      lines.push(intro(sec.title, i, sections.length));
       if (!sec.items.length) {
-        lines.push('오늘은 새 소식이 없습니다.');
+        lines.push(EMPTY);
         return;
       }
       let last = null;
       for (const it of sec.items) {
-        if (sec.perSourceLabel && it.source !== last) lines.push(`${it.source}.`);
+        const same = sec.perSourceLabel && it.source === last;
+        if (sec.perSourceLabel && !same) lines.push(`${it.source} 소식입니다.`);
         last = it.source;
-        lines.push(sentence(it.spoken));
+        lines.push((same ? '또, ' : '') + sentence(it.spoken));
       }
     });
     lines.push('');
-    lines.push('이상으로 오늘 아침 브리핑을 마칩니다. 오늘도 안전 운전하세요.');
+    lines.push(closing(date));
     return lines.join('\n') + '\n';
   }
 

@@ -38,8 +38,8 @@ test('언론사 RSS가 막히면 구글 뉴스로 대신하고, 섹션끼리 겹
   assert.equal(sel[0].items[0].source, '신문사');
   assert.ok(b.log.includes('신문사: RSS 실패 (HTTP 403)'));
   assert.ok(b.log.includes('신문사: 구글 1건'));
-  assert.match(b.script, /^좋은 아침입니다\. 10월 6일 화요일/);
-  assert.match(b.script, /농업신문\.\n벼 수확 한창\./);
+  assert.match(b.script, /^좋은 아침입니다\. 10월 6일 화요일, 출근길/);
+  assert.match(b.script, /농업신문 소식입니다\.\n벼 수확 한창\./);
 });
 
 test('하나도 못 가져오면 그 사실을 말해 준다', async (t) => {
@@ -71,7 +71,7 @@ test('베트남 섹션: 베트남판 구글 뉴스에서 찾아 제목을 우리
   assert.deepEqual(items.map((i) => i.title), ['비료 가격 급등', '농민들 벼 풍작']);
   assert.equal(items[0].original, 'Giá phân bón tăng mạnh');
   assert.equal(items[0].source, '단찌');
-  assert.match(b.script, /마지막으로|먼저/);
+  assert.match(b.script, /끝으로|먼저/);
   assert.match(b.script, /비료 가격 급등\.\n농민들 벼 풍작\./);
   assert.doesNotMatch(b.script, /[ăâđêôơư]/i);
   assert.equal(calls, 1, '한 언론사의 제목은 한 번에 번역한다');
@@ -150,7 +150,7 @@ test('언론사마다 기사를 따로 담고, 고른 언론사만으로 원고�
   assert.deepEqual(both[1].items.map((i) => i.title), ['쌀값 반등'], '겹치는 기사는 건너뛰고 take건');
   const onlyB = brief.select(b, ['b']);
   assert.deepEqual(onlyB.map((s) => s.items.map((i) => i.title)), [['[속보] 정부 비료가격 안정대책 발표']]);
-  assert.match(brief.script(b, ['b']), /^좋은 아침입니다\. 10월 6일 화요일 아침 뉴스 브리핑입니다\.\n\n먼저 농업 신문 헤드라인입니다\.\n나신문\./);
+  assert.match(brief.script(b, ['b']), /^좋은 아침입니다\. 10월 6일 화요일, 출근길 뉴스 브리핑입니다\.\n\n먼저 농업 신문 헤드라인부터 전해 드립니다\.\n나신문 소식입니다\./);
   assert.match(brief.script(b, []), /뉴스를 가져오지 못했습니다/);
 });
 

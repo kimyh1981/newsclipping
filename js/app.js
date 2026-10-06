@@ -19,9 +19,11 @@
 
   const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
+  // 가장 자연스러운 한국어 음성: 신경망 음성(엣지의 'Natural', 애플의 '고품질·Premium')을 먼저, 그다음 구글 음성
+  const voiceScore = (v) => (/natural|neural/i.test(v.name) ? 8 : 0) + (/premium|enhanced|고품질/i.test(v.name) ? 4 : 0) + (/google/i.test(v.name) ? 2 : 0) + (v.localService ? 1 : 0);
   function pickVoice() {
     const ko = synth ? synth.getVoices().filter((v) => /^ko/i.test(v.lang)) : [];
-    voice = ko.find((v) => v.localService) || ko[0] || null;
+    voice = ko.sort((a, b) => voiceScore(b) - voiceScore(a))[0] || null;
   }
 
   function kstTime(iso) {

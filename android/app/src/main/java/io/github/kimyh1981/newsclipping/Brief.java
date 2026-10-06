@@ -57,7 +57,21 @@ final class Brief {
         Picked(String title, boolean perSourceLabel) { this.title = title; this.perSourceLabel = perSourceLabel; }
     }
 
-    private static final String[] ORDINAL = {"먼저", "다음은", "이어서", "마지막으로"};
+    // 아나운서처럼: 요일에 맞춘 인사, 섹션마다 다른 연결 말, 언론사 소개, 맺음말 (js/brief.js와 같은 문장)
+    static String opening(String date) {
+        String extra = date.endsWith("월요일") ? " 새로운 한 주, 힘차게 시작해 보시죠." : date.endsWith("금요일") ? " 한 주의 마무리, 오늘도 힘내세요." : "";
+        return "좋은 아침입니다. " + date + ", 출근길 뉴스 브리핑입니다." + extra;
+    }
+
+    static String intro(String title, int i, int n) {
+        if (i == 0) return "먼저 " + title + "부터 전해 드립니다.";
+        if (i == n - 1) return "끝으로 " + title + "입니다.";
+        return (i % 2 == 1 ? "다음은 " : "이어서 ") + title + "입니다.";
+    }
+
+    static String closing(String date) {
+        return "지금까지 " + date + " 아침 뉴스였습니다. 오늘도 안전 운전하시고, 좋은 하루 보내세요.";
+    }
 
     final String dateLabel;
     /** 서버가 정한 오늘 자동 재생 여부: 주말·공휴일이면 false */
@@ -132,22 +146,22 @@ final class Brief {
             lines.add(new Line("좋은 아침입니다. " + dateLabel + "입니다. 오늘은 뉴스를 가져오지 못했습니다. 안전 운전하세요.", null));
             return lines;
         }
-        lines.add(new Line("좋은 아침입니다. " + dateLabel + " 아침 뉴스 브리핑입니다.", null));
+        lines.add(new Line(opening(dateLabel), null));
         for (int i = 0; i < secs.size(); i++) {
             Picked sec = secs.get(i);
-            String lead = i == secs.size() - 1 && secs.size() > 1 ? ORDINAL[3] : ORDINAL[Math.min(i, 2)];
             lines.add(new Line("", null));
-            lines.add(new Line(lead + " " + sec.title + "입니다.", null));
-            if (sec.items.isEmpty()) { lines.add(new Line("오늘은 새 소식이 없습니다.", null)); continue; }
+            lines.add(new Line(intro(sec.title, i, secs.size()), null));
+            if (sec.items.isEmpty()) { lines.add(new Line("오늘은 새로 들어온 소식이 없습니다.", null)); continue; }
             String last = null;
             for (Item it : sec.items) {
-                if (sec.perSourceLabel && !it.source.equals(last)) lines.add(new Line(it.source + ".", null));
+                boolean same = sec.perSourceLabel && it.source.equals(last);
+                if (sec.perSourceLabel && !same) lines.add(new Line(it.source + " 소식입니다.", null));
                 last = it.source;
-                lines.add(new Line(sentence(it.spoken), it));
+                lines.add(new Line((same ? "또, " : "") + sentence(it.spoken), it));
             }
         }
         lines.add(new Line("", null));
-        lines.add(new Line("이상으로 오늘 아침 브리핑을 마칩니다. 오늘도 안전 운전하세요.", null));
+        lines.add(new Line(closing(dateLabel), null));
         return lines;
     }
 

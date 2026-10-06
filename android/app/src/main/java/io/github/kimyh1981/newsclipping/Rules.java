@@ -48,4 +48,22 @@ public final class Rules {
         while (!out.isEmpty() && out.get(out.size() - 1).isEmpty()) out.remove(out.size() - 1);
         return out;
     }
+
+    /**
+     * 자동으로 고를 음성의 점수: 받지 않은(설치 안 된) 음성은 고르지 않고, 품질이 높을수록,
+     * 품질이 같으면 인터넷이 필요 없는 음성(터널·지하에서도 끊기지 않음)을 먼저 고른다.
+     */
+    public static int voiceScore(int quality, boolean needsNetwork, boolean notInstalled) {
+        if (notInstalled) return Integer.MIN_VALUE;
+        return quality * 2 - (needsNetwork ? 1 : 0);
+    }
+
+    /** 말 빠르기(보통 = 100) */
+    public static final int[] RATES = {85, 100, 115, 130};
+    public static final String[] RATE_LABELS = {"조금 느리게", "보통", "조금 빠르게", "빠르게"};
+
+    public static String rateLabel(int rate) {
+        for (int i = 0; i < RATES.length; i++) if (RATES[i] == rate) return RATE_LABELS[i];
+        return rate + "%";
+    }
 }

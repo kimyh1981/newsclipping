@@ -14,6 +14,8 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.PowerManager;
 import android.provider.Settings;
+import android.speech.tts.TextToSpeech;
+import android.speech.tts.Voice;
 import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.View;
@@ -25,6 +27,7 @@ import android.widget.TextView;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 
 /** 설정 화면: 권한 → 차 블루투스 → 시간대. 설정을 마치면 앱을 닫아도 차에 타면 자동으로 읽는다. */
@@ -32,7 +35,10 @@ public class MainActivity extends Activity {
     private static final String SITE = "https://kimyh1981.github.io/newsclipping/";
     private Prefs prefs;
     private TextView status;
-    private Button permBtn, batteryBtn, carBtn, timeBtn, sourcesBtn;
+    private Button permBtn, batteryBtn, carBtn, timeBtn, sourcesBtn, voiceBtn, rateBtn;
+    private TextToSpeech preview; // 목소리·빠르기를 고를 때 미리 들려준다
+    private boolean previewReady;
+    private Runnable afterPreview;
     private CheckBox enabledBox, weekdaysBox;
 
     @Override
@@ -61,6 +67,10 @@ public class MainActivity extends Activity {
         col.addView(timeBtn);
         sourcesBtn = button("", v -> pickSources());
         col.addView(sourcesBtn);
+        voiceBtn = button("", v -> withPreview(this::pickVoice));
+        rateBtn = button("", v -> withPreview(this::pickRate));
+        col.addView(voiceBtn);
+        col.addView(rateBtn);
 
         weekdaysBox = new CheckBox(this);
         weekdaysBox.setText("평일(월~금)에만 · 공휴일은 서버가 알아서 건너뜁니다");
@@ -85,6 +95,12 @@ public class MainActivity extends Activity {
     }
 
     @Override
+    protected void onDestroy() {
+        if (preview != null) preview.shutdown();
+        super.onDestroy();
+    }
+
+    @Override
     protected void onResume() {
         super.onResume();
         refresh();
@@ -99,6 +115,8 @@ public class MainActivity extends Activity {
         timeBtn.setText("4. 재생 시간: " + Rules.hhmm(prefs.start()) + " ~ " + Rules.hhmm(prefs.end()));
         Set<String> chosen = prefs.sources();
         sourcesBtn.setText("5. 들을 언론사: " + (chosen == null ? "기본" : chosen.size() + "곳 선택"));
+        voiceBtn.setText("6. 목소리: " + (prefs.voice().isEmpty() ? "자동 (가장 자연스러운 음성)" : "직접 고름"));
+        rateBtn.setText("7. 말 빠르기: " + Rules.rateLabel(prefs.rate()));
         weekdaysBox.setChecked(prefs.weekdaysOnly());
         enabledBox.setChecked(prefs.enabled());
         String last = prefs.lastPlayed();
@@ -215,6 +233,87 @@ public class MainActivity extends Activity {
                 })
                 .setNeutralButton("기본값으로", (d, w) -> { prefs.resetSources(); refresh(); })
                 .setNegativeButton("취소", null)
+                .show();
+    }
+
+    /** 미리 듣기용 음성 엔진을 한 번만 띄우고, 준비되면 next를 실행한다 */
+    private void withPreview(Runnable next) {
+        if (previewReady) { next.run(); return; }
+        afterPreview = next;
+        if (preview != null) return; // 준비 중
+        preview = new TextToSpeech(this, st -> runOnUiThread(() -> {
+            if (st != TextToSpeech.SUCCESS) {
+                preview = null;
+                new AlertDialog.Builder(this).setMessage("음성 엔진을 시작하지 못했습니다.").setPositiveButton("확인", null).show();
+                return;
+            }
+            preview.setLanguage(Locale.KOREAN);
+            previewReady = true;
+            if (afterPreview != null) afterPreview.run();
+            afterPreview = null;
+        }));
+    }
+
+    private void say(Voice v, int rate) {
+        if (v != null) preview.setVoice(v);
+        preview.setSpeechRate(rate / 100f);
+        preview.speak(Voices.SAMPLE, TextToSpeech.QUEUE_FLUSH, null, "preview");
+    }
+
+    private void openTtsSettings() {
+        try {
+            startActivity(new Intent("com.android.settings.TTS_SETTINGS"));
+        } catch (RuntimeException e) {
+            startActivity(new Intent(Settings.ACTION_SETTINGS));
+        }
+    }
+
+    /** 폰에 든 한국어 음성 목록: 누르면 미리 들려주고, 저장하면 차에서 그 음성으로 읽는다 */
+    private void pickVoice() {
+        List<Voice> voices = Voices.korean(preview);
+        if (voices.isEmpty()) {
+            new AlertDialog.Builder(this)
+                    .setMessage("고를 수 있는 한국어 음성이 없습니다. 설정의 '텍스트 음성 변환'에서 Google 음성 서비스와 한국어 음성 데이터를 받아 주세요.")
+                    .setPositiveButton("설정 열기", (d, w) -> openTtsSettings())
+                    .setNegativeButton("닫기", null).show();
+            return;
+        }
+        String[] labels = new String[voices.size() + 1];
+        labels[0] = "자동 (가장 자연스러운 음성)";
+        int[] choice = {0};
+        for (int i = 0; i < voices.size(); i++) {
+            labels[i + 1] = Voices.label(voices.get(i), i);
+            if (voices.get(i).getName().equals(prefs.voice())) choice[0] = i + 1;
+        }
+        new AlertDialog.Builder(this)
+                .setTitle("목소리를 고르세요 (누르면 들려 드립니다)")
+                .setSingleChoiceItems(labels, choice[0], (d, i) -> {
+                    choice[0] = i;
+                    say(i == 0 ? Voices.best(voices) : voices.get(i - 1), prefs.rate());
+                })
+                .setPositiveButton("저장", (d, w) -> {
+                    preview.stop();
+                    prefs.setVoice(choice[0] == 0 ? "" : voices.get(choice[0] - 1).getName());
+                    refresh();
+                })
+                .setNeutralButton("음성 더 받기", (d, w) -> { preview.stop(); openTtsSettings(); })
+                .setNegativeButton("취소", (d, w) -> preview.stop())
+                .show();
+    }
+
+    private void pickRate() {
+        int[] choice = {1};
+        for (int i = 0; i < Rules.RATES.length; i++) if (Rules.RATES[i] == prefs.rate()) choice[0] = i;
+        List<Voice> voices = Voices.korean(preview);
+        Voice current = null;
+        for (Voice v : voices) if (v.getName().equals(prefs.voice())) current = v;
+        if (current == null) current = Voices.best(voices);
+        final Voice voice = current;
+        new AlertDialog.Builder(this)
+                .setTitle("말 빠르기 (누르면 들려 드립니다)")
+                .setSingleChoiceItems(Rules.RATE_LABELS, choice[0], (d, i) -> { choice[0] = i; say(voice, Rules.RATES[i]); })
+                .setPositiveButton("저장", (d, w) -> { preview.stop(); prefs.setRate(Rules.RATES[choice[0]]); refresh(); })
+                .setNegativeButton("취소", (d, w) -> preview.stop())
                 .show();
     }
 
