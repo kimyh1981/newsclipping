@@ -100,10 +100,34 @@ test('구글 번역이 429면 쉬었다가 다시 보내고, 기본 언론사부
 });
 
 test('번역이 막히면 그 기사는 읽지 않고 기록만 남긴다', async (t) => {
-  t.mock.method(globalThis, 'fetch', async (url) => url.startsWith('https://translate.googleapis.com/') ? new Response('', { status: 503 }) : new Response(feed('Giá phân bón tăng mạnh')));
+  t.mock.method(globalThis, 'fetch', async (url) => url === 'https://vn' ? new Response(feed('Giá phân bón tăng mạnh')) : new Response('', { status: 503 }));
   const b = await collect({ sections: [{ id: 'vn', title: '베트남', lang: 'vi', limit: 3, sources: [{ id: 'vn', name: '가', url: 'https://vn' }] }] }, NOW);
   assert.equal(b.sections[0].sources[0].items.length, 0);
   assert.ok(b.log.some((l) => l.includes('번역 실패 (HTTP 503)')));
+});
+
+test('구글 번역이 계속 429면 그날은 건너뛰고 다른 번역기로 옮긴다', async (t) => {
+  const { RETRY } = require('../tools/collect.js');
+  const saved = RETRY.waits;
+  RETRY.waits = [0];
+  t.after(() => { RETRY.waits = saved; });
+  const hits = { google: 0, dict: 0 };
+  t.mock.method(globalThis, 'fetch', async (url) => {
+    if (url.startsWith('https://translate.googleapis.com/')) { hits.google++; return new Response('', { status: 429 }); }
+    if (url.startsWith('https://clients5.google.com/')) {
+      hits.dict++;
+      return Response.json([[`번역 ${new URL(url).searchParams.get('q')}`, 'en']]);
+    }
+    return new Response(feed(url.includes('a') ? 'Alpha news' : 'Beta news'));
+  });
+  const b = await collect({ sections: [{ id: 'w', title: '국제', lang: 'en', limit: 5, sources: [
+    { id: 'a', name: '가', url: 'https://a' },
+    { id: 'b', name: '나', url: 'https://b', default: false },
+  ] }] }, NOW);
+  assert.deepEqual(b.sections[0].sources.map((s) => s.items.map((i) => i.title)), [['번역 Alpha news'], ['번역 Beta news']]);
+  assert.equal(hits.google, 2, '429가 두 번 오면 그 뒤로는 구글 번역에 보내지 않는다');
+  assert.equal(hits.dict, 2);
+  assert.ok(b.log.includes('번역기: google-dict 2번 (429로 막힘: google)'), b.log.join('\n'));
 });
 
 test('언론사마다 기사를 따로 담고, 고른 언론사만으로 원고를 만든다 (같은 사건은 한 번만)', async (t) => {
