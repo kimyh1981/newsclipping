@@ -71,3 +71,12 @@ test('리드 요약: 키 없이 기사마다 summary를 채우고, 외국 기사
   assert.ok(log.some((l) => l.includes('본문 없음')));
   assert.ok(log.includes('요약(lead): 3건 중 2건'));
 });
+
+test('네이버 기사 본문(dic_area)은 <br>로 나뉜 문단을 읽고 사진 설명은 뺀다', () => {
+  const p1 = '정부는 6일 내년도 비료 가격 안정 대책을 발표하고 농가 부담을 줄이기 위한 지원을 늘리기로 했다.';
+  const p2 = '농림축산식품부는 요소비료 수입선을 넓히고 무기질 비료 가격 상승분의 일부를 보전한다고 밝혔다.';
+  const p3 = '업계는 국제 원료 가격이 다시 오르고 있어 지원 규모가 충분하지 않을 수 있다고 우려했다.';
+  const html = `<html><body><div class="menu"><p>메뉴에 있는 아주 긴 문장이 여기 하나 들어 있다고 치자.</p></div>
+<article id="dic_area" class="go_trans _article_content"><span class="end_photo_org"><img src="x.jpg"><em class="img_desc">비료를 싣는 모습. 사진=연합뉴스 제공 설명이 꽤 길다</em></span><br>${p1}<br><br>${p2}<br><br>${p3}</article></body></html>`;
+  assert.equal(articleText(html, rss.decodeEntities), [p1, p2, p3].join('\n'));
+});

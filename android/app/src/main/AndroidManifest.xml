@@ -10,6 +10,8 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+    <!-- 차 연결로 읽기 시작할 때 화면 밖에서 자막 화면을 띄우려면 '다른 앱 위에 표시' 허용이 필요하다 -->
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
 
     <queries>
         <intent>
@@ -33,6 +35,15 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- 자막 화면: 잠금 화면 위에도 뜨고, 최근 앱 목록에는 남기지 않는다 -->
+        <activity
+            android:name=".CaptionActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:launchMode="singleTask"
+            android:taskAffinity="io.github.kimyh1981.newsclipping.captions"
+            android:theme="@android:style/Theme.Material.NoActionBar" />
 
         <!-- 블루투스 ACL 연결·끊김은 Android 8 이상에서도 매니페스트 수신기로 받을 수 있는 예외 브로드캐스트다 -->
         <receiver

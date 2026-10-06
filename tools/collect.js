@@ -11,6 +11,7 @@ const brief = require('../js/brief.js');
 const holidays = require('./holidays.js');
 const { summarize } = require('./summarize.js');
 const tts = require('./tts.js');
+const naver = require('./naver.js');
 
 const SPARE = 2; // 언론사마다 take보다 2건 더 모은다: 다른 언론사와 겹치는 기사를 빼고도 take건을 채우도록
 const UA = 'Mozilla/5.0 (compatible; news-briefing/1.0; +https://github.com/kimyh1981/Personal-Project)';
@@ -138,8 +139,18 @@ async function get(url) {
   return decode(new Uint8Array(await res.arrayBuffer()), res.headers.get('content-type') || '');
 }
 
-// 언론사 RSS를 먼저 읽고, 막히거나 비었으면 구글 뉴스 검색으로 대신한다
-async function readSource(src, log, lang) {
+// 네이버의 1면·주요 뉴스(언론사가 고른 헤드라인)를 먼저, 안 되면 언론사 RSS, 그것도 막히거나 비었으면 구글 뉴스 검색으로 대신한다
+async function readSource(src, log, lang, now = Date.now()) {
+  if (src.naver) {
+    const kind = src.front ? '네이버 1면' : '네이버 주요 뉴스';
+    try {
+      const items = await naver.read(src, get, now);
+      log.push(`${src.name}: ${kind} ${items.length}건`);
+      return items;
+    } catch (err) {
+      log.push(`${src.name}: ${kind} 실패 (${err.cause?.code || err.message})`);
+    }
+  }
   const tries = [];
   if (src.url) tries.push(['RSS', src.url]);
   if (src.google) tries.push(['구글', googleUrl(src.google, src.when, lang)]);
@@ -179,7 +190,7 @@ async function collect(config, now = Date.now(), key = '', opts = {}) {
     sources: await Promise.all(sec.sources.map(async (source) => {
       const lang = source.lang || sec.lang || 'ko';
       const take = source.take || 3;
-      const read = await readSource(source, log, lang);
+      const read = await readSource(source, log, lang, now);
       const items = rss.pick({ ...sec, limit: 99 }, [{ source: { ...source, lang, take: take + SPARE }, items: read }], now, []);
       return { id: source.id, name: source.name, lang, default: source.default !== false, take, items };
     })),

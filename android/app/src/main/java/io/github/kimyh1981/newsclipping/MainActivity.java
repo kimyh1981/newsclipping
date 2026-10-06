@@ -51,8 +51,8 @@ import java.util.Set;
 public class MainActivity extends Activity {
     private static final String SITE = "https://kimyh1981.github.io/newsclipping/";
     private Prefs prefs;
-    private TextView footer, permVal, batteryVal, carVal, timeVal, sourcesVal, voiceVal, rateVal;
-    private Switch enabledSw, weekdaysSw, softenSw;
+    private TextView footer, permVal, batteryVal, overlayVal, carVal, timeVal, sourcesVal, voiceVal, rateVal;
+    private Switch enabledSw, weekdaysSw, softenSw, captionsSw;
     private ImageView playBtn;
     private TextToSpeech preview; // 목소리·빠르기를 고를 때 미리 들려준다
     private boolean previewReady;
@@ -126,17 +126,20 @@ public class MainActivity extends Activity {
 
         LinearLayout today = section(col, "오늘 뉴스", null);
         sourcesVal = row(today, "들을 언론사", v -> pickSources(), true);
+        row(today, "자막 화면 (터치하면 전체 듣기)", v -> startActivity(new Intent(this, CaptionActivity.class)), true).setText("");
         row(today, "오늘 기사 목록 (웹)", v -> startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(SITE))), false).setText("");
 
         LinearLayout setup = section(col, "처음 한 번만", "두 가지를 허용해야 차에 탔을 때 앱을 열지 않아도 자동으로 읽습니다.");
         permVal = row(setup, "블루투스·알림 권한", v -> askPermissions(), true);
         batteryVal = row(setup, "배터리 사용 제한 없음", v -> askBattery(), false);
 
-        LinearLayout auto = section(col, "자동 재생", "공휴일은 서버가 알아서 건너뜁니다.");
+        LinearLayout auto = section(col, "자동 재생", "공휴일은 서버가 알아서 건너뜁니다. 자막 화면은 '다른 앱 위에 표시'를 허용해야 차에 탔을 때 저절로 뜹니다.");
         enabledSw = switchRow(auto, "차에 타면 자동으로 읽기", on -> prefs.setEnabled(on), true);
         carVal = row(auto, "차 블루투스", v -> pickCar(), true);
         timeVal = row(auto, "재생 시간", v -> pickTime(), true);
-        weekdaysSw = switchRow(auto, "평일에만", on -> prefs.setWeekdaysOnly(on), false);
+        weekdaysSw = switchRow(auto, "평일에만", on -> prefs.setWeekdaysOnly(on), true);
+        captionsSw = switchRow(auto, "자막 화면 띄우기", on -> prefs.setCaptions(on), true);
+        overlayVal = row(auto, "다른 앱 위에 표시 (자막 화면용)", v -> startActivity(new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:" + getPackageName()))), false);
 
         LinearLayout listen = section(col, "듣기", "목소리와 빠르기는 고르는 동안 미리 들려 드립니다.");
         voiceVal = row(listen, "목소리", v -> withPreview(this::pickVoice), true);
@@ -192,6 +195,8 @@ public class MainActivity extends Activity {
         enabledSw.setChecked(prefs.enabled());
         weekdaysSw.setChecked(prefs.weekdaysOnly());
         softenSw.setChecked(prefs.soften());
+        captionsSw.setChecked(prefs.captions());
+        status(overlayVal, Settings.canDrawOverlays(this));
         String last = prefs.lastPlayed();
         footer.setText("버전 " + BuildConfig.VERSION_NAME + (last.isEmpty() ? "" : " · 마지막 자동 재생 " + last));
     }

@@ -21,6 +21,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
+import android.provider.Settings;
 import android.speech.tts.TextToSpeech;
 import android.speech.tts.UtteranceProgressListener;
 import android.util.Log;
@@ -83,6 +84,8 @@ public class NewsService extends Service {
     private AudioAttributes attrs;
     private int sessionId;
     private final Runnable afterSilence = this::advance;
+    /** 차 연결로 저절로 시작했다 (자막 화면을 띄운다) */
+    private boolean autoStart;
     /** 지금 읽는 원고 줄 번호 */
     private volatile int current;
     /** 통화·다른 앱 소리로 멈춘 상태. 다시 들으면 멈춘 기사 처음부터 이어 읽는다 */
@@ -130,7 +133,22 @@ public class NewsService extends Service {
     private static void stateChanged() {
         Runnable r = onStateChange;
         if (r != null) new Handler(Looper.getMainLooper()).post(r);
+        Runnable c = onCaption;
+        if (c != null) new Handler(Looper.getMainLooper()).post(c);
     }
+
+    /** 자막 화면에 띄울 것: 언론사, 기사 제목, 지금 읽는 글, 전체 듣기 중인지 */
+    static final class Caption {
+        final String source, title, text;
+        final boolean full;
+        Caption(String source, String title, String text, boolean full) { this.source = source; this.title = title; this.text = text; this.full = full; }
+    }
+    private static volatile Caption caption;
+    /** 자막 화면이 지금 읽는 글이 바뀔 때마다(그리고 멈추거나 끝날 때) 다시 그리려고 단다 */
+    static Runnable onCaption;
+
+    /** 읽는 중이 아니면 null */
+    static Caption caption() { return running == null ? null : caption; }
 
     /** 앱 화면의 이전·전체 듣기·다음 버튼 */
     static void control(String action) {
@@ -175,6 +193,7 @@ public class NewsService extends Service {
         running = this;
         stateChanged();
         boolean manual = intent != null && intent.getBooleanExtra(EXTRA_MANUAL, false);
+        autoStart = !manual;
         new Thread(() -> prepare(manual), "news-fetch").start();
         return START_NOT_STICKY;
     }
@@ -185,7 +204,8 @@ public class NewsService extends Service {
 
     private void startInForeground(String text) {
         ensureChannel(this);
-        PendingIntent open = PendingIntent.getActivity(this, 0, new Intent(this, MainActivity.class), PendingIntent.FLAG_IMMUTABLE);
+        // 읽는 중에 알림을 누르면 자막 화면, 가져오는 중이면 앱 화면
+        PendingIntent open = PendingIntent.getActivity(this, tts != null ? 6 : 0, new Intent(this, tts != null ? CaptionActivity.class : MainActivity.class), PendingIntent.FLAG_IMMUTABLE);
         Notification.Builder b = new Notification.Builder(this, CHANNEL)
                 .setSmallIcon(android.R.drawable.ic_lock_silent_mode_off)
                 .setContentTitle("뉴스클리핑")
@@ -334,6 +354,7 @@ public class NewsService extends Service {
             });
             startSession();
             startInForeground(PLAYING_TEXT);
+            openCaptions();
             play(stepsFrom(0));
         });
     }
@@ -371,6 +392,7 @@ public class NewsService extends Service {
             showLine(i);
         }
         if (s.silence > 0) { main.postDelayed(afterSilence, s.silence); return; }
+        showCaption(s);
         File f = clips.get(s.text);
         if (f == null && s.text.startsWith("또, ") && clips.containsKey(s.text.substring(3)) && clips.containsKey("또,")) {
             queue.add(pos, new Step(s.id + "b", s.text.substring(3), 0)); // '또,'와 기사 제목을 따로 녹음해 두었다
@@ -378,6 +400,25 @@ public class NewsService extends Service {
         }
         if (f != null && playClip(f)) return;
         tts.speak(s.text, TextToSpeech.QUEUE_FLUSH, speakParams, gen + ":" + s.id);
+    }
+
+    private void showCaption(Step s) {
+        boolean full = s.id.startsWith("S");
+        int i = Integer.parseInt(s.id.substring(1, s.id.indexOf('.')));
+        Brief.Item it = i < lines.size() ? lines.get(i).item : null;
+        caption = it == null ? new Caption("뉴스클리핑", "", s.text, false) : new Caption(it.source, it.title, s.text, full);
+        Runnable c = onCaption;
+        if (c != null) c.run();
+    }
+
+    /** 차에서 자동으로 읽기 시작하면 자막 화면을 띄운다. 화면 밖(백그라운드)에서 띄우려면 '다른 앱 위에 표시' 허용이 필요하다 */
+    private void openCaptions() {
+        if (!autoStart || !new Prefs(this).captions() || !Settings.canDrawOverlays(this)) return;
+        try {
+            startActivity(new Intent(this, CaptionActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+        } catch (RuntimeException e) {
+            Log.w(TAG, "자막 화면을 띄우지 못함: " + e);
+        }
     }
 
     /** 녹음 파일을 앱에서 직접 튼다. 치찰음 줄이기(이퀄라이저)가 걸리도록 같은 오디오 세션으로 */
@@ -594,6 +635,7 @@ public class NewsService extends Service {
         if (session != null) { session.setActive(false); session.release(); session = null; }
         if (audio != null && focus != null) audio.abandonAudioFocusRequest(focus);
         if (running == this) running = null;
+        caption = null;
         stateChanged();
         stopForeground(STOP_FOREGROUND_REMOVE);
         stopSelf();
