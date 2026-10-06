@@ -29,6 +29,11 @@ function wanted(b) {
   add(brief.opening(date), 'fixed');
   add(brief.closing(date), 'fixed');
   add(brief.EMPTY, 'fixed');
+  // 다음 날 아침 서버 실행이 늦거나 빠지면 앱이 이 원고를 다음 날 날짜로 읽는다: 그 인사·맺음말도 녹음해 둔다
+  const next = brief.koreanDate(Date.parse(b.generatedAt) + 24 * 3600e3);
+  add(brief.opening(next), 'fixed');
+  add(brief.STALE, 'fixed');
+  add(brief.closing(next), 'fixed');
   add(`좋은 아침입니다. ${date}입니다. 오늘은 뉴스를 가져오지 못했습니다. 안전 운전하세요.`, 'fixed');
   for (const sec of b.sections) {
     add(brief.intro(sec.title, 0, 3), 'fixed'); // 먼저 ~부터 전해 드립니다.

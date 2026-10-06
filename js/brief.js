@@ -31,6 +31,8 @@
   }
 
   const EMPTY = '오늘은 새로 들어온 소식이 없습니다.';
+  // 서버가 오늘 원고를 아직 못 만들어 앱이 어제 원고를 읽을 때 인사 뒤에 붙인다 (Brief.STALE과 같은 문장)
+  const STALE = '오늘 아침 소식은 아직 정리되지 않아, 어제 모은 뉴스로 전해 드립니다.';
   const closing = (date) => `지금까지 ${date} 아침 뉴스였습니다. 오늘도 안전 운전하시고, 좋은 하루 보내세요.`;
 
   // 차에서 들을 원고. 문장 끝마다 마침표를 넣어 음성이 잠깐 쉬게 한다
@@ -125,5 +127,5 @@
     return ['open', ...ids, 'close'].join(' ');
   }
 
-  return { koreanDate, sentence, buildScript, defaults, select, script, piece, iosCode, opening, intro, closing, EMPTY };
+  return { koreanDate, sentence, buildScript, defaults, select, script, piece, iosCode, opening, intro, closing, EMPTY, STALE };
 });
