@@ -52,7 +52,7 @@ public class MainActivity extends Activity {
     private static final String SITE = "https://kimyh1981.github.io/newsclipping/";
     private Prefs prefs;
     private TextView footer, permVal, batteryVal, carVal, timeVal, sourcesVal, voiceVal, rateVal;
-    private Switch enabledSw, weekdaysSw;
+    private Switch enabledSw, weekdaysSw, softenSw;
     private TextToSpeech preview; // 목소리·빠르기를 고를 때 미리 들려준다
     private boolean previewReady;
     private Runnable afterPreview;
@@ -95,11 +95,26 @@ public class MainActivity extends Activity {
         // 지금 듣기 / 멈춤
         LinearLayout play = new LinearLayout(this);
         play.setOrientation(LinearLayout.HORIZONTAL);
-        play.addView(iconPill(true, "지금 듣기", tint, 0xFFFFFFFF, v -> NewsService.start(this, true)), new LinearLayout.LayoutParams(0, dp(50), 1f));
-        View gap = new View(this);
-        play.addView(gap, new LinearLayout.LayoutParams(dp(10), 1));
-        play.addView(iconPill(false, "멈춤", card, red, v -> NewsService.stopIfRunning()), new LinearLayout.LayoutParams(0, dp(50), 1f));
+        play.addView(iconPill(Glyph.PLAY, "지금 듣기", tint, 0xFFFFFFFF, v -> NewsService.start(this, true)), new LinearLayout.LayoutParams(0, dp(50), 1f));
+        play.addView(new View(this), new LinearLayout.LayoutParams(dp(10), 1));
+        play.addView(iconPill(Glyph.STOP, "멈춤", card, red, v -> NewsService.stopIfRunning()), new LinearLayout.LayoutParams(0, dp(50), 1f));
         col.addView(play);
+
+        // 이전 기사 / 듣던 기사 전체 듣기 / 다음 기사 (읽는 중에만 동작)
+        LinearLayout nav = new LinearLayout(this);
+        nav.setOrientation(LinearLayout.HORIZONTAL);
+        nav.setPadding(0, dp(10), 0, 0);
+        nav.addView(iconPill(Glyph.PREV, "이전 기사", card, tint, v -> NewsService.control(NewsService.ACTION_PREV)), new LinearLayout.LayoutParams(0, dp(46), 1f));
+        nav.addView(new View(this), new LinearLayout.LayoutParams(dp(10), 1));
+        TextView fullBtn = text("전체 듣기", 16, tint);
+        fullBtn.setTypeface(Typeface.DEFAULT_BOLD);
+        fullBtn.setGravity(Gravity.CENTER);
+        fullBtn.setBackground(pressable(rounded(card, dp(14))));
+        fullBtn.setOnClickListener(v -> NewsService.control(NewsService.ACTION_MORE));
+        nav.addView(fullBtn, new LinearLayout.LayoutParams(0, dp(46), 1f));
+        nav.addView(new View(this), new LinearLayout.LayoutParams(dp(10), 1));
+        nav.addView(iconPill(Glyph.NEXT, "다음 기사", card, tint, v -> NewsService.control(NewsService.ACTION_NEXT)), new LinearLayout.LayoutParams(0, dp(46), 1f));
+        col.addView(nav);
 
         LinearLayout setup = section(col, "처음 한 번만", "두 가지를 허용해야 차에 탔을 때 앱을 열지 않아도 자동으로 읽습니다.");
         permVal = row(setup, "블루투스·알림 권한", v -> askPermissions(), true);
@@ -114,7 +129,8 @@ public class MainActivity extends Activity {
         LinearLayout listen = section(col, "듣기", "목소리와 빠르기는 고르는 동안 미리 들려 드립니다.");
         sourcesVal = row(listen, "들을 언론사", v -> pickSources(), true);
         voiceVal = row(listen, "목소리", v -> withPreview(this::pickVoice), true);
-        rateVal = row(listen, "말 빠르기", v -> withPreview(this::pickRate), false);
+        rateVal = row(listen, "말 빠르기", v -> withPreview(this::pickRate), true);
+        softenSw = switchRow(listen, "치찰음 줄이기 (차 블루투스)", on -> prefs.setSoften(on), false);
 
         LinearLayout more = section(col, "더 보기", null);
         row(more, "오늘 기사 목록 (웹)", v -> startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(SITE))), false).setText("");
@@ -153,6 +169,7 @@ public class MainActivity extends Activity {
         rateVal.setText(Rules.rateLabel(prefs.rate()));
         enabledSw.setChecked(prefs.enabled());
         weekdaysSw.setChecked(prefs.weekdaysOnly());
+        softenSw.setChecked(prefs.soften());
         String last = prefs.lastPlayed();
         footer.setText("버전 " + BuildConfig.VERSION_NAME + (last.isEmpty() ? "" : " · 마지막 자동 재생 " + last));
     }
@@ -175,10 +192,10 @@ public class MainActivity extends Activity {
         return new RippleDrawable(ColorStateList.valueOf(dark ? 0x33FFFFFF : 0x1F000000), content, null);
     }
 
-    /** 글자 없이 재생(▶)·멈춤(■) 기호만 그린 버튼. 글꼴마다 ▶와 ■ 크기가 달라서 직접 같은 크기로 그린다 */
-    private ImageView iconPill(boolean playIcon, String label, int fill, int color, View.OnClickListener l) {
+    /** 글자 없이 기호(재생·멈춤·이전·다음)만 그린 버튼. 글꼴마다 ▶와 ■ 크기가 달라서 직접 같은 크기로 그린다 */
+    private ImageView iconPill(int kind, String label, int fill, int color, View.OnClickListener l) {
         ImageView v = new ImageView(this);
-        v.setImageDrawable(new Glyph(playIcon, color, dp(22)));
+        v.setImageDrawable(new Glyph(kind, color, dp(22)));
         v.setScaleType(ImageView.ScaleType.CENTER);
         v.setContentDescription(label);
         v.setBackground(pressable(rounded(fill, dp(14))));
@@ -186,14 +203,15 @@ public class MainActivity extends Activity {
         return v;
     }
 
-    /** size×size 칸에 꽉 차는 재생 삼각형, 또는 같은 칸 안에서 눈으로 보기에 같은 크기인 정사각형 */
+    /** size×size 칸에 그리는 기호: 재생 삼각형, 같은 칸에서 같은 크기로 보이는 정사각형, 이전·다음(막대 + 삼각형) */
     private static final class Glyph extends Drawable {
-        private final boolean play;
+        static final int PLAY = 0, STOP = 1, PREV = 2, NEXT = 3;
+        private final int kind;
         private final int size;
         private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
 
-        Glyph(boolean play, int color, int size) {
-            this.play = play;
+        Glyph(int kind, int color, int size) {
+            this.kind = kind;
             this.size = size;
             paint.setColor(color);
         }
@@ -202,11 +220,27 @@ public class MainActivity extends Activity {
         public void draw(Canvas c) {
             Rect b = getBounds();
             float s = size, x = b.left, y = b.top;
-            if (play) {
+            if (kind == PLAY) {
                 Path p = new Path();
                 p.moveTo(x + s * 0.12f, y);
                 p.lineTo(x + s, y + s / 2f);
                 p.lineTo(x + s * 0.12f, y + s);
+                p.close();
+                c.drawPath(p, paint);
+            } else if (kind == PREV || kind == NEXT) {
+                float bar = s * 0.16f, top = y + s * 0.1f, bottom = y + s * 0.9f;
+                Path p = new Path();
+                if (kind == NEXT) {
+                    p.moveTo(x + s * 0.08f, top);
+                    p.lineTo(x + s * 0.76f, y + s / 2f);
+                    p.lineTo(x + s * 0.08f, bottom);
+                    c.drawRect(x + s * 0.8f, top, x + s * 0.8f + bar, bottom, paint);
+                } else {
+                    p.moveTo(x + s * 0.92f, top);
+                    p.lineTo(x + s * 0.24f, y + s / 2f);
+                    p.lineTo(x + s * 0.92f, bottom);
+                    c.drawRect(x + s * 0.2f - bar, top, x + s * 0.2f, bottom, paint);
+                }
                 p.close();
                 c.drawPath(p, paint);
             } else {

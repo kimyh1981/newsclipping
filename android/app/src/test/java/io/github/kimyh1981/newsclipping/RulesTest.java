@@ -51,4 +51,24 @@ public class RulesTest {
         assertEquals("조금 느리게", Rules.rateLabel(85));
         assertEquals("90%", Rules.rateLabel(90));
     }
+
+    @Test public void previousAndNextArticle() {
+        boolean[] f = {false, false, true, false, true, true, false};
+        assertEquals(2, Rules.nextItem(f, 0));
+        assertEquals(4, Rules.nextItem(f, 2));
+        assertEquals(7, Rules.nextItem(f, 5)); // 마지막 기사 다음은 맺음말 쪽으로
+        assertEquals(2, Rules.prevItem(f, 4));
+        assertEquals(4, Rules.prevItem(f, 5));
+        assertEquals(0, Rules.prevItem(f, 2)); // 첫 기사 앞은 처음부터
+        assertEquals(5, Rules.prevItem(f, 9));
+    }
+
+    @Test public void softenCutsHissKeepsBody() {
+        short min = -1500, max = 1500;
+        assertTrue(Rules.softenLevel(14000, min, max) < Rules.softenLevel(3600, min, max));
+        assertTrue(Rules.softenLevel(3600, min, max) < 0);
+        assertEquals(0, Rules.softenLevel(910, min, max));
+        assertTrue(Rules.softenLevel(230, min, max) > 0);
+        assertEquals(-300, Rules.softenLevel(14000, (short) -300, max)); // 기기 한도 안으로
+    }
 }

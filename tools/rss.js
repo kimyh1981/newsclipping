@@ -86,7 +86,8 @@ function spoken(title) {
   s = s.replace(/[‘’“”"'`]/g, '');
   s = s.replace(/…|\.{2,}/g, ', ');
   s = s.replace(/↑/g, ' 상승').replace(/↓/g, ' 하락').replace(/[→⇒]/g, ', ');
-  s = s.replace(/·/g, ' ').replace(/[|/]/g, ', ').replace(/(\d)\s*~\s*(?=\d)/g, '$1에서 ').replace(/~/g, ', ');
+  // 가운뎃점: 한 글자끼리는 붙여 읽고(한·미 → 한미), 낱말 사이는 쉼표처럼 잠깐 쉰다(비료·농약 → 비료, 농약)
+  s = s.replace(/(^|[^가-힣·])[가-힣](?:\s*·\s*[가-힣])+(?![가-힣])/g, (m) => m.replace(/\s*·\s*/g, '')).replace(/\s*·\s*/g, ', ').replace(/[|/]/g, ', ').replace(/(\d)\s*~\s*(?=\d)/g, '$1에서 ').replace(/~/g, ', ');
   s = s.replace(/\s*,(?:\s*,)*\s*(?!\d)/g, ', ').replace(/\s+/g, ' ').replace(/^[\s,]+|[\s,]+$/g, '');
   return s;
 }

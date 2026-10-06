@@ -47,6 +47,10 @@ final class Prefs {
     int rate() { return p.getInt("rate", 100); }
     void setRate(int rate) { p.edit().putInt("rate", rate).apply(); }
 
+    /** 차 블루투스에서 'ㅅ·ㅆ' 소리(치찰음)가 날카롭지 않게 고음을 줄인다 */
+    boolean soften() { return p.getBoolean("soften", true); }
+    void setSoften(boolean v) { p.edit().putBoolean("soften", v).apply(); }
+
     static String today() { return new SimpleDateFormat("yyyy-MM-dd", Locale.ROOT).format(new Date()); }
     boolean playedToday() { return today().equals(p.getString("lastPlayed", "")); }
     void markPlayed() { p.edit().putString("lastPlayed", today()).apply(); }

@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { summarize, resolveGoogle, articleText, lead } = require('../tools/summarize.js');
+const { summarize, resolveGoogle, articleText, lead, body } = require('../tools/summarize.js');
 const rss = require('../tools/rss.js');
 
 const ARTICLE = `<html><head><meta name="description" content="요약 설명"><script>var x = "<p>스크립트 속 문단은 빼야 합니다 아주 길게 써 둔 문장</p>";</script></head><body>
@@ -21,6 +21,16 @@ test('기사 페이지에서 본문 문단만 뽑고, 리드는 첫 두세 문�
   assert.doesNotMatch(l, /뉴시스|홍길동|@/);
   assert.ok(l.length <= 480 && l.length >= 60, l);
   assert.match(l, /발표했다\.$|오른다\.$/);
+});
+
+test('전체 듣기 본문: 문장 단위로 앞에서부터 한도까지, 머리말·전자우편은 뺀다', () => {
+  const text = articleText(ARTICLE, rss.decodeEntities);
+  const b = body(text);
+  assert.ok(b.startsWith('정부가 내년부터 화학비료'), b);
+  assert.match(b, /현장 설명회를 열 계획이다\. 업계는 미생물 비료 수요가 늘 것으로 내다봤다\.$/);
+  assert.doesNotMatch(b, /뉴시스|홍길동|@|저작권/);
+  const short = body(text, 120);
+  assert.ok(short.length <= 160 && /[.]$/.test(short), short);
 });
 
 test('구글 뉴스 기사 주소는 서명값으로 원래 기사 주소를 받는다', async (t) => {

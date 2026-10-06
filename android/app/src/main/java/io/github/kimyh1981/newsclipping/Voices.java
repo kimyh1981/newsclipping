@@ -48,6 +48,7 @@ final class Voices {
         if (pick == null) pick = best(voices);
         if (pick != null) tts.setVoice(pick);
         tts.setSpeechRate(prefs.rate() / 100f);
+        tts.setPitch(0.95f); // 살짝 낮게: 높고 날카로운 끝소리가 줄어 차에서 듣기 편하다
     }
 
     static String label(Voice v, int i) {
