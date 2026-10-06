@@ -1,0 +1,28 @@
+# PR에서 출처·번역을 실제로 불러 보아 원고가 제대로 나오는지 확인한다 (배포는 하지 않는다)
+name: News check
+
+on:
+  pull_request:
+    paths: ['tools/**', 'feeds.json', 'tests/**', '.github/workflows/news-check.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm test
+      - name: Live collection
+        timeout-minutes: 4
+        run: |
+          node tools/collect.js out
+          echo '----- 원고 -----'
+          cat out/briefing.txt
+          echo '----- 번역 원문 -----'
+          node -e "const b=require('./out/briefing.json');for(const s of b.sections)for(const i of s.items)if(i.original)console.log(i.source+' | '+i.original+' => '+i.title)"
