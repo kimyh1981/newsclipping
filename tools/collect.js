@@ -10,6 +10,7 @@ const rss = require('./rss.js');
 const brief = require('../js/brief.js');
 const holidays = require('./holidays.js');
 const { summarize } = require('./summarize.js');
+const tts = require('./tts.js');
 
 const SPARE = 2; // 언론사마다 take보다 2건 더 모은다: 다른 언론사와 겹치는 기사를 빼고도 take건을 채우도록
 const UA = 'Mozilla/5.0 (compatible; news-briefing/1.0; +https://github.com/kimyh1981/Personal-Project)';
@@ -210,6 +211,11 @@ if (require.main === module) {
       summaryMode: process.env.SUMMARY_MODE || 'lead', // 저장소 Variables에서 SUMMARY_MODE=claude로 바꾸면 Claude 요약
       summaryKey: process.env.ANTHROPIC_API_KEY || '',
       summaryLimit: process.env.SUMMARY_LIMIT === undefined ? 40 : Number(process.env.SUMMARY_LIMIT),
+    });
+    // 구글 클라우드 음성으로 원고 줄을 미리 녹음 (저장소 비밀값 GOOGLE_TTS_KEY가 있을 때만, 없으면 앱이 폰 음성으로 읽는다)
+    b.audio = await tts.record(b, {
+      out, key: process.env.GOOGLE_TTS_KEY || '', cache: process.env.TTS_CACHE || '', voice: process.env.TTS_VOICE || tts.VOICE,
+      budget: Number(process.env.TTS_DAILY_CHARS) || 25000, log: b.log, run: limiter(4),
     });
     fs.writeFileSync(path.join(out, 'briefing.json'), JSON.stringify(b, null, 1));
     fs.writeFileSync(path.join(out, 'briefing.txt'), speechText(b));

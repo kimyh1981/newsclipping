@@ -81,9 +81,24 @@ final class Brief {
     /** 서버가 정한 오늘 자동 재생 여부: 주말·공휴일이면 false */
     final boolean playToday;
     final List<Section> sections;
+    /** 서버가 구글 음성으로 녹음해 둔 줄(audioId)과 그 파일이 있는 곳(briefing.json 기준 상대 경로). 없으면 빈 목록 */
+    final Set<String> audioIds;
+    final String audioBase;
 
-    private Brief(String dateLabel, boolean playToday, List<Section> sections) {
-        this.dateLabel = dateLabel; this.playToday = playToday; this.sections = sections;
+    private Brief(String dateLabel, boolean playToday, List<Section> sections, Set<String> audioIds, String audioBase) {
+        this.dateLabel = dateLabel; this.playToday = playToday; this.sections = sections; this.audioIds = audioIds; this.audioBase = audioBase;
+    }
+
+    /** 녹음 파일 이름: 줄 글자(앞뒤 공백 뺌)의 SHA-1 앞 16자리. 서버 tools/tts.js의 audioId와 같은 규칙 */
+    static String audioId(String text) {
+        try {
+            byte[] h = java.security.MessageDigest.getInstance("SHA-1").digest(text.trim().getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            StringBuilder sb = new StringBuilder();
+            for (int i = 0; i < 8; i++) sb.append(String.format("%02x", h[i] & 0xff));
+            return sb.toString();
+        } catch (java.security.NoSuchAlgorithmException e) {
+            throw new IllegalStateException(e);
+        }
     }
 
     static Brief parse(String json) throws JSONException {
@@ -108,7 +123,11 @@ final class Brief {
             sections.add(new Section(s.getString("id"), s.getString("title"), s.optBoolean("perSourceLabel", false), s.optInt("limit", 99), sources));
         }
         JSONObject auto = b.optJSONObject("autoPlay");
-        return new Brief(b.getString("dateLabel"), auto == null || auto.optBoolean("play", true), sections);
+        Set<String> audioIds = new HashSet<>();
+        JSONObject audio = b.optJSONObject("audio");
+        JSONArray ids = audio == null ? null : audio.optJSONArray("ids");
+        if (ids != null) for (int i = 0; i < ids.length(); i++) audioIds.add(ids.getString(i));
+        return new Brief(b.getString("dateLabel"), auto == null || auto.optBoolean("play", true), sections, audioIds, audio == null ? "audio/" : audio.optString("base", "audio/"));
     }
 
     Set<String> defaults() {

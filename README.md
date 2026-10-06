@@ -40,6 +40,19 @@
 APK는 `android/app/release.keystore`로 서명합니다. 같은 키로 서명해야 새 버전이 기존 앱 위에 업데이트로 설치됩니다.
 저장소가 공개라 키도 공개되어 있으니, 가족·지인 밖으로 널리 배포하려면 키를 새로 만들어 저장소 비밀값으로 옮기고 `KEYSTORE_PASSWORD`를 바꾸세요.
 
+## 구글 음성으로 읽기 (선택, 한 번만)
+
+저장소 비밀값 `GOOGLE_TTS_KEY`가 있으면 배포 작업이 매일 새벽 원고 줄(인사·연결 말·언론사 소개·헤드라인, 기본 언론사의 요약·본문)을 구글 클라우드 음성(Chirp 3 HD)으로 녹음해 `audio/`에 올리고,
+갤럭시 앱은 녹음된 줄을 그 파일로, 나머지는 폰 음성으로 읽습니다. 키가 없거나 녹음이 실패하면 지금처럼 폰 음성만 씁니다.
+
+1. https://console.cloud.google.com 에서 프로젝트를 만들고 결제 계정(카드)을 연결합니다. 녹음량이 무료 한도 안이면 청구되지 않습니다.
+2. API 및 서비스 → 라이브러리 → **Cloud Text-to-Speech API** 사용
+3. API 및 서비스 → 사용자 인증 정보 → **API 키 만들기** → 키 제한: API 제한에서 Cloud Text-to-Speech API만 고릅니다.
+4. 이 저장소 Settings → Secrets and variables → Actions → New repository secret: 이름 `GOOGLE_TTS_KEY`, 값에 그 키
+
+하루 녹음 글자 수는 기본 25,000자(`TTS_DAILY_CHARS`)로 막아 두었고, 같은 날 다시 배포하면 이미 녹음한 줄은 다시 녹음하지 않습니다(작업 캐시).
+목소리는 저장소 Variables의 `TTS_VOICE`로 바꿀 수 있습니다(기본 `ko-KR-Chirp3-HD-Aoede`, 남성 예: `ko-KR-Chirp3-HD-Charon`). 녹음된 줄은 앱의 말 빠르기 설정을 따르지 않습니다.
+
 ## 아이폰 단축어 만들기 (한 번만, 아이폰에서)
 
 아이폰은 앱이 블루투스 연결을 알아차리는 것을 허용하지 않아 단축어로 합니다. 한 번 만들어 iCloud 링크로 공유하면 다른 사람은 링크로 추가만 하면 됩니다.

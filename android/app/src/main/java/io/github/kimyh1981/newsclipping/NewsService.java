@@ -28,7 +28,16 @@ import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.io.File;
+import java.io.FileOutputStream;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.List;
 import java.util.Locale;
 
@@ -59,6 +68,9 @@ public class NewsService extends Service {
     private String last;
     private MediaSession session;
     private List<Brief.Line> lines = new ArrayList<>();
+    /** 구글 음성으로 녹음된 줄 글자 → 받아 둔 파일. 여기 있는 글자는 음성 엔진이 파일을 튼다 (addSpeech) */
+    private Map<String, File> clips = new HashMap<>();
+    private final Set<String> recorded = new HashSet<>();
     /** 지금 읽는 원고 줄 번호 */
     private volatile int current;
     /** 통화·다른 앱 소리로 멈춘 상태. 다시 들으면 멈춘 기사 처음부터 이어 읽는다 */
@@ -194,7 +206,76 @@ public class NewsService extends Service {
             script = brief.lines(new Prefs(this).sources());
         }
         if (!manual) new Prefs(this).markPlayed();
-        main.post(() -> speak(script));
+        Map<String, File> got = brief == null ? new HashMap<>() : fetchClips(brief, script);
+        main.post(() -> { clips = got; speak(script); });
+    }
+
+    /** 원고 줄(과 요약·본문) 가운데 서버가 녹음해 둔 것을 받아 둔다. 늦어도 25초 안에 받은 것만 쓰고 나머지는 폰 음성 */
+    private Map<String, File> fetchClips(Brief brief, List<Brief.Line> script) {
+        Map<String, File> out = new java.util.concurrent.ConcurrentHashMap<>();
+        if (brief.audioIds.isEmpty()) return out;
+        Set<String> texts = new java.util.LinkedHashSet<>();
+        texts.add("또,");
+        for (Brief.Line l : script) {
+            if (!l.text.isEmpty()) texts.add(l.text.startsWith("또, ") ? l.text.substring(3) : l.text);
+            if (l.item != null) { texts.add(l.item.summary); texts.add(l.item.body); }
+        }
+        File dir = new File(getCacheDir(), "audio");
+        dir.mkdirs();
+        String base = BuildConfig.NEWS_URL.substring(0, BuildConfig.NEWS_URL.lastIndexOf('/') + 1) + brief.audioBase;
+        Set<String> keep = new HashSet<>();
+        ExecutorService pool = Executors.newFixedThreadPool(4);
+        for (String t : texts) {
+            if (t.isEmpty()) continue;
+            String id = Brief.audioId(t);
+            if (!brief.audioIds.contains(id)) continue;
+            File f = new File(dir, id + ".mp3");
+            keep.add(f.getName());
+            pool.execute(() -> {
+                if (stopped) return;
+                try {
+                    if (!f.exists() || f.length() == 0) download(base + id + ".mp3", f);
+                    out.put(t, f);
+                } catch (Exception e) {
+                    Log.w(TAG, "녹음 파일 받기 실패 " + id + ": " + e);
+                }
+            });
+        }
+        pool.shutdown();
+        try { pool.awaitTermination(25, TimeUnit.SECONDS); } catch (InterruptedException ignored) { Thread.currentThread().interrupt(); }
+        pool.shutdownNow();
+        File[] old = dir.listFiles(); // 어제 받은 파일은 지운다
+        if (old != null) for (File f : old) if (!keep.contains(f.getName())) f.delete();
+        Log.i(TAG, "구글 음성 파일 " + out.size() + "개");
+        return out;
+    }
+
+    private static void download(String url, File to) throws Exception {
+        HttpURLConnection c = (HttpURLConnection) new URL(url).openConnection();
+        c.setConnectTimeout(10000);
+        c.setReadTimeout(15000);
+        File part = new File(to.getPath() + ".part");
+        try {
+            if (c.getResponseCode() != 200) throw new IllegalStateException("HTTP " + c.getResponseCode());
+            try (InputStream in = c.getInputStream(); FileOutputStream o = new FileOutputStream(part)) {
+                byte[] buf = new byte[8192];
+                for (int n; (n = in.read(buf)) > 0; ) o.write(buf, 0, n);
+            }
+            if (!part.renameTo(to)) throw new IllegalStateException("저장 실패");
+        } finally {
+            c.disconnect();
+            part.delete();
+        }
+    }
+
+    /** 한 줄을 읽기 예약: 녹음 파일이 있으면 그 파일, '또, '만 빠진 녹음이 있으면 '또,' + 그 녹음, 없으면 폰 음성 */
+    private void say(String text, int mode, String id) {
+        if (!recorded.contains(text) && text.startsWith("또, ") && recorded.contains(text.substring(3)) && recorded.contains("또,")) {
+            tts.speak("또,", mode, speakParams, id + "a");
+            tts.speak(text.substring(3), TextToSpeech.QUEUE_ADD, speakParams, id);
+        } else {
+            tts.speak(text, mode, speakParams, id);
+        }
     }
 
     private void speak(List<Brief.Line> script) {
@@ -206,6 +287,9 @@ public class NewsService extends Service {
             int lang = tts.setLanguage(Locale.KOREAN);
             if (lang == TextToSpeech.LANG_MISSING_DATA || lang == TextToSpeech.LANG_NOT_SUPPORTED) Log.w(TAG, "한국어 음성 데이터 없음");
             Voices.apply(tts, new Prefs(this));
+            for (Map.Entry<String, File> e : clips.entrySet()) {
+                if (tts.addSpeech(e.getKey(), e.getValue()) == TextToSpeech.SUCCESS) recorded.add(e.getKey());
+            }
             AudioAttributes attrs = new AudioAttributes.Builder()
                     .setUsage(AudioAttributes.USAGE_MEDIA)
                     .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH).build();
@@ -249,7 +333,7 @@ public class NewsService extends Service {
                 List<String> parts = Rules.chunks(line.text, max);
                 for (int k = 0; k < parts.size(); k++) {
                     last = "L" + i + "." + k;
-                    tts.speak(parts.get(k), mode, speakParams, last);
+                    say(parts.get(k), mode, last);
                     mode = TextToSpeech.QUEUE_ADD;
                 }
                 if (line.item != null) { // 헤드라인 뒤에 숨 한 번: 기사끼리 붙어 들리지 않게
@@ -304,7 +388,7 @@ public class NewsService extends Service {
         tts.stop();
         int max = Math.min(3900, TextToSpeech.getMaxSpeechInputLength());
         List<String> parts = Rules.chunks(text, max);
-        for (int k = 0; k < parts.size(); k++) tts.speak(parts.get(k), k == 0 ? TextToSpeech.QUEUE_FLUSH : TextToSpeech.QUEUE_ADD, speakParams, "S" + i + "." + k);
+        for (int k = 0; k < parts.size(); k++) say(parts.get(k), k == 0 ? TextToSpeech.QUEUE_FLUSH : TextToSpeech.QUEUE_ADD, "S" + i + "." + k);
         tts.playSilentUtterance(600, TextToSpeech.QUEUE_ADD, "S" + i + ".p");
         queueFrom(i + 1, TextToSpeech.QUEUE_ADD);
         if (last == null) last = "S" + i + ".p";
