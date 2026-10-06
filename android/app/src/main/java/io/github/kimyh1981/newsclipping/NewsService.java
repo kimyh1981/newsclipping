@@ -95,7 +95,7 @@ public class NewsService extends Service {
     /** 내비 안내 음성이 나오는 동안 멈췄다 (끝나면 이어 읽는다) */
     private boolean navPaused;
     private AudioManager.AudioPlaybackCallback playbackWatch;
-    private final Runnable navResume = () -> { if (paused && navPaused) { navPaused = false; resume(); } };
+    private final Runnable navResume = () -> { if (this.paused && this.navPaused) { this.navPaused = false; resume(); } };
     /** 지금 읽는 원고 줄 번호 */
     private volatile int current;
     /** 통화·다른 앱 소리로 멈춘 상태. 다시 들으면 멈춘 기사 처음부터 이어 읽는다 */
