@@ -212,10 +212,11 @@ if (require.main === module) {
       summaryKey: process.env.ANTHROPIC_API_KEY || '',
       summaryLimit: process.env.SUMMARY_LIMIT === undefined ? 40 : Number(process.env.SUMMARY_LIMIT),
     });
-    // 구글 클라우드 음성으로 원고 줄을 미리 녹음 (저장소 비밀값 GOOGLE_TTS_KEY가 있을 때만, 없으면 앱이 폰 음성으로 읽는다)
+    // 원고 줄을 신경망 음성으로 미리 녹음 (기본: 무료 MS 엣지 음성, GOOGLE_TTS_KEY가 있으면 구글, TTS_ENGINE=off면 안 함). 녹음이 없으면 앱이 폰 음성으로 읽는다
+    const key = process.env.GOOGLE_TTS_KEY || '';
     b.audio = await tts.record(b, {
-      out, key: process.env.GOOGLE_TTS_KEY || '', cache: process.env.TTS_CACHE || '', voice: process.env.TTS_VOICE || tts.VOICE,
-      budget: Number(process.env.TTS_DAILY_CHARS) || 25000, log: b.log, run: limiter(4),
+      out, key, engine: process.env.TTS_ENGINE || (key ? 'google' : 'edge'), cache: process.env.TTS_CACHE || '', voice: process.env.TTS_VOICE || '',
+      budget: Number(process.env.TTS_DAILY_CHARS) || 0, log: b.log, run: limiter(4),
     });
     fs.writeFileSync(path.join(out, 'briefing.json'), JSON.stringify(b, null, 1));
     fs.writeFileSync(path.join(out, 'briefing.txt'), speechText(b));

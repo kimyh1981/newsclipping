@@ -19,10 +19,13 @@ jobs:
           node-version: 22
       - run: npm ci
       - run: npm test
+      - run: python3 -m pip install --user edge-tts==7.2.8
       - name: Live collection
         timeout-minutes: 8
         env:
           SUMMARY_LIMIT: '8' # 요약은 앞의 8건만 시험한다 (기본 리드 방식, 무료)
+          TTS_ENGINE: edge
+          TTS_DAILY_CHARS: '600' # 엣지 음성 녹음이 되는지 몇 줄만 시험한다
         run: |
           node tools/collect.js out
           echo '----- 원고 -----'
@@ -31,5 +34,7 @@ jobs:
           node -e "const b=require('./out/briefing.json');for(const s of b.sections)for(const x of s.sources)for(const i of x.items)if(i.original)console.log(i.source+' | '+i.original+' => '+i.title)"
           echo '----- 자세히 (요약) -----'
           node -e "const b=require('./out/briefing.json');for(const s of b.sections)for(const x of s.sources)for(const i of x.items)if(i.summary)console.log('* '+i.title+'\n  '+i.summary)"
+          echo '----- 음성 녹음 -----'
+          ls -l out/audio 2>/dev/null | head -8 || echo '녹음 없음'
           echo '----- 수집 기록 -----'
           node -e "require('./out/briefing.json').log.forEach((l)=>console.log(l))"

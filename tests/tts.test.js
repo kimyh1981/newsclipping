@@ -65,3 +65,23 @@ test('키가 틀리면(403) 바로 멈추고 기록만 남긴다', async () => {
   assert.equal(calls, 1);
   assert.match(log.join('\n'), /키나 설정 문제로 멈춤 \(HTTP 403 PERMISSION_DENIED\)/);
 });
+
+test('edge(무료): 키 없이 한꺼번에 녹음하고, 실패한 줄은 빼며, 파이썬이 없으면 기록만 남긴다', async () => {
+  const out = tmp();
+  const batch = (jobs, voice) => {
+    assert.equal(voice, 'ko-KR-SunHiNeural');
+    const res = {};
+    jobs.forEach((j, i) => { if (i === 1) res[j.id] = 'WSServerHandshakeError: 403'; else { fs.writeFileSync(j.file, 'mp3'); res[j.id] = null; } });
+    return res;
+  };
+  const log = [];
+  const a = await record(B, { out, engine: 'edge', log, run, batch });
+  assert.equal(a.voice, 'ko-KR-SunHiNeural');
+  assert.equal(a.ids.length, wanted(B).length - 1);
+  assert.match(log.join('\n'), /음성 녹음 실패 1줄 \(예: WSServerHandshakeError: 403\)/);
+  assert.equal(fs.readdirSync(path.join(out, 'audio')).length, a.ids.length);
+  const log2 = [];
+  assert.equal(await record(B, { out: tmp(), engine: 'edge', log: log2, run, batch: () => { throw new Error('No module named edge_tts'); } }), null);
+  assert.match(log2.join('\n'), /음성 녹음\(edge\)을 못 함: No module named edge_tts/);
+  assert.equal(await record(B, { out: tmp(), engine: 'off', key: 'k', log: [], run }), null);
+});
