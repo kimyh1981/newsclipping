@@ -1,5 +1,5 @@
 {
-  "_설명": "섹션별 뉴스 출처. url은 RSS 주소, google은 구글 뉴스 검색어(url이 없거나 막히거나 비어 있을 때 쓴다), when은 구글 검색 기간(기본 1d). take는 그 출처에서 읽을 기사 수, limit은 섹션 전체 기사 수, hours는 이보다 오래된 기사를 뺀다(기본 36, 출처에도 줄 수 있다), must는 제목에 꼭 있어야 하는 낱말(정규식). lang은 외국어 섹션의 언어(vi 등): 구글 뉴스를 그 나라판에서 찾고, 고른 제목을 우리말로 번역해 읽는다(must는 원문 제목에 적용).",
+  "_설명": "섹션별 뉴스 출처. url은 RSS 주소, google은 구글 뉴스 검색어(url이 없거나 막히거나 비어 있을 때 쓴다), when은 구글 검색 기간(기본 1d). take는 그 출처에서 읽을 기사 수, limit은 섹션 전체 기사 수, hours는 이보다 오래된 기사를 뺀다(기본 36, 출처에도 줄 수 있다), must는 제목에 꼭 있어야 하는 낱말(정규식, 출처에도 줄 수 있다). lang은 외국어 섹션의 언어(vi 등): 구글 뉴스를 그 나라판에서 찾고, 고른 제목을 우리말로 번역해 읽는다(must는 원문 제목에 적용).",
   "sections": [
     {
       "id": "papers",
@@ -127,13 +127,15 @@
           "google": "site:dantri.com.vn phân bón",
           "when": "7d",
           "hours": 168,
-          "take": 2
+          "take": 2,
+          "must": "phân bón|vi sinh|hữu cơ|urê|NPK|DAP|kali"
         },
         {
           "name": "구글 뉴스 베트남",
           "google": "\"phân bón\" OR \"phân bón sinh học\" OR \"phân bón vi sinh\" OR \"phân bón hữu cơ\"",
           "when": "3d",
-          "take": 2
+          "take": 2,
+          "must": "phân bón|vi sinh|hữu cơ|urê|NPK|DAP|kali"
         },
         {
           "name": "단찌",

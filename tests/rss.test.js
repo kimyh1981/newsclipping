@@ -123,3 +123,9 @@ test('출처마다 hours를 따로 줄 수 있다', () => {
   assert.equal(rss.pick(sec, [{ source: { name: '가', take: 5 }, items: [old] }], NOW, []).length, 0);
   assert.equal(rss.pick(sec, [{ source: { name: '가', take: 5, hours: 168 }, items: [old] }], NOW, []).length, 1);
 });
+
+test('출처마다 must를 따로 줄 수 있다', () => {
+  const items = [{ title: 'Giá lúa tăng mạnh' }, { title: 'Giá phân bón giảm' }];
+  const got = rss.pick({ limit: 5, lang: 'vi', must: 'lúa|phân bón' }, [{ source: { name: '가', take: 5, must: 'phân bón' }, items }], NOW, []);
+  assert.deepEqual(got.map((i) => i.title), ['Giá phân bón giảm']);
+});

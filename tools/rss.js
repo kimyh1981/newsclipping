@@ -139,10 +139,11 @@ function pick(section, fetched, now, seen = []) {
   const must = section.must ? new RegExp(section.must, 'i') : null; // 검색 결과에 섞여 든 엉뚱한 기사를 거른다
   for (const { source, items: list } of fetched) {
     let taken = 0;
+    const need = source.must ? new RegExp(source.must, 'i') : must; // 출처마다 따로 줄 수도 있다
     for (const it of list) {
       if (taken >= (source.take || 3) || items.length >= section.limit) break;
       const title = (it.viaGoogle ? splitGoogleSource(it.title, it.source) : it.title).normalize('NFC');
-      if (skip(title, lang) || !fresh(it, now, source.hours || hours) || !spoken(title) || (must && !must.test(title))) continue;
+      if (skip(title, lang) || !fresh(it, now, source.hours || hours) || !spoken(title) || (need && !need.test(title))) continue;
       if (seen.some((t) => similar(t, title))) continue;
       seen.push(title);
       items.push({ title, spoken: spoken(title), source: source.name.startsWith('구글 뉴스') ? it.source || source.name : source.name, link: it.link, publishedAt: it.publishedAt });
