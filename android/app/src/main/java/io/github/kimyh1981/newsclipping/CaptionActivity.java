@@ -85,7 +85,8 @@ public class CaptionActivity extends Activity {
         boolean paused = NewsService.state() == NewsService.PAUSED;
         head.setText(c.title.isEmpty() ? c.source : c.source + (c.full ? " · 전체 듣는 중" : ""));
         // 헤드라인은 읽는 글 그대로, 본문(전체 듣기)처럼 긴 글은 기사 제목을 띄운다
-        body.setText(c.full || c.text.length() > 140 ? c.title : c.text);
+        // '또, '는 같은 언론사 두 번째 기사를 소리로 잇는 말이라 화면에는 띄우지 않는다
+        body.setText(c.full || c.text.length() > 140 ? c.title : c.text.replaceFirst("^또, ", ""));
         hint.setText(paused ? "멈춤" : c.title.isEmpty() ? "" : c.full ? "다 읽으면 다음 헤드라인으로 넘어갑니다" : "화면을 누르면 이 기사 전체를 읽어 드립니다");
     }
 
