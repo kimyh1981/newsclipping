@@ -21,22 +21,58 @@ function googleUrl(q, when = '1d', lang = 'ko') {
   return `https://news.google.com/rss/search?q=${encodeURIComponent(`${q} when:${when}`)}&hl=${hl}&gl=${gl}&ceid=${ceid}`;
 }
 
-// 외국어 제목을 우리말로 옮긴다 (구글 번역 무료 주소, 키 없음). 너무 자주 보내 429가 오면 잠깐 쉬었다가 다시 보낸다
-const RETRY = { waits: [3e3, 8e3] };
+// 외국어 제목을 우리말로 옮긴다 (키 없는 무료 번역). 구글 번역이 429로 막으면 잠깐 쉬었다가 다시 보내고,
+// 그래도 막히면 그날은 그 번역기를 건너뛰고 다음 번역기로 넘어간다
+const RETRY = { waits: [3e3] };
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const unwrap = (d) => { while (Array.isArray(d)) d = d[0]; return typeof d === 'string' ? d : ''; };
 
-async function translate(text, from, to = 'ko') {
-  const sl = from === 'zh' ? 'zh-CN' : from;
-  const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${sl}&tl=${to}&dt=t&q=${encodeURIComponent(text)}`;
+const ENGINES = [
+  {
+    name: 'google',
+    url: (q, sl, tl) => `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${sl}&tl=${tl}&dt=t&q=${encodeURIComponent(q)}`,
+    read: (d) => (Array.isArray(d?.[0]) ? d[0] : []).map((seg) => seg?.[0] || '').join(''),
+  },
+  {
+    name: 'google-dict',
+    url: (q, sl, tl) => `https://clients5.google.com/translate_a/t?client=dict-chrome-ex&sl=${sl}&tl=${tl}&q=${encodeURIComponent(q)}`,
+    read: unwrap,
+  },
+  {
+    name: 'mymemory',
+    url: (q, sl, tl) => `https://api.mymemory.translated.net/get?q=${encodeURIComponent(q)}&langpair=${sl}|${tl}`,
+    read: (d) => (Number(d?.responseStatus) === 200 && !/^MYMEMORY WARNING/.test(d?.responseData?.translatedText || '') ? d.responseData.translatedText : ''),
+  },
+];
+const blocked = new Set(); // 이번 수집에서 429로 막힌 번역기
+const used = {}; // 번역기별 성공 횟수 (수집 기록용)
+
+async function translateWith(engine, text, sl, tl) {
   for (let i = 0; ; i++) {
-    const res = await fetch(url, { headers: { 'User-Agent': UA }, signal: AbortSignal.timeout(10e3) });
+    const res = await fetch(engine.url(text, sl, tl), { headers: { 'User-Agent': UA }, signal: AbortSignal.timeout(10e3) });
     if (res.status === 429 && i < RETRY.waits.length) { await sleep(RETRY.waits[i]); continue; }
+    if (res.status === 429) blocked.add(engine.name);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = await res.json();
-    const out = (Array.isArray(data?.[0]) ? data[0] : []).map((seg) => seg?.[0] || '').join('').trim();
+    const out = engine.read(await res.json()).trim();
     if (!out) throw new Error('빈 번역');
     return out;
   }
+}
+
+async function translate(text, from, to = 'ko') {
+  const sl = from === 'zh' ? 'zh-CN' : from;
+  let last = new Error('번역기 없음');
+  for (const engine of ENGINES) {
+    if (blocked.has(engine.name)) continue;
+    try {
+      const out = await translateWith(engine, text, sl, to);
+      used[engine.name] = (used[engine.name] || 0) + 1;
+      return out;
+    } catch (err) {
+      last = err;
+    }
+  }
+  throw last;
 }
 
 // 한 언론사의 제목들을 줄바꿈으로 이어 한 번에 번역한다 (언론사 수만큼만 요청). 줄 수가 안 맞으면 한 건씩 다시 번역한다
@@ -142,11 +178,14 @@ async function collect(config, now = Date.now(), key = '') {
     })),
   })));
   // 번역: 기본 언론사부터, 두 곳씩 차례로 (한꺼번에 보내면 구글 번역이 429로 막는다)
+  blocked.clear();
+  for (const k of Object.keys(used)) delete used[k];
   const foreign = sections.flatMap((sec) => sec.sources).filter((src) => src.lang !== 'ko');
   const tr = limiter(2);
   for (const batch of [foreign.filter((s) => s.default), foreign.filter((s) => !s.default)]) {
     await Promise.all(batch.map((src) => tr(async () => { src.items = await translateItems(src.name, src.lang, src.items, log); })));
   }
+  if (foreign.length) log.push(`번역기: ${Object.entries(used).map(([k, n]) => `${k} ${n}번`).join(', ') || '없음'}${blocked.size ? ` (429로 막힘: ${[...blocked].join(', ')})` : ''}`);
   group(sections);
   const b = { version: 2, generatedAt: new Date(now).toISOString(), dateLabel: rss.koreanDate(now), autoPlay, sections, log };
   b.script = brief.script(b); // 기본 언론사로 만든 원고: briefing.txt(아이폰 단축어, 옛 앱)
