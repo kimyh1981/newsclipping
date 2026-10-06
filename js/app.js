@@ -55,6 +55,7 @@
     const on = new Set(enabled || Brief.defaults(b));
     $('sources').innerHTML = b.sections.map((s) => `<fieldset><legend>${esc(s.title)}</legend>` + s.sources.map((x) =>
       `<label><input type="checkbox" value="${esc(x.id)}"${on.has(x.id) ? ' checked' : ''}> ${esc(x.name)}${x.lang !== 'ko' ? ' <small>번역</small>' : ''}<small>${x.items.length ? '' : ' · 오늘 기사 없음'}</small></label>`).join('') + '</fieldset>').join('');
+    $('iosCode').textContent = Brief.iosCode(b, enabled);
     $('pickNote').textContent = enabled ? `${enabled.length}곳을 골랐어요.` : '기본 언론사를 듣고 있어요.';
   }
 
@@ -70,6 +71,11 @@
 
   $('sources').addEventListener('change', () => choose([...document.querySelectorAll('#sources input:checked')].map((x) => x.value)));
   $('resetSources').onclick = () => choose(null);
+  $('copyCode').onclick = () => {
+    const code = $('iosCode').textContent;
+    const done = () => { $('copyCode').textContent = '복사됨'; setTimeout(() => { $('copyCode').textContent = '복사'; }, 1500); };
+    if (navigator.clipboard) navigator.clipboard.writeText(code).then(done, () => {});
+  };
 
   function mark(el) {
     document.querySelectorAll('li.now').forEach((x) => x.classList.remove('now'));

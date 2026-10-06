@@ -56,6 +56,8 @@
     <p class="meta"><span id="pickNote"></span> 고른 언론사는 이 기기에만 저장돼요. 갤럭시 앱은 앱의 '들을 언론사'에서 따로 고릅니다. 외국 언론은 제목을 우리말로 번역해 읽어요.</p>
     <div id="sources"></div>
     <button id="resetSources" type="button">기본값으로</button>
+    <p class="meta">아이폰 단축어용 코드: 단축어의 '텍스트' 칸에 붙여 넣으면 여기서 고른 언론사만 읽어요.</p>
+    <p class="ioscode"><code id="iosCode"></code> <button id="copyCode" type="button">복사</button></p>
   </details>
 
   <section class="install" id="install">
@@ -71,10 +73,20 @@
     <h3>아이폰</h3>
     <p id="iosLink"><a class="cta" href="#" id="shortcutLink">'뉴스클리핑' 단축어 추가</a></p>
     <ol>
-      <li>위 버튼으로 단축어를 추가합니다.</li>
+      <li>위 버튼으로 단축어를 추가합니다 (버튼이 없으면 아래 '단축어 직접 만들기'대로).</li>
+      <li>위 '들을 언론사 고르기'에서 언론사를 고르고 <b>아이폰 단축어용 코드</b>를 복사해, 단축어의 <b>텍스트</b> 칸에 붙여 넣습니다. 언론사를 바꾸면 코드도 다시 붙여 넣습니다.</li>
       <li>단축어 앱 → <b>자동화</b> → <b>+</b> → <b>블루투스</b> → 차 블루투스 선택 → <b>연결될 때</b>, <b>즉시 실행</b> → 단축어 <b>'뉴스클리핑'</b>을 고릅니다.</li>
     </ol>
-    <p class="meta">아이폰은 앱이 블루투스 연결을 알아차리는 것을 허용하지 않아, 2번(자동화 연결)만 직접 한 번 해야 합니다.</p>
+    <details>
+      <summary>단축어 직접 만들기</summary>
+      <ol>
+        <li>단축어 앱 → <b>+</b> → 이름 '뉴스클리핑'</li>
+        <li><b>현재 날짜</b> → <b>날짜 형식 지정</b> (사용자 지정 <code>H</code>) → <b>만약</b> 형식이 지정된 날짜가 <b>6과 7 사이</b></li>
+        <li>만약 안에: <b>텍스트</b> (위 코드를 붙여 넣기) → <b>텍스트 분할</b> (공백 기준)</li>
+        <li><b>각 항목을 반복</b> 안에: <b>URL</b> <code>https://kimyh1981.github.io/newsclipping/ios/</code><b>반복 항목</b><code>.txt</code> → <b>URL의 콘텐츠 가져오기</b> → <b>텍스트 말하기</b> (한국어, Siri 음성)</li>
+      </ol>
+    </details>
+    <p class="meta">아이폰은 앱이 블루투스 연결을 알아차리는 것을 허용하지 않아, 자동화 연결만 직접 한 번 해야 합니다. 언론사마다 따로 읽어서, 같은 사건이 두 언론사에 다 나오면 두 번 들릴 수 있어요.</p>
   </section>
 </main>
 

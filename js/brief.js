@@ -95,5 +95,36 @@
     return buildScript(sections, now);
   }
 
-  return { koreanDate, sentence, buildScript, defaults, select, script };
+  // 아이폰 단축어용 조각 원고: 단축어가 고른 언론사 조각을 차례로 받아 읽는다 (ios/<id>.txt, 앞뒤에 open·close)
+  // 조각마다 따로 만들어서, 같은 사건이 두 언론사에 다 나오면 두 번 읽힐 수 있다
+  function piece(b, id) {
+    const date = koreanDate(Date.parse(b.generatedAt));
+    if (id === 'open') return opening(date) + '\n';
+    if (id === 'close') return closing(date) + '\n';
+    for (const sec of b.sections) {
+      const src = sec.sources.find((x) => x.id === id);
+      if (!src) continue;
+      const groups = new Set();
+      const items = [];
+      for (const it of src.items) {
+        if (items.length >= src.take) break;
+        if (groups.has(it.group)) continue;
+        groups.add(it.group);
+        items.push(it);
+      }
+      if (!items.length) return '';
+      const head = sec.perSourceLabel ? `${src.name} 소식입니다.` : `${sec.title}입니다.`;
+      return [head, ...items.map((it, i) => (i ? '또, ' : '') + sentence(it.spoken))].join('\n') + '\n';
+    }
+    return '';
+  }
+
+  // 단축어에 붙여 넣을 코드: 시작 인사, 고른 언론사(화면 순서), 맺음말
+  function iosCode(b, enabled) {
+    const on = new Set(enabled || defaults(b));
+    const ids = b.sections.flatMap((sec) => sec.sources.filter((x) => on.has(x.id)).map((x) => x.id));
+    return ['open', ...ids, 'close'].join(' ');
+  }
+
+  return { koreanDate, sentence, buildScript, defaults, select, script, piece, iosCode };
 });
