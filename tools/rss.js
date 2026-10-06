@@ -74,7 +74,17 @@ function splitGoogleSource(title, source) {
 }
 
 // 제목에 흔한 한자 약칭: 음성이 '날 일'처럼 읽지 않게 우리말로 바꾼다
-const HANJA = [['與野', '여야'], ['日', '일본'], ['美', '미국'], ['中', '중국'], ['北', '북한'], ['韓', '한국'], ['英', '영국'], ['獨', '독일'], ['佛', '프랑스'], ['露', '러시아'], ['印', '인도'], ['濠', '호주'], ['與', '여당'], ['野', '야당'], ['靑', '청와대'], ['檢', '검찰'], ['軍', '군'], ['銀', '은행'], ['株', '주식'], ['百', '백화점'], ['女', '여성'], ['男', '남성'], ['前', '전'], ['現', '현'], ['新', '신'], ['故', '고']];
+const HANJA = [['與野', '여야'], ['秋', '추'], ['尹', '윤'], ['李', '이'], ['文', '문'], ['朴', '박'], ['日', '일본'], ['美', '미국'], ['中', '중국'], ['北', '북한'], ['韓', '한국'], ['英', '영국'], ['獨', '독일'], ['佛', '프랑스'], ['露', '러시아'], ['印', '인도'], ['濠', '호주'], ['與', '여당'], ['野', '야당'], ['靑', '청와대'], ['檢', '검찰'], ['軍', '군'], ['銀', '은행'], ['株', '주식'], ['百', '백화점'], ['女', '여성'], ['男', '남성'], ['前', '전'], ['現', '현'], ['新', '신'], ['故', '고']];
+
+// 큰따옴표로 옮긴 말 앞뒤에서 잠깐 쉰다: 北 "韓 자작극" 발뺌 → 북한, 한국 자작극, 발뺌.
+// 뒤에 조사가 붙으면('…'라고) 뒤는 붙여 읽는다. 짧은 강조 낱말과 작은따옴표는 그냥 지운다
+function quotes(s) {
+  s = s.replace(/["“]([^"“”]{1,200})["”](?=([가-힣]?))/g, (m, inner, next) => {
+    if (!/[다라요것까야죠나며고]$|,/.test(inner.trim()) && inner.trim().length < 10) return inner; // "통상 협력"처럼 짧은 낱말은 강조라 그냥 읽는다
+    return `, ${inner}${next ? '' : ', '}`;
+  });
+  return s.replace(/[‘’"'`“”]/g, '');
+}
 
 // 소리 내어 읽기 좋게 다듬는다: 말머리, (종합), 따옴표, 말줄임표, 기호
 function spoken(title) {
@@ -83,13 +93,34 @@ function spoken(title) {
   s = s.replace(/\[[^\]]{1,12}\]|【[^】]{1,12}】|<[^>]{1,12}>|〈[^〉]{1,12}〉/g, ' ');
   s = s.replace(/\((종합|종합\d*보|\d+보|속보|단독|상보|영상|사진|포토|인터뷰|르포|일문일답)[^)]{0,6}\)/g, ' ');
   s = s.replace(/^\s*(속보|단독)\s*[:|]?\s*/, ' ');
-  s = s.replace(/[‘’“”"'`]/g, '');
+  s = quotes(s);
+  s = s.replace(/\s+:\s+|(?<=[가-힣])\s*:\s+/g, ', '); // '두리안 수확 : 규모' → 쉼
   s = s.replace(/…|\.{2,}/g, ', ');
   s = s.replace(/↑/g, ' 상승').replace(/↓/g, ' 하락').replace(/[→⇒]/g, ', ');
   // 가운뎃점: 한 글자끼리는 붙여 읽고(한·미 → 한미), 낱말 사이는 쉼표처럼 잠깐 쉰다(비료·농약 → 비료, 농약)
   s = s.replace(/(^|[^가-힣·])[가-힣](?:\s*·\s*[가-힣])+(?![가-힣])/g, (m) => m.replace(/\s*·\s*/g, '')).replace(/\s*·\s*/g, ', ').replace(/[|/]/g, ', ').replace(/(\d)\s*~\s*(?=\d)/g, '$1에서 ').replace(/~/g, ', ');
   s = s.replace(/\s*,(?:\s*,)*\s*(?!\d)/g, ', ').replace(/\s+/g, ' ').replace(/^[\s,]+|[\s,]+$/g, '');
   return s;
+}
+
+// '전체 듣기'로 읽을 본문을 소리 내어 읽기 좋게: 한자 약칭, 기자 이름 머리말, 괄호 속 덧붙임(영문 약어·한자·'얼굴'),
+// 따옴표, 말줄임표, 물결표, 가운뎃점. 문장 단위로 나눠 돌려준다 (앱이 문장마다 자막을 띄우고, 녹음도 문장마다 한다)
+function speechSentences(text) {
+  if (!text) return [];
+  let s = text.normalize('NFKC');
+  s = s.replace(/\s*(?:[가-힣]{3}\s+){0,2}[가-힣]{2,4}\s*(?:기자|특파원|객원기자)\s*=\s*/g, '. ').replace(/([.?!])\s*\.(?=\s|$)/g, '$1'); // 부제 … 홍길동 기자 = 본문 → 부제. 본문
+  s = s.replace(/\(\s*[^()]{1,20}\s*\)/g, (m) => (/[가-힣]{2,}\s*[=:]|\d{4}/.test(m) ? m : '')); // 비무장지대(DMZ) → 비무장지대
+  for (const [h, k] of HANJA) s = s.split(h).join(k);
+  s = s.replace(/[\u4e00-\u9fff]+/g, ''); // 남은 한자는 읽지 않는다
+  s = quotes(s);
+  s = s.replace(/…|\.{3,}/g, ', ').replace(/(\d)\s*~\s*(?=\d)/g, '$1에서 ').replace(/~/g, ', ');
+  s = s.replace(/(^|[^가-힣·])[가-힣](?:\s*·\s*[가-힣])+(?![가-힣])/g, (m) => m.replace(/\s*·\s*/g, '')).replace(/\s*·\s*/g, ', ');
+  s = s.replace(/\s*,(?:\s*,)*\s*(?!\d)/g, ', ').replace(/\s+/g, ' ');
+  const out = (s.match(/[^.?!。]+(?:[.?!。]+|$)/g) || [])
+    .map((x) => x.replace(/^[\s,]+|[\s,]+$/g, '').replace(/,\s*([.?!])$/, '$1'))
+    .filter((x) => /[가-힣a-zA-Z0-9]{2}/.test(x))
+    .map((x) => (/[.?!]$/.test(x) ? x : `${x}.`));
+  return out;
 }
 
 function normalize(title) {
@@ -156,4 +187,4 @@ function pick(section, fetched, now, seen = []) {
   return items;
 }
 
-module.exports = { decodeEntities, text, parseFeed, skip, splitGoogleSource, spoken, similar, words, fresh, pick, koreanDate: brief.koreanDate, buildScript: brief.buildScript, sentence: brief.sentence };
+module.exports = { decodeEntities, text, parseFeed, skip, splitGoogleSource, spoken, speechSentences, quotes, similar, words, fresh, pick, koreanDate: brief.koreanDate, buildScript: brief.buildScript, sentence: brief.sentence };

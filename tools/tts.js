@@ -2,9 +2,9 @@
  * 원고 줄을 신경망 음성으로 미리 녹음해 둔다. 녹음하는 곳(engine)은 둘 중 하나:
  *  - edge (기본, 무료·키 없음): MS 엣지 '소리 내어 읽기' 음성(edge-tts, tools/edge_tts_batch.py). 비공식이라 막히면 그날은 폰 음성
  *  - google: 구글 클라우드 Text-to-Speech(Chirp 3 HD), 저장소 비밀값 GOOGLE_TTS_KEY가 있을 때 (카드 등록 필요)
- * 앱은 원고 줄마다 그 글자 그대로 녹음된 파일이 있으면 그 파일을, 없으면 폰 음성으로 읽는다 (TextToSpeech.addSpeech).
+ * 앱은 원고 줄(과 전체 듣기 문장 say)마다 그 글자 그대로 녹음된 파일이 있으면 그 파일을, 없으면 폰 음성으로 읽는다.
  *  - 파일 이름은 줄 글자의 SHA-1 앞 16자리 (앱 Brief.audioId와 같은 규칙)
- *  - 하루 글자 수 한도(TTS_DAILY_CHARS) 안에서 인사·연결 말 → 헤드라인 → 기본 언론사 요약 → 본문 순으로 녹음한다
+ *  - 하루 글자 수 한도(TTS_DAILY_CHARS) 안에서 인사·연결 말 → 헤드라인 → 기본 언론사 전체 듣기 문장 순으로 녹음한다
  *  - 지난 실행에서 녹음한 파일(캐시)은 다시 녹음하지 않는다: 하루 두 번 배포해도 새 기사만 돈이 든다
  * TTS_ENGINE=off면 아무것도 하지 않는다.
  */
@@ -29,7 +29,6 @@ function wanted(b) {
   add(brief.opening(date), 'fixed');
   add(brief.closing(date), 'fixed');
   add(brief.EMPTY, 'fixed');
-  add('또,', 'fixed');
   add(`좋은 아침입니다. ${date}입니다. 오늘은 뉴스를 가져오지 못했습니다. 안전 운전하세요.`, 'fixed');
   for (const sec of b.sections) {
     add(brief.intro(sec.title, 0, 3), 'fixed'); // 먼저 ~부터 전해 드립니다.
@@ -41,8 +40,8 @@ function wanted(b) {
   for (const { sec, it } of items) if (sec.perSourceLabel) add(`${it.source} 소식입니다.`, 'fixed');
   for (const { it } of items) add(brief.sentence(it.spoken), 'headline');
   const picked = brief.select(b).flatMap((s) => s.items);
-  for (const it of picked) add(it.summary, 'summary');
-  for (const it of picked) add(it.body, 'body');
+  for (const it of picked) for (const s of (it.say || []).slice(0, 3)) add(s, 'summary'); // 전체 듣기 앞 세 문장 먼저
+  for (const it of picked) for (const s of (it.say || []).slice(3)) add(s, 'body');
   const seen = new Set();
   return out.filter(([t]) => (seen.has(t) ? false : seen.add(t)));
 }

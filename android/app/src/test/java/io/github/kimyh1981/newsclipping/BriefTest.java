@@ -46,6 +46,17 @@ public class BriefTest {
         for (Brief.Line l : b.lines(null)) if (l.item != null && l.item.body.isEmpty()) assertEquals(l.item.summary, l.item.full());
     }
 
+    @Test public void fullListeningReadsServerSentences() throws Exception {
+        Brief b = Brief.parse(read("briefing.json"));
+        Brief.Item first = null;
+        for (Brief.Line l : b.lines(null)) if (l.item != null && first == null) first = l.item;
+        assertEquals(Arrays.asList("가 기사의 자세한 내용입니다.", "두 번째 문장입니다.", "본문 세 번째 문장까지 이어집니다."), first.fullSentences());
+        Brief.Item old = new Brief.Item("t", "t", "s", "g", "요약입니다.", "");
+        assertEquals(Collections.singletonList("요약입니다."), old.fullSentences());
+        assertTrue(new Brief.Item("t", "t", "s", "g", "", "").fullSentences().isEmpty());
+        for (Brief.Line l : b.lines(null)) assertFalse(l.text.startsWith("또,"));
+    }
+
     @Test public void sentenceKeepsEndingMarks() {
         assertEquals("쌀값 급등.", Brief.sentence("쌀값 급등"));
         assertEquals("어떻습니까?", Brief.sentence("어떻습니까?"));

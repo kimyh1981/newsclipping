@@ -262,12 +262,11 @@ public class NewsService extends Service {
     private void fetchClips(Brief brief, List<Brief.Line> script) {
         if (brief.audioIds.isEmpty()) return;
         Set<String> texts = new LinkedHashSet<>();
-        texts.add("또,");
-        for (Brief.Line l : script) { // 원고 줄을 먼저, 요약·본문(전체 듣기)은 그 뒤에
-            if (!l.text.isEmpty()) texts.add(l.text.startsWith("또, ") ? l.text.substring(3) : l.text);
+        for (Brief.Line l : script) { // 원고 줄을 먼저, 전체 듣기 문장은 그 뒤에
+            if (!l.text.isEmpty()) texts.add(l.text);
         }
         for (Brief.Line l : script) {
-            if (l.item != null) { texts.add(l.item.summary); texts.add(l.item.body); }
+            if (l.item != null) texts.addAll(l.item.fullSentences());
         }
         File dir = new File(getCacheDir(), "audio");
         dir.mkdirs();
@@ -394,10 +393,6 @@ public class NewsService extends Service {
         if (s.silence > 0) { main.postDelayed(afterSilence, s.silence); return; }
         showCaption(s);
         File f = clips.get(s.text);
-        if (f == null && s.text.startsWith("또, ") && clips.containsKey(s.text.substring(3)) && clips.containsKey("또,")) {
-            queue.add(pos, new Step(s.id + "b", s.text.substring(3), 0)); // '또,'와 기사 제목을 따로 녹음해 두었다
-            f = clips.get("또,");
-        }
         if (f != null && playClip(f)) return;
         tts.speak(s.text, TextToSpeech.QUEUE_FLUSH, speakParams, gen + ":" + s.id);
     }
@@ -497,19 +492,21 @@ public class NewsService extends Service {
         play(stepsFrom(start));
     }
 
-    /** '전체 듣기': 지금(또는 방금) 읽은 기사의 본문 앞부분을 읽고, 그다음 줄부터 이어 읽는다 */
+    /** '전체 듣기': 지금(또는 방금) 읽은 기사의 본문 앞부분을 문장마다(자막도 문장마다) 읽고, 그다음 줄부터 이어 읽는다.
+     *  읽는 중에 '다음'(자막 화면을 왼쪽으로 쓸기·핸들 다음 버튼)을 누르면 전체 듣기를 끝내고 다음 기사 헤드라인으로 */
     private void full() {
         if (tts == null || stopped || lines.isEmpty()) return;
         int i = Math.min(current, lines.size() - 1);
         while (i > 0 && lines.get(i).item == null) i--;
         Brief.Item it = lines.get(i).item;
-        String text = it == null ? "" : it.full();
-        if (text.isEmpty()) text = it == null ? "전체로 들을 기사가 아직 없습니다." : "이 기사는 본문을 가져오지 못했습니다.";
+        List<String> sentences = it == null ? new ArrayList<>() : new ArrayList<>(it.fullSentences());
+        if (sentences.isEmpty()) sentences.add(it == null ? "전체로 들을 기사가 아직 없습니다." : "이 기사는 본문을 가져오지 못했습니다.");
+        current = i;
         if (paused) { paused = false; stateChanged(); main.removeCallbacks(pauseLimit); audio.requestAudioFocus(focus); setState(PlaybackState.STATE_PLAYING); startInForeground(PLAYING_TEXT); }
         int max = Math.min(3900, TextToSpeech.getMaxSpeechInputLength());
         List<Step> steps = new ArrayList<>();
-        List<String> parts = Rules.chunks(text, max);
-        for (int k = 0; k < parts.size(); k++) steps.add(new Step("S" + i + "." + k, parts.get(k), 0));
+        int k = 0;
+        for (String sen : sentences) for (String part : Rules.chunks(sen, max)) steps.add(new Step("S" + i + "." + k++, part, 0));
         steps.add(new Step("S" + i + ".p", "", 600));
         steps.addAll(stepsFrom(i + 1));
         play(steps);

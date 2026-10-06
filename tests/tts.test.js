@@ -18,12 +18,9 @@ test('녹음 파일 이름은 줄 글자의 SHA-1 앞 16자리 (앱 Brief.audioI
 test('녹음할 줄: 앱 원고의 모든 줄(인사·연결 말·언론사 소개·헤드라인)과 요약·본문', () => {
   const lines = wanted(B).map(([t]) => t);
   for (const l of brief.script(B).split('\n').map((x) => x.trim()).filter(Boolean)) {
-    const t = l.startsWith('또, ') ? l.slice(3) : l;
-    assert.ok(lines.includes(t), `원고 줄이 빠짐: ${t}`);
+    assert.ok(lines.includes(l), `원고 줄이 빠짐: ${l}`);
   }
-  assert.ok(lines.includes('또,'));
-  assert.ok(lines.some((t) => t.startsWith('가 기사의 자세한 내용')), '요약');
-  assert.ok(lines.some((t) => t.endsWith('본문 세 번째 문장까지 이어집니다.')), '본문');
+  for (const s of B.sections[0].sources[0].items[0].say) assert.ok(lines.includes(s), `전체 듣기 문장이 빠짐: ${s}`);
   assert.equal(new Set(lines).size, lines.length);
 });
 

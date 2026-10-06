@@ -153,7 +153,7 @@ test('언론사마다 기사를 따로 담고, 고른 언론사만으로 원고�
   assert.match(brief.script(b, ['b']), /^좋은 아침입니다\. 10월 6일 화요일, 출근길 뉴스 브리핑입니다\.\n\n먼저 농업 신문 헤드라인부터 전해 드립니다\.\n나신문 소식입니다\./);
   assert.match(brief.script(b, []), /뉴스를 가져오지 못했습니다/);
   assert.equal(brief.piece(b, 'b'), '나신문 소식입니다.\n정부 비료가격 안정대책 발표.\n', '아이폰 조각은 언론사 하나만, take건');
-  assert.equal(brief.piece(b, 'a'), '가신문 소식입니다.\n정부, 비료 가격 안정 대책 발표.\n또, 국회 예산안 처리.\n');
+  assert.equal(brief.piece(b, 'a'), '가신문 소식입니다.\n정부, 비료 가격 안정 대책 발표.\n국회 예산안 처리.\n');
   assert.equal(brief.piece(b, 'zz'), '');
   assert.equal(brief.iosCode(b), 'open a close');
   assert.equal(brief.iosCode(b, ['b', 'a']), 'open a b close', '화면 순서대로');
