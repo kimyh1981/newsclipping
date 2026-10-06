@@ -162,6 +162,11 @@ function speechText(b) {
   return b.autoPlay.play ? b.script : '';
 }
 
+function iosPieces(b) {
+  const ids = ['open', 'close', ...b.sections.flatMap((sec) => sec.sources.map((x) => x.id))];
+  return Object.fromEntries(ids.map((id) => [id, b.autoPlay.play ? brief.piece(b, id) : '']));
+}
+
 async function collect(config, now = Date.now(), key = '', opts = {}) {
   const log = [];
   const autoPlay = await holidays.playDay(now, key);
@@ -208,6 +213,9 @@ if (require.main === module) {
     });
     fs.writeFileSync(path.join(out, 'briefing.json'), JSON.stringify(b, null, 1));
     fs.writeFileSync(path.join(out, 'briefing.txt'), speechText(b));
+    // 아이폰 단축어가 고른 언론사만 읽도록 언론사마다 조각 원고 (쉬는 날에는 모두 빈 파일)
+    fs.mkdirSync(path.join(out, 'ios'), { recursive: true });
+    for (const [id, text] of Object.entries(iosPieces(b))) fs.writeFileSync(path.join(out, 'ios', `${id}.txt`), text);
     console.log(`뉴스 브리핑 ${b.dateLabel} (기본 언론사): ` + brief.select(b).map((s) => `${s.title} ${s.items.length}건`).join(' · '));
     console.log(`언론사 ${b.sections.reduce((n, s) => n + s.sources.length, 0)}곳, 기사 ${b.sections.reduce((n, s) => n + s.sources.reduce((m, x) => m + x.items.length, 0), 0)}건`);
     b.log.forEach((l) => console.log('  ' + l));
@@ -219,4 +227,4 @@ if (require.main === module) {
   })();
 }
 
-module.exports = { collect, decode, googleUrl, translate, speechText, RETRY };
+module.exports = { collect, decode, googleUrl, translate, speechText, iosPieces, RETRY };

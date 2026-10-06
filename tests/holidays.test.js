@@ -1,7 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const h = require('../tools/holidays.js');
-const { collect, speechText } = require('../tools/collect.js');
+const { collect, speechText, iosPieces } = require('../tools/collect.js');
 
 const at = (ymd, hh = 6) => Date.parse(`${ymd}T${String(hh).padStart(2, '0')}:00:00+09:00`);
 
@@ -47,4 +47,16 @@ test('briefing.txt: 쉬는 날에는 비워서 자동 재생이 아무것도 읽
   assert.equal(speechText(off), '');
   assert.match(off.script, /오늘의 주요 소식입니다/, '화면(briefing.json)에서는 쉬는 날에도 들을 수 있다');
   assert.deepEqual([off.autoPlay.play, off.autoPlay.reason], [false, '한글날']);
+});
+
+test('아이폰 조각 원고: 언론사마다 따로, 쉬는 날에는 모두 비운다', async (t) => {
+  t.mock.method(globalThis, 'fetch', async () => new Response('<rss><channel><item><title>오늘의 주요 소식입니다</title><link>x</link></item></channel></rss>'));
+  const config = { sections: [{ id: 'a', title: '가', perSourceLabel: true, limit: 3, sources: [{ id: 'ga', name: '가신문', url: 'https://a' }] }] };
+  const work = iosPieces(await collect(config, at('2026-10-06')));
+  assert.deepEqual(Object.keys(work), ['open', 'close', 'ga']);
+  assert.match(work.open, /^좋은 아침입니다\. 10월 6일 화요일/);
+  assert.equal(work.ga, '가신문 소식입니다.\n오늘의 주요 소식입니다.\n');
+  assert.match(work.close, /좋은 하루 보내세요/);
+  const off = iosPieces(await collect(config, at('2026-10-09')));
+  assert.deepEqual(Object.values(off), ['', '', '']);
 });
