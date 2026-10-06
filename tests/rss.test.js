@@ -110,3 +110,16 @@ test('must: 검색에 섞여 든 엉뚱한 기사를 거른다', () => {
   const got = rss.pick({ limit: 5, must: '비료|요소' }, [{ source: { name: '구글 뉴스', take: 5 }, items }], NOW, []);
   assert.deepEqual(got.map((i) => i.title), ['강원농업기술원, 비료 토양 분석 신뢰성 입증']);
 });
+
+test('이미 . ? ! 로 끝나는 제목(번역문)에는 마침표를 또 붙이지 않는다', () => {
+  assert.equal(rss.sentence('쌀 가격 급등'), '쌀 가격 급등.');
+  assert.equal(rss.sentence('경쟁력은 어떻습니까?'), '경쟁력은 어떻습니까?');
+  assert.equal(rss.sentence('채권 매각을 중단했습니다.'), '채권 매각을 중단했습니다.');
+});
+
+test('출처마다 hours를 따로 줄 수 있다', () => {
+  const old = { title: '일주일 전 비료 소식입니다', publishedAt: new Date(NOW - 100 * 3600e3).toISOString() };
+  const sec = { limit: 5 };
+  assert.equal(rss.pick(sec, [{ source: { name: '가', take: 5 }, items: [old] }], NOW, []).length, 0);
+  assert.equal(rss.pick(sec, [{ source: { name: '가', take: 5, hours: 168 }, items: [old] }], NOW, []).length, 1);
+});

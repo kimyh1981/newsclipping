@@ -38,7 +38,7 @@
       const hs = b.sections.findIndex((s, i) => i > sec && text.endsWith(`${s.title}입니다.`));
       if (hs >= 0) sec = hs;
       const s = b.sections[sec];
-      const ii = s ? s.items.findIndex((it) => `${it.spoken}.` === text) : -1;
+      const ii = s ? s.items.findIndex((it) => text === it.spoken || text === `${it.spoken}.`) : -1;
       return { text, sec, el: ii >= 0 ? $(`i${sec}-${ii}`) : null };
     });
   }
