@@ -13,8 +13,8 @@ android {
         // 배포 작업 번호가 버전: 새 APK를 받으면 기존 앱 위에 업데이트로 설치된다
         versionCode Integer.parseInt(System.getenv('GITHUB_RUN_NUMBER') ?: '1')
         versionName "1.0.${System.getenv('GITHUB_RUN_NUMBER') ?: '0'}"
-        // 뉴스 원고 주소. 다른 곳에 배포하면 NEWS_URL 환경 변수로 바꾼다
-        buildConfigField 'String', 'NEWS_URL', "\"${System.getenv('NEWS_URL') ?: 'https://kimyh1981.github.io/newsclipping/briefing.txt'}\""
+        // 뉴스 브리핑(언론사별 기사) 주소. 다른 곳에 배포하면 NEWS_URL 환경 변수로 바꾼다
+        buildConfigField 'String', 'NEWS_URL', "\"${System.getenv('NEWS_URL') ?: 'https://kimyh1981.github.io/newsclipping/briefing.json'}\""
     }
 
     buildFeatures {
@@ -50,4 +50,6 @@ android {
 
 dependencies {
     testImplementation 'junit:junit:4.13.2'
+    // 안드로이드에 들어 있는 org.json을 JVM 단위 테스트에서도 쓰려면 실제 구현이 필요하다
+    testImplementation 'org.json:json:20240303'
 }

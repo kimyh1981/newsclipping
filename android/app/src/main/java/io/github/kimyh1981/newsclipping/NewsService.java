@@ -26,7 +26,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Locale;
 
-/** 오늘의 원고(briefing.txt)를 받아 미디어 음량으로 읽는다. 차 스피커로 나가도록 포그라운드 서비스로 돈다. */
+/** 오늘의 브리핑(briefing.json)을 받아 고른 언론사로 원고를 만들어 미디어 음량으로 읽는다. 차 스피커로 나가도록 포그라운드 서비스로 돈다. */
 public class NewsService extends Service {
     static final String ACTION_PLAY = "play";
     static final String ACTION_STOP = "stop";
@@ -106,20 +106,25 @@ public class NewsService extends Service {
 
     private void prepare(boolean manual) {
         if (!manual) sleep(5000); // 차 오디오(A2DP)가 이어질 시간
-        String text = null;
-        for (int k = 0; k < 3 && text == null && !stopped; k++) {
+        Brief brief = null;
+        for (int k = 0; k < 3 && brief == null && !stopped; k++) {
             try {
-                text = fetch(BuildConfig.NEWS_URL);
+                brief = Brief.parse(fetch(BuildConfig.NEWS_URL));
             } catch (Exception e) {
-                Log.w(TAG, "원고 받기 실패 " + (k + 1) + "회: " + e);
+                Log.w(TAG, "브리핑 받기 실패 " + (k + 1) + "회: " + e);
                 sleep(4000L * (k + 1)); // 시동 직후 데이터가 늦게 잡히는 경우
             }
         }
         if (stopped) return;
-        if (text == null) text = manual ? "뉴스를 가져오지 못했습니다. 인터넷 연결을 확인해 주세요." : "";
-        if (text.trim().isEmpty()) {
-            if (!manual) { main.post(this::finish); return; } // 주말·공휴일: 서버가 원고를 비워 둔다
-            text = "오늘은 쉬는 날이라 자동 브리핑이 없습니다. 뉴스 화면에서 오늘 기사를 볼 수 있습니다.";
+        String text;
+        if (brief == null) {
+            if (!manual) { main.post(this::finish); return; }
+            text = "뉴스를 가져오지 못했습니다. 인터넷 연결을 확인해 주세요.";
+        } else if (!brief.playToday && !manual) {
+            main.post(this::finish); // 주말·공휴일: 자동으로는 읽지 않는다
+            return;
+        } else {
+            text = brief.script(new Prefs(this).sources());
         }
         if (!manual) new Prefs(this).markPlayed();
         final String script = text;
@@ -156,7 +161,7 @@ public class NewsService extends Service {
         });
     }
 
-    private static String fetch(String url) throws Exception {
+    static String fetch(String url) throws Exception {
         HttpURLConnection c = (HttpURLConnection) new URL(url + "?t=" + System.currentTimeMillis()).openConnection();
         c.setConnectTimeout(15000);
         c.setReadTimeout(20000);
