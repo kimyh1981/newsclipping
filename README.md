@@ -2,10 +2,12 @@
 
 매일 아침 주요 신문(연합·조선·중앙·동아·한겨레·경향), 농업 신문(농민신문·한국농어민신문·농수축산신문·농축유통신문), 비료 관련 뉴스, 국제 정세·경제, 베트남 농업·비료 뉴스(단찌 등, 우리말 번역) 헤드라인을 모아,
 **평일 아침 6~8시 차 블루투스가 연결되면 자동으로 읽어 주는** 앱입니다.
+한국·베트남·영문 국제·중국·일본 언론 69곳 가운데 들을 언론사를 앱과 웹에서 각자 체크해 고릅니다 (외국 언론은 제목을 우리말로 번역).
 
 - 설치·기사 목록: https://kimyh1981.github.io/newsclipping/
 - 갤럭시 앱(APK): https://github.com/kimyh1981/newsclipping/releases/latest/download/newsclipping.apk
-- 앱이 읽는 원고: https://kimyh1981.github.io/newsclipping/briefing.txt (주말·공휴일에는 빈 파일)
+- 언론사별 기사: https://kimyh1981.github.io/newsclipping/briefing.json (앱과 웹이 읽는다)
+- 기본 언론사 원고: https://kimyh1981.github.io/newsclipping/briefing.txt (아이폰 단축어가 읽는다, 주말·공휴일에는 빈 파일)
 
 ## 구성
 
@@ -13,7 +15,8 @@
 |---|---|
 | `tools/collect.js`, `feeds.json` | 매일 새벽 5시(한국 시간) RSS를 모아 `briefing.json`·`briefing.txt`를 만든다. 언론사 RSS가 막히면 구글 뉴스로 대신하고, 같은 사건은 한 번만, 제목은 소리 내어 읽기 좋게 다듬는다. `lang`이 붙은 섹션(베트남)은 베트남판 구글 뉴스에서 찾아 제목을 구글 번역으로 옮긴다 |
 | `tools/holidays.js` | 주말·공휴일이면 `briefing.txt`를 비운다. 공휴일은 공공데이터포털 특일 정보(`DATA_GO_KR_KEY`), 실패하면 내장 목록 |
-| `index.html`, `js/` | 기사 목록, 듣기 버튼, 설치 안내 |
+| `js/brief.js` | 고른 언론사로 섹션과 원고를 만드는 규칙 (서버·웹 공용, 앱의 `Brief.java`가 같은 규칙. `tests/fixtures`로 둘을 맞춘다) |
+| `index.html`, `js/app.js` | 기사 목록, 듣기 버튼, 언론사 체크 목록, 설치 안내 |
 | `android/` | 갤럭시 앱. 차 블루투스 연결(ACL_CONNECTED)을 받아 평일 6~8시에 하루 한 번 원고를 받아 미디어 음량으로 읽고, 연결이 끊기면 멈춘다 |
 | `.github/workflows/pages.yml` | 테스트 → 원고 수집 → Pages 배포 (push, 매일 05:00·05:40) |
 | `.github/workflows/news-check.yml` | PR마다 실제 출처·번역을 불러 원고를 로그로 보여 준다 |

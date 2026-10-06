@@ -28,12 +28,17 @@ test('화면이 참조하는 파일이 모두 있고, 배포 작업이 그 파�
   assert.match(wf, /cron: '\d+ 20 \* \* \*'/, '한국 시간 새벽 5시대에 브리핑을 만든다');
 });
 
-test('앱과 화면이 같은 주소를 쓴다: 앱은 briefing.txt, 화면의 설치 버튼은 최신 릴리스 APK', () => {
+test('앱과 화면이 같은 주소를 쓴다: 앱은 briefing.json, 화면의 설치 버튼은 최신 릴리스 APK', () => {
   const gradle = read('android/app/build.gradle');
-  assert.match(gradle, /https:\/\/kimyh1981\.github\.io\/newsclipping\/briefing\.txt/);
+  assert.match(gradle, /https:\/\/kimyh1981\.github\.io\/newsclipping\/briefing\.json/);
   const wf = read('.github/workflows/android.yml');
   assert.match(wf, /gh release create "\$tag" newsclipping\.apk/);
   assert.match(read('index.html'), /releases\/latest\/download\/newsclipping\.apk/);
   const manifest = read('android/app/src/main/AndroidManifest.xml');
   for (const a of ['ACL_CONNECTED', 'ACL_DISCONNECTED', 'BLUETOOTH_CONNECT', 'FOREGROUND_SERVICE_MEDIA_PLAYBACK', 'mediaPlayback']) assert.match(manifest, new RegExp(a));
+});
+
+test('화면은 원고 규칙(js/brief.js)을 먼저 불러온다', () => {
+  const html = read('index.html');
+  assert.ok(html.indexOf('js/brief.js') > 0 && html.indexOf('js/brief.js') < html.indexOf('js/app.js'));
 });

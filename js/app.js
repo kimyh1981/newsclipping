@@ -1,4 +1,4 @@
-/* 아침 뉴스 브리핑 화면: briefing.json을 보여 주고, 원고를 한 줄씩 한국어 음성으로 읽는다 */
+/* 아침 뉴스 브리핑 화면: briefing.json에서 고른 언론사의 기사를 보여 주고, 원고를 한 줄씩 한국어 음성으로 읽는다 (원고 규칙은 js/brief.js) */
 (function () {
   const $ = (id) => document.getElementById(id);
   const synth = window.speechSynthesis;
@@ -12,6 +12,9 @@
   let pos = 0;
   let playing = false;
   let voice = null;
+  let data = null; // 오늘 briefing.json
+  let enabled = null; // 고른 언론사 id 목록, null이면 기본값
+  try { enabled = JSON.parse(store.get('news.sources')); } catch { enabled = null; }
 
   const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
@@ -28,20 +31,42 @@
     const age = (Date.now() - Date.parse(b.generatedAt)) / 3600e3;
     $('meta').textContent = `${b.dateLabel} · ${kstTime(b.generatedAt)} 수집` + (age > 20 ? ' · 어제 소식일 수 있어요' : '') +
       (b.autoPlay && !b.autoPlay.play ? ` · 오늘은 ${b.autoPlay.reason}이라 차에서 자동 재생은 쉬어요` : '');
-    $('list').innerHTML = b.sections.map((s, si) => `<section><h2>${esc(s.title)}</h2>` + (s.items.length
+    const sections = Brief.select(b, enabled);
+    $('list').innerHTML = sections.map((s, si) => `<section><h2>${esc(s.title)}</h2>` + (s.items.length
       ? `<ol>${s.items.map((it, ii) => `<li id="i${si}-${ii}"><a href="${esc(it.link)}" target="_blank" rel="noopener">${esc(it.title)}</a><small>${esc(it.source)}${it.original ? ` · 원문: ${esc(it.original)}` : ''}</small></li>`).join('')}</ol>`
-      : '<p class="empty">새 소식 없음</p>') + '</section>').join('');
+      : '<p class="empty">새 소식 없음</p>') + '</section>').join('') || '<p class="empty">고른 언론사가 없어요. 아래에서 언론사를 골라 주세요.</p>';
 
     // 원고 줄을 화면의 섹션·기사와 짝지어, 읽는 중인 기사를 표시하고 섹션 단위로 건너뛴다
     let sec = -1;
-    queue = b.script.split('\n').map((t) => t.trim()).filter(Boolean).map((text) => {
-      const hs = b.sections.findIndex((s, i) => i > sec && text.endsWith(`${s.title}입니다.`));
+    queue = Brief.script(b, enabled).split('\n').map((t) => t.trim()).filter(Boolean).map((text) => {
+      const hs = sections.findIndex((s, i) => i > sec && text.endsWith(`${s.title}입니다.`));
       if (hs >= 0) sec = hs;
-      const s = b.sections[sec];
-      const ii = s ? s.items.findIndex((it) => text === it.spoken || text === `${it.spoken}.`) : -1;
+      const s = sections[sec];
+      const ii = s ? s.items.findIndex((it) => text === Brief.sentence(it.spoken)) : -1;
       return { text, sec, el: ii >= 0 ? $(`i${sec}-${ii}`) : null };
     });
   }
+
+  // 언론사 체크 목록: 섹션마다 언론사를 보여 주고, 고른 것을 이 기기에 저장한다
+  function renderPicker(b) {
+    const on = new Set(enabled || Brief.defaults(b));
+    $('sources').innerHTML = b.sections.map((s) => `<fieldset><legend>${esc(s.title)}</legend>` + s.sources.map((x) =>
+      `<label><input type="checkbox" value="${esc(x.id)}"${on.has(x.id) ? ' checked' : ''}> ${esc(x.name)}${x.lang !== 'ko' ? ' <small>번역</small>' : ''}<small>${x.items.length ? '' : ' · 오늘 기사 없음'}</small></label>`).join('') + '</fieldset>').join('');
+    $('pickNote').textContent = enabled ? `${enabled.length}곳을 골랐어요.` : '기본 언론사를 듣고 있어요.';
+  }
+
+  function choose(ids) {
+    enabled = ids;
+    if (ids) store.set('news.sources', JSON.stringify(ids)); else store.set('news.sources', '');
+    stop();
+    pos = 0;
+    render(data);
+    renderPicker(data);
+    setPlaying(false);
+  }
+
+  $('sources').addEventListener('change', () => choose([...document.querySelectorAll('#sources input:checked')].map((x) => x.value)));
+  $('resetSources').onclick = () => choose(null);
 
   function mark(el) {
     document.querySelectorAll('li.now').forEach((x) => x.classList.remove('now'));
@@ -117,7 +142,9 @@
   fetch('briefing.json', { cache: 'no-store' })
     .then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); })
     .then((b) => {
+      data = b;
       render(b);
+      renderPicker(b);
       if (new URLSearchParams(location.search).has('autoplay')) play();
     })
     .catch(() => { $('meta').textContent = '오늘 브리핑을 아직 만들지 못했어요. 잠시 후 다시 열어 주세요.'; });

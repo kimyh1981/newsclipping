@@ -1,0 +1,50 @@
+package io.github.kimyh1981.newsclipping;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashSet;
+import org.junit.Test;
+
+/** 웹(js/brief.js)과 같은 브리핑에서 같은 원고가 나와야 한다: tests/fixtures를 같이 쓴다. */
+public class BriefTest {
+    private static Path fixtures() {
+        for (Path p = Paths.get("").toAbsolutePath(); p != null; p = p.getParent()) {
+            Path f = p.resolve("tests/fixtures");
+            if (Files.isDirectory(f)) return f;
+        }
+        throw new IllegalStateException("tests/fixtures를 찾지 못함");
+    }
+
+    private static String read(String name) throws Exception {
+        return new String(Files.readAllBytes(fixtures().resolve(name)), StandardCharsets.UTF_8);
+    }
+
+    @Test public void sameScriptAsWeb() throws Exception {
+        Brief b = Brief.parse(read("briefing.json"));
+        assertTrue(b.playToday);
+        assertEquals(new HashSet<>(Arrays.asList("a", "c", "d")), b.defaults());
+        assertEquals(read("script-default.txt"), b.script(null));
+        assertEquals(read("script-b-c-d.txt"), b.script(new HashSet<>(Arrays.asList("b", "c", "d"))));
+        assertEquals(read("script-none.txt"), b.script(Collections.emptySet()));
+    }
+
+    @Test public void sentenceKeepsEndingMarks() {
+        assertEquals("쌀값 급등.", Brief.sentence("쌀값 급등"));
+        assertEquals("어떻습니까?", Brief.sentence("어떻습니까?"));
+        assertFalse(Brief.sentence("끝.").endsWith(".."));
+    }
+
+    @Test public void catalogMarksTranslatedSources() throws Exception {
+        Brief b = Brief.parse(read("briefing.json"));
+        assertEquals(4, b.catalog().size());
+        assertEquals("번역", b.catalog().get(3)[3]);
+    }
+}

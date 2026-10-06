@@ -2,6 +2,8 @@
  * RSS·Atom 읽기와 아침 브리핑 원고 만들기. 네트워크 없이 동작하는 순수 함수만 둔다 (테스트 대상).
  */
 
+const brief = require('../js/brief.js');
+
 const ENTITIES = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ', middot: '·', hellip: '…', lsquo: '‘', rsquo: '’', ldquo: '“', rdquo: '”' };
 
 function decodeEntities(s) {
@@ -59,8 +61,8 @@ const SKIP = /\[(포토|사진|영상|그래픽|카드뉴스|부고|인사|게�
 const SKIP_FOREIGN = /^\s*(video|clip|ảnh|infographic|emagazine|podcast)\b|\[(video|clip|ảnh|infographic)\]/i;
 
 function skip(title, lang = 'ko') {
-  if (/[\u3040-\u30ff]/.test(title)) return true;
   if (lang !== 'ko') return SKIP_FOREIGN.test(title);
+  if (/[\u3040-\u30ff]/.test(title)) return true;
   const hangul = (title.match(/[가-힣]/g) || []).length;
   return hangul < 4 || SKIP.test(title);
 }
@@ -135,10 +137,10 @@ function fresh(item, now, hours = 36) {
 function pick(section, fetched, now, seen = []) {
   const items = [];
   const hours = section.hours || 36;
-  const lang = section.lang || 'ko';
   const must = section.must ? new RegExp(section.must, 'i') : null; // 검색 결과에 섞여 든 엉뚱한 기사를 거른다
   for (const { source, items: list } of fetched) {
     let taken = 0;
+    const lang = source.lang || section.lang || 'ko';
     const need = source.must ? new RegExp(source.must, 'i') : must; // 출처마다 따로 줄 수도 있다
     for (const it of list) {
       if (taken >= (source.take || 3) || items.length >= section.limit) break;
@@ -146,52 +148,11 @@ function pick(section, fetched, now, seen = []) {
       if (skip(title, lang) || !fresh(it, now, source.hours || hours) || !spoken(title) || (need && !need.test(title))) continue;
       if (seen.some((t) => similar(t, title))) continue;
       seen.push(title);
-      items.push({ title, spoken: spoken(title), source: source.name.startsWith('구글 뉴스') ? it.source || source.name : source.name, link: it.link, publishedAt: it.publishedAt });
+      items.push({ title, spoken: spoken(title), source: source.mix || source.name.startsWith('구글 뉴스') ? it.source || source.name : source.name, link: it.link, publishedAt: it.publishedAt });
       taken++;
     }
   }
   return items;
 }
 
-const DAYS = ['일', '월', '화', '수', '목', '금', '토'];
-
-function koreanDate(now) {
-  const kst = new Date(now + 9 * 3600e3);
-  return `${kst.getUTCMonth() + 1}월 ${kst.getUTCDate()}일 ${DAYS[kst.getUTCDay()]}요일`;
-}
-
-// 문장 끝에 마침표를 붙이되, 번역문처럼 이미 . ? ! 로 끝나면 그대로 둔다
-function sentence(s) {
-  return /[.?!]$/.test(s) ? s : `${s}.`;
-}
-
-const ORDINAL = ['먼저', '다음은', '이어서', '마지막으로'];
-
-// 차에서 들을 원고. 문장 끝마다 마침표를 넣어 음성이 잠깐 쉬게 한다
-function buildScript(sections, now) {
-  const lines = [`좋은 아침입니다. ${koreanDate(now)} 아침 뉴스 브리핑입니다.`];
-  sections.forEach((sec, i) => {
-    const lead = i === sections.length - 1 && sections.length > 1 ? ORDINAL[3] : ORDINAL[Math.min(i, 2)];
-    lines.push('');
-    lines.push(`${lead} ${sec.title}입니다.`);
-    if (!sec.items.length) {
-      lines.push('오늘은 새 소식이 없습니다.');
-      return;
-    }
-    if (sec.perSourceLabel) {
-      let last = null;
-      for (const it of sec.items) {
-        if (it.source !== last) lines.push(`${it.source}.`);
-        last = it.source;
-        lines.push(sentence(it.spoken));
-      }
-    } else {
-      for (const it of sec.items) lines.push(sentence(it.spoken));
-    }
-  });
-  lines.push('');
-  lines.push('이상으로 오늘 아침 브리핑을 마칩니다. 오늘도 안전 운전하세요.');
-  return lines.join('\n') + '\n';
-}
-
-module.exports = { decodeEntities, text, parseFeed, skip, splitGoogleSource, spoken, similar, words, fresh, pick, koreanDate, buildScript, sentence };
+module.exports = { decodeEntities, text, parseFeed, skip, splitGoogleSource, spoken, similar, words, fresh, pick, koreanDate: brief.koreanDate, buildScript: brief.buildScript, sentence: brief.sentence };
