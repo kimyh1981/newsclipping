@@ -30,6 +30,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+      - run: npm ci
       - name: Test
         run: npm test
       - name: Site files
@@ -38,10 +39,13 @@ jobs:
           cp -r index.html manifest.webmanifest js icons _site/
       # 신문사·농업·비료·국제/경제 헤드라인 → briefing.json(화면), briefing.txt(앱이 읽는 원고, 주말·공휴일엔 빈 파일)
       - name: News briefing
-        timeout-minutes: 4
+        timeout-minutes: 8
         continue-on-error: true
         env:
           DATA_GO_KR_KEY: ${{ secrets.DATA_GO_KR_KEY }}
+          # 기사 '자세히': 기본은 본문 첫 문장(무료). 저장소 Settings → Variables에서 SUMMARY_MODE=claude로 바꾸면 Claude 요약(유료)
+          SUMMARY_MODE: ${{ vars.SUMMARY_MODE }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: node tools/collect.js _site
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3

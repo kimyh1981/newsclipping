@@ -1,46 +1,158 @@
 {
-  "_설명": "섹션별 뉴스 출처. url은 RSS 주소, google은 구글 뉴스 검색어(url이 없거나 막히거나 비어 있을 때 쓴다), when은 구글 검색 기간(기본 1d). take는 그 출처에서 읽을 기사 수, limit은 섹션 전체 기사 수, hours는 이보다 오래된 기사를 뺀다(기본 36, 출처에도 줄 수 있다), must는 제목에 꼭 있어야 하는 낱말(정규식, 출처에도 줄 수 있다). lang은 외국어 섹션의 언어(vi 등): 구글 뉴스를 그 나라판에서 찾고, 고른 제목을 우리말로 번역해 읽는다(must는 원문 제목에 적용).",
+  "_설명": "섹션별 뉴스 출처(언론사). id는 앱·웹에서 체크할 때 쓰는 이름(바꾸면 각자 고른 설정이 풀린다), default가 false면 기본으로 꺼져 있다. url은 RSS 주소, google은 구글 뉴스 검색어(url이 없거나 막히거나 비어 있을 때 쓴다), when은 구글 검색 기간(기본 1d). take는 그 출처에서 읽을 기사 수, limit은 섹션 전체 기사 수, hours는 이보다 오래된 기사를 뺀다(기본 36, 출처에도 줄 수 있다), must는 제목에 꼭 있어야 하는 낱말(정규식, 출처에도 줄 수 있다). lang은 외국 언론의 언어(en, vi, zh, ja; 섹션이나 출처에): 구글 뉴스를 그 나라판에서 찾고 제목을 우리말로 번역해 읽는다(must는 원문 제목에 적용). mix는 여러 언론사 모음(구글 검색)이라 기사마다 실제 언론사 이름을 쓴다.",
   "sections": [
     {
       "id": "papers",
       "title": "주요 신문 헤드라인",
       "perSourceLabel": true,
-      "limit": 12,
+      "limit": 14,
       "sources": [
         {
           "name": "연합뉴스",
           "url": "https://www.yna.co.kr/rss/news.xml",
           "google": "site:yna.co.kr",
-          "take": 2
+          "take": 2,
+          "id": "yna"
         },
         {
           "name": "조선일보",
           "url": "https://www.chosun.com/arc/outboundfeeds/rss/?outputType=xml",
           "google": "site:chosun.com",
-          "take": 2
+          "take": 2,
+          "id": "chosun"
         },
         {
           "name": "중앙일보",
           "google": "site:joongang.co.kr",
-          "take": 2
+          "take": 2,
+          "id": "joongang"
         },
         {
           "name": "동아일보",
           "url": "https://rss.donga.com/total.xml",
           "google": "site:donga.com",
-          "take": 2
+          "take": 2,
+          "id": "donga"
         },
         {
           "name": "한겨레",
           "url": "https://www.hani.co.kr/rss/",
           "google": "site:hani.co.kr",
-          "take": 2
+          "take": 2,
+          "id": "hani"
         },
         {
           "name": "경향신문",
           "url": "https://www.khan.co.kr/rss/rssdata/total_news.xml",
           "google": "site:khan.co.kr",
-          "take": 2
+          "take": 2,
+          "id": "khan"
+        },
+        {
+          "id": "hankookilbo",
+          "name": "한국일보",
+          "google": "site:hankookilbo.com",
+          "take": 2,
+          "default": false
+        },
+        {
+          "id": "kmib",
+          "name": "국민일보",
+          "google": "site:kmib.co.kr",
+          "take": 2,
+          "default": false
+        },
+        {
+          "id": "kbs",
+          "name": "KBS",
+          "google": "site:news.kbs.co.kr",
+          "take": 2,
+          "default": false
+        },
+        {
+          "id": "mbc",
+          "name": "MBC",
+          "google": "site:imnews.imbc.com",
+          "take": 2,
+          "default": false
+        },
+        {
+          "id": "sbs",
+          "name": "SBS",
+          "google": "site:news.sbs.co.kr",
+          "take": 2,
+          "default": false
+        },
+        {
+          "id": "ytn",
+          "name": "YTN",
+          "google": "site:ytn.co.kr",
+          "take": 2,
+          "default": false
+        },
+        {
+          "id": "jtbc",
+          "name": "JTBC",
+          "google": "site:news.jtbc.co.kr",
+          "take": 2,
+          "default": false
+        }
+      ]
+    },
+    {
+      "id": "economy",
+      "title": "경제 신문 헤드라인",
+      "perSourceLabel": true,
+      "limit": 8,
+      "sources": [
+        {
+          "id": "mk",
+          "name": "매일경제",
+          "google": "site:mk.co.kr",
+          "take": 2,
+          "default": false
+        },
+        {
+          "id": "hankyung",
+          "name": "한국경제",
+          "google": "site:hankyung.com",
+          "take": 2,
+          "default": false
+        },
+        {
+          "id": "sedaily",
+          "name": "서울경제",
+          "google": "site:sedaily.com",
+          "take": 2,
+          "default": false
+        },
+        {
+          "id": "mt",
+          "name": "머니투데이",
+          "google": "site:mt.co.kr",
+          "take": 2,
+          "default": false
+        },
+        {
+          "id": "edaily",
+          "name": "이데일리",
+          "google": "site:edaily.co.kr",
+          "take": 2,
+          "default": false
+        },
+        {
+          "id": "fnnews",
+          "name": "파이낸셜뉴스",
+          "google": "site:fnnews.com",
+          "take": 2,
+          "default": false
+        },
+        {
+          "id": "heraldcorp",
+          "name": "헤럴드경제",
+          "google": "site:heraldcorp.com",
+          "take": 2,
+          "default": false
         }
       ]
     },
@@ -53,25 +165,57 @@
         {
           "name": "농민신문",
           "google": "site:nongmin.com (농업 OR 농가 OR 농협 OR 농산물 OR 농촌 OR 축산 OR 쌀 OR 비료)",
-          "take": 3
+          "take": 3,
+          "id": "nongmin"
         },
         {
           "name": "한국농어민신문",
           "url": "https://www.agrinet.co.kr/rss/allArticle.xml",
           "google": "site:agrinet.co.kr",
-          "take": 2
+          "take": 2,
+          "id": "agrinet"
         },
         {
           "name": "농수축산신문",
           "url": "https://www.aflnews.co.kr/rss/allArticle.xml",
           "google": "site:aflnews.co.kr",
-          "take": 2
+          "take": 2,
+          "id": "aflnews"
         },
         {
           "name": "농축유통신문",
           "url": "https://www.amnews.co.kr/rss/allArticle.xml",
           "google": "site:amnews.co.kr",
-          "take": 1
+          "take": 1,
+          "id": "amnews"
+        },
+        {
+          "id": "ikpnews",
+          "name": "한국농정신문",
+          "google": "site:ikpnews.net",
+          "take": 2,
+          "default": false
+        },
+        {
+          "id": "nongupin",
+          "name": "농업인신문",
+          "google": "site:nongupin.co.kr",
+          "take": 2,
+          "default": false
+        },
+        {
+          "id": "farminsight",
+          "name": "팜인사이트",
+          "google": "site:farminsight.net",
+          "take": 2,
+          "default": false
+        },
+        {
+          "id": "chuksannews",
+          "name": "축산신문",
+          "google": "site:chuksannews.co.kr",
+          "take": 2,
+          "default": false
         }
       ]
     },
@@ -81,20 +225,44 @@
       "limit": 5,
       "sources": [
         {
-          "name": "구글 뉴스",
+          "name": "비료 검색",
           "google": "비료",
           "when": "2d",
-          "take": 4
+          "take": 4,
+          "id": "fert-search",
+          "mix": true
         },
         {
-          "name": "구글 뉴스",
+          "name": "비료값·요소비료 검색",
           "google": "비료값 OR 요소비료 OR 무기질비료 OR 유기질비료 OR 농자재",
           "when": "2d",
-          "take": 2
+          "take": 2,
+          "id": "fert-price",
+          "mix": true
+        },
+        {
+          "id": "fert-bio",
+          "name": "미생물·바이오 비료 검색",
+          "google": "미생물비료 OR 바이오비료 OR 미생물제제 OR 토양개량제",
+          "when": "3d",
+          "take": 2,
+          "mix": true,
+          "default": false
+        },
+        {
+          "id": "bioplan",
+          "name": "바이오플랜 검색",
+          "google": "바이오플랜",
+          "when": "7d",
+          "hours": 168,
+          "take": 2,
+          "mix": true,
+          "default": false,
+          "must": "바이오플랜"
         }
       ],
       "hours": 60,
-      "must": "비료|요소|퇴비|농자재|농기자재|칼륨|인산"
+      "must": "비료|요소|퇴비|농자재|농기자재|칼륨|인산|미생물|토양|바이오플랜"
     },
     {
       "id": "world",
@@ -105,13 +273,263 @@
           "name": "구글 뉴스 국제",
           "url": "https://news.google.com/rss/headlines/section/topic/WORLD?hl=ko&gl=KR&ceid=KR:ko",
           "google": "국제 정세",
-          "take": 4
+          "take": 4,
+          "id": "gnews-world",
+          "mix": true
         },
         {
           "name": "구글 뉴스 경제",
           "url": "https://news.google.com/rss/headlines/section/topic/BUSINESS?hl=ko&gl=KR&ceid=KR:ko",
           "google": "경제 증시 환율",
-          "take": 4
+          "take": 4,
+          "id": "gnews-biz",
+          "mix": true
+        },
+        {
+          "id": "reuters",
+          "name": "로이터",
+          "google": "site:reuters.com",
+          "take": 2,
+          "default": false,
+          "lang": "en"
+        },
+        {
+          "id": "ap",
+          "name": "AP",
+          "google": "site:apnews.com",
+          "take": 2,
+          "default": false,
+          "lang": "en"
+        },
+        {
+          "id": "bbc",
+          "name": "BBC",
+          "google": "site:bbc.com",
+          "take": 2,
+          "default": false,
+          "lang": "en"
+        },
+        {
+          "id": "bloomberg",
+          "name": "블룸버그",
+          "google": "site:bloomberg.com",
+          "take": 2,
+          "default": false,
+          "lang": "en"
+        },
+        {
+          "id": "cnbc",
+          "name": "CNBC",
+          "google": "site:cnbc.com",
+          "take": 2,
+          "default": false,
+          "lang": "en"
+        },
+        {
+          "id": "nikkei-asia",
+          "name": "닛케이 아시아",
+          "google": "site:asia.nikkei.com",
+          "take": 2,
+          "default": false,
+          "lang": "en"
+        }
+      ]
+    },
+    {
+      "id": "global-agri",
+      "title": "해외 농업과 비료 뉴스",
+      "lang": "en",
+      "limit": 5,
+      "hours": 72,
+      "sources": [
+        {
+          "id": "worldfertilizer",
+          "name": "월드 퍼틸라이저",
+          "google": "site:worldfertilizer.com",
+          "take": 2,
+          "default": false,
+          "when": "3d"
+        },
+        {
+          "id": "agropages",
+          "name": "애그로페이지스",
+          "google": "site:agropages.com",
+          "take": 2,
+          "default": false,
+          "when": "3d"
+        },
+        {
+          "id": "argus-fert",
+          "name": "아거스 비료 시황",
+          "google": "site:argusmedia.com fertilizer",
+          "take": 2,
+          "default": false,
+          "when": "3d",
+          "must": "fertili[sz]er|urea|ammonia|potash|phosphate|sulphur|sulfur"
+        },
+        {
+          "id": "dtn",
+          "name": "DTN 프로그레시브 파머",
+          "google": "site:dtnpf.com",
+          "take": 2,
+          "default": false,
+          "when": "3d"
+        },
+        {
+          "id": "agriculture-com",
+          "name": "석세스풀 파밍",
+          "google": "site:agriculture.com",
+          "take": 2,
+          "default": false,
+          "when": "3d"
+        },
+        {
+          "id": "worldgrain",
+          "name": "월드 그레인",
+          "google": "site:world-grain.com",
+          "take": 2,
+          "default": false,
+          "when": "3d"
+        }
+      ]
+    },
+    {
+      "id": "china",
+      "title": "중국 뉴스",
+      "lang": "zh",
+      "limit": 6,
+      "sources": [
+        {
+          "id": "xinhua",
+          "name": "신화망",
+          "google": "site:xinhuanet.com",
+          "take": 2,
+          "default": false
+        },
+        {
+          "id": "people",
+          "name": "인민망",
+          "google": "site:people.com.cn",
+          "take": 2,
+          "default": false
+        },
+        {
+          "id": "caixin",
+          "name": "차이신",
+          "google": "site:caixin.com",
+          "take": 2,
+          "default": false
+        },
+        {
+          "id": "farmer-cn",
+          "name": "농민일보",
+          "google": "site:farmer.com.cn",
+          "take": 2,
+          "default": false,
+          "when": "3d",
+          "hours": 72
+        }
+      ]
+    },
+    {
+      "id": "japan",
+      "title": "일본 뉴스",
+      "lang": "ja",
+      "limit": 6,
+      "sources": [
+        {
+          "id": "nhk",
+          "name": "NHK",
+          "google": "site:nhk.or.jp",
+          "take": 2,
+          "default": false
+        },
+        {
+          "id": "nikkei",
+          "name": "니혼게이자이",
+          "google": "site:nikkei.com",
+          "take": 2,
+          "default": false
+        },
+        {
+          "id": "agrinews-jp",
+          "name": "일본농업신문",
+          "google": "site:agrinews.co.jp",
+          "take": 2,
+          "default": false,
+          "when": "3d",
+          "hours": 72
+        }
+      ]
+    },
+    {
+      "id": "vietnam-news",
+      "title": "베트남 주요 뉴스",
+      "lang": "vi",
+      "limit": 6,
+      "sources": [
+        {
+          "id": "vnexpress",
+          "name": "브이엔익스프레스",
+          "google": "site:vnexpress.net",
+          "take": 2,
+          "default": false
+        },
+        {
+          "id": "tuoitre",
+          "name": "뚜오이째",
+          "google": "site:tuoitre.vn",
+          "take": 2,
+          "default": false
+        },
+        {
+          "id": "thanhnien",
+          "name": "타인니엔",
+          "google": "site:thanhnien.vn",
+          "take": 2,
+          "default": false
+        },
+        {
+          "id": "vietnamplus",
+          "name": "베트남플러스",
+          "google": "site:vietnamplus.vn",
+          "take": 2,
+          "default": false
+        },
+        {
+          "id": "vtv",
+          "name": "VTV",
+          "google": "site:vtv.vn",
+          "take": 2,
+          "default": false
+        },
+        {
+          "id": "laodong",
+          "name": "라오동",
+          "google": "site:laodong.vn",
+          "take": 2,
+          "default": false
+        },
+        {
+          "id": "vneconomy",
+          "name": "브이엔이코노미",
+          "google": "site:vneconomy.vn",
+          "take": 2,
+          "default": false
+        },
+        {
+          "id": "cafef",
+          "name": "카페에프",
+          "google": "site:cafef.vn",
+          "take": 2,
+          "default": false
+        },
+        {
+          "id": "baodautu",
+          "name": "투자신문",
+          "google": "site:baodautu.vn",
+          "take": 2,
+          "default": false
         }
       ]
     },
@@ -128,20 +546,56 @@
           "when": "7d",
           "hours": 168,
           "take": 2,
-          "must": "phân bón|vi sinh|hữu cơ|urê|NPK|DAP|kali"
+          "must": "phân bón|vi sinh|hữu cơ|urê|NPK|DAP|kali",
+          "id": "dantri-fert"
         },
         {
-          "name": "구글 뉴스 베트남",
+          "name": "베트남 비료 검색",
           "google": "\"phân bón\" OR \"phân bón sinh học\" OR \"phân bón vi sinh\" OR \"phân bón hữu cơ\"",
           "when": "3d",
           "take": 2,
-          "must": "phân bón|vi sinh|hữu cơ|urê|NPK|DAP|kali"
+          "must": "phân bón|vi sinh|hữu cơ|urê|NPK|DAP|kali",
+          "id": "vn-fert-search",
+          "mix": true
         },
         {
           "name": "단찌",
           "google": "site:dantri.com.vn (nông nghiệp OR nông sản OR nông dân OR cây trồng)",
           "when": "3d",
-          "take": 2
+          "take": 2,
+          "id": "dantri-agri"
+        },
+        {
+          "id": "nongnghiep",
+          "name": "농업환경신문",
+          "google": "site:nongnghiepmoitruong.vn",
+          "take": 2,
+          "default": false,
+          "when": "3d"
+        },
+        {
+          "id": "danviet",
+          "name": "단비엣",
+          "google": "site:danviet.vn (nông nghiệp OR nông sản OR phân bón OR nông dân)",
+          "take": 2,
+          "default": false,
+          "when": "3d"
+        },
+        {
+          "id": "kinhtenongthon",
+          "name": "농촌경제",
+          "google": "site:kinhtenongthon.vn",
+          "take": 2,
+          "default": false,
+          "when": "3d"
+        },
+        {
+          "id": "vnexpress-agri",
+          "name": "브이엔익스프레스 농업",
+          "google": "site:vnexpress.net (nông nghiệp OR nông sản OR phân bón OR nông dân)",
+          "take": 2,
+          "default": false,
+          "when": "3d"
         }
       ],
       "must": "phân bón|nông nghiệp|nông sản|nông dân|cây trồng|vi sinh|hữu cơ|urê|NPK|DAP|kali|lúa|gạo|cà phê|sầu riêng|hồ tiêu"

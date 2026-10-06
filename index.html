@@ -32,6 +32,16 @@
   .install h3 { font-size: 1rem; margin: 14px 0 6px; }
   .install ol { padding-left: 1.3em; color: var(--sub); }
   .cta { display: block; text-align: center; background: var(--accent); color: var(--accent-ink); text-decoration: none; font-weight: 700; padding: 14px; border-radius: 12px; }
+  li details { margin: 2px 0 0; }
+  li details summary { color: var(--accent); font-size: .85rem; cursor: pointer; }
+  .sum { margin: 4px 0 6px; color: var(--sub); font-size: .92rem; }
+  .picker { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; margin: 0 0 12px; }
+  .picker summary { font-weight: 700; cursor: pointer; min-height: 32px; }
+  fieldset { border: 0; border-top: 1px solid var(--line); margin: 8px 0 0; padding: 8px 0 0; }
+  legend { font-weight: 600; font-size: .95rem; padding: 0; }
+  fieldset label { display: inline-flex; align-items: center; gap: 6px; margin: 4px 14px 4px 0; min-height: 32px; }
+  fieldset input { width: 20px; height: 20px; }
+  label small { color: var(--sub); }
   code { background: var(--line); border-radius: 4px; padding: 0 4px; word-break: break-all; }
 </style>
 </head>
@@ -40,6 +50,13 @@
   <h1>뉴스클리핑</h1>
   <p class="meta" id="meta">불러오는 중…</p>
   <div id="list"></div>
+
+  <details class="picker" id="picker">
+    <summary>들을 언론사 고르기</summary>
+    <p class="meta"><span id="pickNote"></span> 고른 언론사는 이 기기에만 저장돼요. 갤럭시 앱은 앱의 '들을 언론사'에서 따로 고릅니다. 외국 언론은 제목을 우리말로 번역해 읽어요.</p>
+    <div id="sources"></div>
+    <button id="resetSources" type="button">기본값으로</button>
+  </details>
 
   <section class="install" id="install">
     <h2>차에 타면 자동으로 듣기</h2>
@@ -64,10 +81,12 @@
 <div class="player">
   <button id="back" aria-label="이전 섹션">⏮</button>
   <button id="play" class="play">▶ 듣기</button>
+  <button id="more" aria-label="이 기사 자세히">자세히</button>
   <button id="next" aria-label="다음 섹션">⏭</button>
   <button id="rate" aria-label="읽기 속도">1.0×</button>
 </div>
 
+<script src="js/brief.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>

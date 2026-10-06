@@ -1,0 +1,137 @@
+{
+ "version": 2,
+ "generatedAt": "2026-10-05T20:00:00.000Z",
+ "dateLabel": "10월 6일 화요일",
+ "autoPlay": {
+  "play": true,
+  "ymd": "2026-10-06",
+  "reason": "평일",
+  "source": "내장 목록"
+ },
+ "sections": [
+  {
+   "id": "papers",
+   "title": "주요 신문 헤드라인",
+   "perSourceLabel": true,
+   "limit": 3,
+   "sources": [
+    {
+     "id": "a",
+     "name": "가신문",
+     "lang": "ko",
+     "default": true,
+     "take": 2,
+     "items": [
+      {
+       "title": "가 기사",
+       "spoken": "가 기사",
+       "source": "가신문",
+       "link": "x",
+       "group": "g0",
+       "summary": "가 기사의 자세한 내용입니다. 두 번째 문장입니다."
+      },
+      {
+       "title": "나 기사",
+       "spoken": "나 기사",
+       "source": "가신문",
+       "link": "x",
+       "group": "g1"
+      },
+      {
+       "title": "다 기사",
+       "spoken": "다 기사",
+       "source": "가신문",
+       "link": "x",
+       "group": "g2"
+      }
+     ]
+    },
+    {
+     "id": "b",
+     "name": "나신문",
+     "lang": "ko",
+     "default": false,
+     "take": 2,
+     "items": [
+      {
+       "title": "가 기사 속보",
+       "spoken": "가 기사 속보",
+       "source": "나신문",
+       "link": "x",
+       "group": "g0"
+      },
+      {
+       "title": "라 기사",
+       "spoken": "라 기사",
+       "source": "나신문",
+       "link": "x",
+       "group": "g3"
+      },
+      {
+       "title": "마 기사",
+       "spoken": "마 기사",
+       "source": "나신문",
+       "link": "x",
+       "group": "g4"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "fert",
+   "title": "비료 관련 뉴스",
+   "perSourceLabel": false,
+   "limit": 5,
+   "sources": [
+    {
+     "id": "c",
+     "name": "비료 검색",
+     "lang": "ko",
+     "default": true,
+     "take": 2,
+     "items": []
+    }
+   ]
+  },
+  {
+   "id": "vietnam",
+   "title": "베트남 농업과 비료 뉴스",
+   "perSourceLabel": false,
+   "limit": 5,
+   "sources": [
+    {
+     "id": "d",
+     "name": "단찌",
+     "lang": "vi",
+     "default": true,
+     "take": 2,
+     "items": [
+      {
+       "title": "경쟁력은 어떻습니까?",
+       "original": "Ra sao?",
+       "spoken": "경쟁력은 어떻습니까?",
+       "source": "단찌",
+       "link": "x",
+       "group": "g5"
+      },
+      {
+       "title": "라 기사",
+       "spoken": "라 기사",
+       "source": "단찌",
+       "link": "x",
+       "group": "g3"
+      },
+      {
+       "title": "쌀값 급등",
+       "spoken": "쌀값 급등",
+       "source": "단찌",
+       "link": "x",
+       "group": "g6"
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

@@ -39,4 +39,16 @@ public class RulesTest {
         assertTrue(Rules.chunks("", 100).isEmpty());
         for (String c : Rules.chunks("아주긴문장없이계속되는텍스트입니다", 5)) assertTrue(c.length() <= 5);
     }
+
+    @Test public void picksBestInstalledVoicePreferringOffline() {
+        assertTrue(Rules.voiceScore(500, false, false) > Rules.voiceScore(500, true, false));
+        assertTrue(Rules.voiceScore(500, true, false) > Rules.voiceScore(400, false, false));
+        assertTrue(Rules.voiceScore(300, false, false) > Rules.voiceScore(500, false, true));
+    }
+
+    @Test public void rateLabels() {
+        assertEquals("보통", Rules.rateLabel(100));
+        assertEquals("조금 느리게", Rules.rateLabel(85));
+        assertEquals("90%", Rules.rateLabel(90));
+    }
 }
