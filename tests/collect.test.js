@@ -45,3 +45,35 @@ test('하나도 못 가져오면 그 사실을 말해 준다', async (t) => {
   const b = await collect({ sections: [{ id: 'a', title: '가', limit: 3, sources: [{ name: '가', url: 'https://a' }] }] }, NOW);
   assert.match(b.script, /뉴스를 가져오지 못했습니다/);
 });
+
+test('베트남 섹션: 베트남판 구글 뉴스에서 찾아 제목을 우리말로 옮기고, 영상·엉뚱한 기사는 거른다', async (t) => {
+  const q = googleUrl('site:dantri.com.vn phân bón', '3d', 'vi');
+  assert.match(q, /hl=vi&gl=VN&ceid=VN:vi$/);
+  const ko = { 'Giá phân bón tăng mạnh': '비료 가격 급등', 'Nông dân trúng mùa lúa': '농민들 벼 풍작' };
+  t.mock.method(globalThis, 'fetch', async (url) => {
+    if (url === q) return new Response(feed('Giá phân bón tăng mạnh - Báo Dân trí', 'Video: Bão số 5 đổ bộ - Báo Dân trí', 'Nông dân trúng mùa lúa - Báo Dân trí', 'Bóng đá: đội tuyển thắng - Báo Dân trí'));
+    if (url.startsWith('https://translate.googleapis.com/')) {
+      const src = new URL(url).searchParams.get('q');
+      assert.equal(new URL(url).searchParams.get('sl'), 'vi');
+      if (!ko[src]) return new Response('busy', { status: 429 });
+      return Response.json([[[ko[src], src, null, null]]]);
+    }
+    throw new Error('예상 못한 주소 ' + url);
+  });
+  const config = { sections: [{ id: 'vietnam', title: '베트남 농업과 비료 뉴스', lang: 'vi', limit: 5, hours: 72, must: 'phân bón|nông dân|lúa', sources: [{ name: '단찌', google: 'site:dantri.com.vn phân bón', when: '3d', take: 3 }] }] };
+  const b = await collect(config, NOW);
+  const items = b.sections[0].items;
+  assert.deepEqual(items.map((i) => i.title), ['비료 가격 급등', '농민들 벼 풍작']);
+  assert.equal(items[0].original, 'Giá phân bón tăng mạnh');
+  assert.equal(items[0].source, '단찌');
+  assert.match(b.script, /마지막으로|먼저/);
+  assert.match(b.script, /비료 가격 급등\.\n농민들 벼 풍작\./);
+  assert.doesNotMatch(b.script, /[ăâđêôơư]/i);
+});
+
+test('번역이 막히면 그 기사는 읽지 않고 기록만 남긴다', async (t) => {
+  t.mock.method(globalThis, 'fetch', async (url) => url.startsWith('https://translate.googleapis.com/') ? new Response('', { status: 503 }) : new Response(feed('Giá phân bón tăng mạnh')));
+  const b = await collect({ sections: [{ id: 'vn', title: '베트남', lang: 'vi', limit: 3, sources: [{ name: '가', url: 'https://vn' }] }] }, NOW);
+  assert.equal(b.sections[0].items.length, 0);
+  assert.ok(b.log.some((l) => l.includes('번역 실패 (HTTP 503)')));
+});

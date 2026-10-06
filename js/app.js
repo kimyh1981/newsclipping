@@ -29,7 +29,7 @@
     $('meta').textContent = `${b.dateLabel} · ${kstTime(b.generatedAt)} 수집` + (age > 20 ? ' · 어제 소식일 수 있어요' : '') +
       (b.autoPlay && !b.autoPlay.play ? ` · 오늘은 ${b.autoPlay.reason}이라 차에서 자동 재생은 쉬어요` : '');
     $('list').innerHTML = b.sections.map((s, si) => `<section><h2>${esc(s.title)}</h2>` + (s.items.length
-      ? `<ol>${s.items.map((it, ii) => `<li id="i${si}-${ii}"><a href="${esc(it.link)}" target="_blank" rel="noopener">${esc(it.title)}</a><small>${esc(it.source)}</small></li>`).join('')}</ol>`
+      ? `<ol>${s.items.map((it, ii) => `<li id="i${si}-${ii}"><a href="${esc(it.link)}" target="_blank" rel="noopener">${esc(it.title)}</a><small>${esc(it.source)}${it.original ? ` · 원문: ${esc(it.original)}` : ''}</small></li>`).join('')}</ol>`
       : '<p class="empty">새 소식 없음</p>') + '</section>').join('');
 
     // 원고 줄을 화면의 섹션·기사와 짝지어, 읽는 중인 기사를 표시하고 섹션 단위로 건너뛴다
@@ -38,7 +38,7 @@
       const hs = b.sections.findIndex((s, i) => i > sec && text.endsWith(`${s.title}입니다.`));
       if (hs >= 0) sec = hs;
       const s = b.sections[sec];
-      const ii = s ? s.items.findIndex((it) => `${it.spoken}.` === text) : -1;
+      const ii = s ? s.items.findIndex((it) => text === it.spoken || text === `${it.spoken}.`) : -1;
       return { text, sec, el: ii >= 0 ? $(`i${sec}-${ii}`) : null };
     });
   }

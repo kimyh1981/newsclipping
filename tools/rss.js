@@ -55,9 +55,12 @@ function parseFeed(xml) {
 // 사진·영상·부고·인사 같은 기사는 귀로 들어도 소용이 없다
 const SKIP = /\[(포토|사진|영상|그래픽|카드뉴스|부고|인사|게시판|운세|오늘의 운세|만평|TV|동영상)\]|^(부고|인사|게시판|오늘의 운세)\b|포토뉴스|\[포토\]/;
 
-// 일본어판·영문판 기사(한글이 거의 없는 제목)도 뺀다
-function skip(title) {
+// 일본어판·영문판 기사(한글이 거의 없는 제목)도 뺀다. 번역할 외국어 섹션(lang)은 한글 검사 대신 영상·사진 기사만 거른다
+const SKIP_FOREIGN = /^\s*(video|clip|ảnh|infographic|emagazine|podcast)\b|\[(video|clip|ảnh|infographic)\]/i;
+
+function skip(title, lang = 'ko') {
   if (/[\u3040-\u30ff]/.test(title)) return true;
+  if (lang !== 'ko') return SKIP_FOREIGN.test(title);
   const hangul = (title.match(/[가-힣]/g) || []).length;
   return hangul < 4 || SKIP.test(title);
 }
@@ -87,7 +90,7 @@ function spoken(title) {
 }
 
 function normalize(title) {
-  return spoken(title).replace(/[^0-9a-z가-힣]/gi, '').toLowerCase();
+  return spoken(title).replace(/[^\p{L}\p{N}]/gu, '').toLowerCase();
 }
 
 function bigrams(s) {
@@ -119,7 +122,7 @@ function similar(a, b) {
 const PARTICLE = /(에서|으로|에게|까지|부터|이다|에|의|을|를|은|는|이|가|와|과|로|도)$/;
 
 function words(title) {
-  return spoken(title).toLowerCase().split(/[^0-9a-z가-힣]+/).map((w) => (w.length > 2 ? w.replace(PARTICLE, '') : w)).filter((w) => w.length >= 2);
+  return spoken(title).toLowerCase().split(/[^\p{L}\p{N}]+/u).map((w) => (w.length > 2 ? w.replace(PARTICLE, '') : w)).filter((w) => w.length >= 2);
 }
 
 function fresh(item, now, hours = 36) {
@@ -132,13 +135,15 @@ function fresh(item, now, hours = 36) {
 function pick(section, fetched, now, seen = []) {
   const items = [];
   const hours = section.hours || 36;
-  const must = section.must ? new RegExp(section.must) : null; // 검색 결과에 섞여 든 엉뚱한 기사를 거른다
+  const lang = section.lang || 'ko';
+  const must = section.must ? new RegExp(section.must, 'i') : null; // 검색 결과에 섞여 든 엉뚱한 기사를 거른다
   for (const { source, items: list } of fetched) {
     let taken = 0;
+    const need = source.must ? new RegExp(source.must, 'i') : must; // 출처마다 따로 줄 수도 있다
     for (const it of list) {
       if (taken >= (source.take || 3) || items.length >= section.limit) break;
-      const title = it.viaGoogle ? splitGoogleSource(it.title, it.source) : it.title;
-      if (skip(title) || !fresh(it, now, hours) || !spoken(title) || (must && !must.test(title))) continue;
+      const title = (it.viaGoogle ? splitGoogleSource(it.title, it.source) : it.title).normalize('NFC');
+      if (skip(title, lang) || !fresh(it, now, source.hours || hours) || !spoken(title) || (need && !need.test(title))) continue;
       if (seen.some((t) => similar(t, title))) continue;
       seen.push(title);
       items.push({ title, spoken: spoken(title), source: source.name.startsWith('구글 뉴스') ? it.source || source.name : source.name, link: it.link, publishedAt: it.publishedAt });
@@ -153,6 +158,11 @@ const DAYS = ['일', '월', '화', '수', '목', '금', '토'];
 function koreanDate(now) {
   const kst = new Date(now + 9 * 3600e3);
   return `${kst.getUTCMonth() + 1}월 ${kst.getUTCDate()}일 ${DAYS[kst.getUTCDay()]}요일`;
+}
+
+// 문장 끝에 마침표를 붙이되, 번역문처럼 이미 . ? ! 로 끝나면 그대로 둔다
+function sentence(s) {
+  return /[.?!]$/.test(s) ? s : `${s}.`;
 }
 
 const ORDINAL = ['먼저', '다음은', '이어서', '마지막으로'];
@@ -173,10 +183,10 @@ function buildScript(sections, now) {
       for (const it of sec.items) {
         if (it.source !== last) lines.push(`${it.source}.`);
         last = it.source;
-        lines.push(`${it.spoken}.`);
+        lines.push(sentence(it.spoken));
       }
     } else {
-      for (const it of sec.items) lines.push(`${it.spoken}.`);
+      for (const it of sec.items) lines.push(sentence(it.spoken));
     }
   });
   lines.push('');
@@ -184,4 +194,4 @@ function buildScript(sections, now) {
   return lines.join('\n') + '\n';
 }
 
-module.exports = { decodeEntities, text, parseFeed, skip, splitGoogleSource, spoken, similar, words, fresh, pick, koreanDate, buildScript };
+module.exports = { decodeEntities, text, parseFeed, skip, splitGoogleSource, spoken, similar, words, fresh, pick, koreanDate, buildScript, sentence };
