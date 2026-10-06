@@ -1,0 +1,53 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'io.github.kimyh1981.newsclipping'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId 'io.github.kimyh1981.newsclipping'
+        minSdk 26
+        targetSdk 34
+        // 배포 작업 번호가 버전: 새 APK를 받으면 기존 앱 위에 업데이트로 설치된다
+        versionCode Integer.parseInt(System.getenv('GITHUB_RUN_NUMBER') ?: '1')
+        versionName "1.0.${System.getenv('GITHUB_RUN_NUMBER') ?: '0'}"
+        // 뉴스 원고 주소. 다른 곳에 배포하면 NEWS_URL 환경 변수로 바꾼다
+        buildConfigField 'String', 'NEWS_URL', "\"${System.getenv('NEWS_URL') ?: 'https://kimyh1981.github.io/newsclipping/briefing.txt'}\""
+    }
+
+    buildFeatures {
+        buildConfig true
+    }
+
+    // 업데이트 설치가 되려면 항상 같은 키로 서명해야 한다 (release.keystore, 비밀번호는 환경 변수로 바꿀 수 있다)
+    signingConfigs {
+        release {
+            storeFile file('release.keystore')
+            storePassword System.getenv('KEYSTORE_PASSWORD') ?: 'newsclipping'
+            keyAlias 'newsclipping'
+            keyPassword System.getenv('KEYSTORE_PASSWORD') ?: 'newsclipping'
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            signingConfig signingConfigs.release
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    lint {
+        abortOnError false
+    }
+}
+
+dependencies {
+    testImplementation 'junit:junit:4.13.2'
+}

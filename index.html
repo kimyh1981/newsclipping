@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0f172a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" href="icons/icon-192.png">
+<title>뉴스클리핑</title>
+<style>
+  :root { --bg: #f8fafc; --card: #fff; --ink: #0f172a; --sub: #475569; --line: #e2e8f0; --accent: #2563eb; --accent-ink: #fff; --now: #dbeafe; }
+  @media (prefers-color-scheme: dark) { :root { --bg: #0b1120; --card: #111827; --ink: #e5e7eb; --sub: #94a3b8; --line: #1f2937; --accent: #3b82f6; --now: #1e3a8a; } }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.55 system-ui, -apple-system, 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif; }
+  main { max-width: 680px; margin: 0 auto; padding: 16px 16px 120px; }
+  h1 { font-size: 1.4rem; margin: 8px 0 2px; }
+  .meta { color: var(--sub); font-size: .9rem; margin: 0 0 16px; }
+  .player { position: fixed; left: 0; right: 0; bottom: 0; background: var(--card); border-top: 1px solid var(--line); padding: 12px 16px calc(12px + env(safe-area-inset-bottom)); display: flex; gap: 10px; align-items: center; justify-content: center; }
+  button { font: inherit; border: 1px solid var(--line); background: var(--card); color: var(--ink); border-radius: 12px; padding: 12px 16px; min-height: 48px; cursor: pointer; }
+  button.play { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-size: 1.15rem; font-weight: 700; flex: 1; max-width: 320px; }
+  section { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; margin: 0 0 12px; }
+  h2 { font-size: 1.05rem; margin: 2px 0 8px; }
+  ol { margin: 0; padding-left: 1.3em; }
+  li { margin: 6px 0; border-radius: 6px; }
+  li.now { background: var(--now); }
+  li a { color: inherit; text-decoration: none; }
+  li small { color: var(--sub); margin-left: 4px; }
+  .empty { color: var(--sub); margin: 0; }
+  .install { margin-top: 20px; }
+  .install h3 { font-size: 1rem; margin: 14px 0 6px; }
+  .install ol { padding-left: 1.3em; color: var(--sub); }
+  .cta { display: block; text-align: center; background: var(--accent); color: var(--accent-ink); text-decoration: none; font-weight: 700; padding: 14px; border-radius: 12px; }
+  code { background: var(--line); border-radius: 4px; padding: 0 4px; word-break: break-all; }
+</style>
+</head>
+<body>
+<main>
+  <h1>뉴스클리핑</h1>
+  <p class="meta" id="meta">불러오는 중…</p>
+  <div id="list"></div>
+
+  <section class="install" id="install">
+    <h2>차에 타면 자동으로 듣기</h2>
+    <p class="meta">평일 아침 6~8시, 차 블루투스가 연결되면 오늘의 헤드라인을 읽어 줍니다. 주말·공휴일은 쉽니다.</p>
+    <h3>갤럭시 (안드로이드)</h3>
+    <a class="cta" href="https://github.com/kimyh1981/newsclipping/releases/latest/download/newsclipping.apk">뉴스클리핑 앱 받기 (APK)</a>
+    <ol>
+      <li>받은 파일을 열고 <b>설치</b>를 누릅니다. '출처를 알 수 없는 앱' 경고가 나오면 이 브라우저에 <b>허용</b>을 한 번 켭니다 (플레이스토어 앱이 아니어서 나오는 안내입니다).</li>
+      <li>앱을 열고 화면 순서대로 <b>권한 허용 → 배터리 제한 없음 → 차 블루투스 선택</b>을 누릅니다.</li>
+      <li>끝. 앱을 닫아도 차 블루투스가 연결되면 읽기 시작하고, 끊기면 멈춥니다.</li>
+    </ol>
+    <h3>아이폰</h3>
+    <p id="iosLink"><a class="cta" href="#" id="shortcutLink">'뉴스클리핑' 단축어 추가</a></p>
+    <ol>
+      <li>위 버튼으로 단축어를 추가합니다.</li>
+      <li>단축어 앱 → <b>자동화</b> → <b>+</b> → <b>블루투스</b> → 차 블루투스 선택 → <b>연결될 때</b>, <b>즉시 실행</b> → 단축어 <b>'뉴스클리핑'</b>을 고릅니다.</li>
+    </ol>
+    <p class="meta">아이폰은 앱이 블루투스 연결을 알아차리는 것을 허용하지 않아, 2번(자동화 연결)만 직접 한 번 해야 합니다.</p>
+  </section>
+</main>
+
+<div class="player">
+  <button id="back" aria-label="이전 섹션">⏮</button>
+  <button id="play" class="play">▶ 듣기</button>
+  <button id="next" aria-label="다음 섹션">⏭</button>
+  <button id="rate" aria-label="읽기 속도">1.0×</button>
+</div>
+
+<script src="js/app.js"></script>
+</body>
+</html>
