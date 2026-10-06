@@ -47,7 +47,7 @@ jobs:
           restore-keys: tts-
       # 신문사·농업·비료·국제/경제 헤드라인 → briefing.json(화면), briefing.txt(앱이 읽는 원고, 주말·공휴일엔 빈 파일)
       - name: News briefing
-        timeout-minutes: 8
+        timeout-minutes: 14 # 수집 몇 분 + 음성 녹음 (첫 녹음은 몇 분 걸리고, 같은 날 다시 하면 캐시로 금방)
         continue-on-error: true
         env:
           DATA_GO_KR_KEY: ${{ secrets.DATA_GO_KR_KEY }}

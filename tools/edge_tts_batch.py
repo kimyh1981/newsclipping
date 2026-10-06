@@ -4,6 +4,7 @@
 결과(표준 출력): {"id": null(성공) 또는 "오류 내용"}"""
 import asyncio
 import json
+import os
 import sys
 
 import edge_tts
@@ -14,7 +15,9 @@ async def one(sem, job, voice, rate):
     async with sem:
         for attempt in range(3):
             try:
-                await edge_tts.Communicate(job["text"], voice, rate=rate).save(job["file"])
+                part = job["file"] + ".part"  # 끝까지 받은 파일만 이름을 바꾼다: 도중에 멈춰도 반쪽 파일이 남지 않게
+                await edge_tts.Communicate(job["text"], voice, rate=rate).save(part)
+                os.replace(part, job["file"])
                 return job["id"], None
             except Exception as e:  # 연결이 끊기거나 잠깐 막히면 쉬었다가 다시
                 err = f"{type(e).__name__}: {str(e)[:120]}"

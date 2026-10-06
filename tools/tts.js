@@ -70,6 +70,7 @@ function edgeBatch(jobs, voice, rate = '+0%') {
   const tmp = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'edge-')), 'jobs.json');
   fs.writeFileSync(tmp, JSON.stringify(jobs));
   const r = spawnSync('python3', [path.join(__dirname, 'edge_tts_batch.py'), tmp, voice, rate], { encoding: 'utf8', maxBuffer: 16 << 20, timeout: 6 * 60e3 });
+  if (r.error?.code === 'ETIMEDOUT') return {}; // 시간이 다 되면 그때까지 끝난 파일만 쓴다
   if (r.status !== 0) throw new Error((r.stderr || r.error?.message || `종료 코드 ${r.status}`).trim().split('\n').pop());
   return JSON.parse(r.stdout);
 }
@@ -111,8 +112,9 @@ async function record(b, opts) {
       const res = batch(todo.map(({ id, text, file }) => ({ id, text, file })), voice);
       const errors = [];
       for (const job of todo) {
-        if (res[job.id] === null && fs.existsSync(job.file) && fs.statSync(job.file).size > 0) done(job);
-        else { fs.rmSync(job.file, { force: true }); errors.push(res[job.id] || '파일 없음'); }
+        const ok = fs.existsSync(job.file) && fs.statSync(job.file).size > 0;
+        if (ok && !res[job.id]) done(job);
+        else { fs.rmSync(job.file, { force: true }); errors.push(res[job.id] || '시간 초과'); }
       }
       if (errors.length) log.push(`음성 녹음 실패 ${errors.length}줄 (예: ${errors[0]})`);
     } catch (err) {
