@@ -22,15 +22,32 @@ function googleUrl(q, when = '1d', lang = 'ko') {
   return `https://news.google.com/rss/search?q=${encodeURIComponent(`${q} when:${when}`)}&hl=${hl}&gl=${gl}&ceid=${ceid}`;
 }
 
-// 외국어 제목을 우리말로 옮긴다 (구글 번역 무료 주소, 키 없음)
+// 외국어 제목을 우리말로 옮긴다 (구글 번역 무료 주소, 키 없음). 너무 자주 보내 429가 오면 잠깐 쉬었다가 다시 보낸다
+const RETRY = { waits: [3e3, 8e3] };
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
 async function translate(text, from, to = 'ko') {
   const sl = from === 'zh' ? 'zh-CN' : from;
   const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${sl}&tl=${to}&dt=t&q=${encodeURIComponent(text)}`;
-  const res = await fetch(url, { headers: { 'User-Agent': UA }, signal: AbortSignal.timeout(10e3) });
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  const data = await res.json();
-  const out = (Array.isArray(data?.[0]) ? data[0] : []).map((seg) => seg?.[0] || '').join('').trim();
-  if (!out) throw new Error('빈 번역');
+  for (let i = 0; ; i++) {
+    const res = await fetch(url, { headers: { 'User-Agent': UA }, signal: AbortSignal.timeout(10e3) });
+    if (res.status === 429 && i < RETRY.waits.length) { await sleep(RETRY.waits[i]); continue; }
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    const out = (Array.isArray(data?.[0]) ? data[0] : []).map((seg) => seg?.[0] || '').join('').trim();
+    if (!out) throw new Error('빈 번역');
+    return out;
+  }
+}
+
+// 한 언론사의 제목들을 줄바꿈으로 이어 한 번에 번역한다 (언론사 수만큼만 요청). 줄 수가 안 맞으면 한 건씩 다시 번역한다
+async function translateAll(texts, from) {
+  if (texts.length > 1) {
+    const lines = (await translate(texts.join('\n'), from)).split('\n').map((t) => t.trim());
+    if (lines.length === texts.length && lines.every(Boolean)) return lines;
+  }
+  const out = [];
+  for (const t of texts) out.push(await translate(t, from));
   return out;
 }
 
@@ -45,18 +62,16 @@ function limiter(n) {
   };
 }
 
-// 외국 언론: 고른 기사 제목을 우리말로 바꾸고 원문은 original에 남긴다. 번역에 실패한 기사는 읽을 수 없으니 뺀다
-async function translateItems(name, lang, items, log, run) {
-  const done = await Promise.all(items.map((it) => run(async () => {
-    try {
-      const title = await translate(it.title, lang);
-      return { ...it, title, original: it.title, spoken: rss.spoken(title), lang };
-    } catch (err) {
-      log.push(`${name}: 번역 실패 (${err.cause?.code || err.message}) ${it.title}`);
-      return null;
-    }
-  })));
-  return done.filter((it) => it && it.spoken);
+// 외국 언론: 고른 기사 제목을 우리말로 바꾸고 원문은 original에 남긴다. 번역에 실패하면 읽을 수 없으니 빼고 기록만 남긴다
+async function translateItems(name, lang, items, log) {
+  if (!items.length) return items;
+  try {
+    const titles = await translateAll(items.map((it) => it.title), lang);
+    return items.map((it, i) => ({ ...it, title: titles[i], original: it.title, spoken: rss.spoken(titles[i]), lang })).filter((it) => it.spoken);
+  } catch (err) {
+    log.push(`${name}: 번역 실패 (${err.cause?.code || err.message}) ${items.length}건`);
+    return [];
+  }
 }
 
 // 같은 사건을 다룬 기사는 같은 group: 화면·앱이 고른 언론사 중 처음 나온 것만 읽는다
@@ -114,7 +129,6 @@ function speechText(b) {
 async function collect(config, now = Date.now(), key = '', opts = {}) {
   const log = [];
   const autoPlay = await holidays.playDay(now, key);
-  const run = limiter(6);
   const sections = await Promise.all(config.sections.map(async (sec) => ({
     id: sec.id,
     title: sec.title,
@@ -124,14 +138,20 @@ async function collect(config, now = Date.now(), key = '', opts = {}) {
       const lang = source.lang || sec.lang || 'ko';
       const take = source.take || 3;
       const read = await readSource(source, log, lang);
-      let items = rss.pick({ ...sec, limit: 99 }, [{ source: { ...source, lang, take: take + SPARE }, items: read }], now, []);
-      if (lang !== 'ko') items = await translateItems(source.name, lang, items, log, run);
+      const items = rss.pick({ ...sec, limit: 99 }, [{ source: { ...source, lang, take: take + SPARE }, items: read }], now, []);
       return { id: source.id, name: source.name, lang, default: source.default !== false, take, items };
     })),
   })));
+  // 번역: 기본 언론사부터, 두 곳씩 차례로 (한꺼번에 보내면 구글 번역이 429로 막는다)
+  const foreign = sections.flatMap((sec) => sec.sources).filter((src) => src.lang !== 'ko');
+  const tr = limiter(2);
+  for (const batch of [foreign.filter((s) => s.default), foreign.filter((s) => !s.default)]) {
+    await Promise.all(batch.map((src) => tr(async () => { src.items = await translateItems(src.name, src.lang, src.items, log); })));
+  }
   group(sections);
   const b = { version: 2, generatedAt: new Date(now).toISOString(), dateLabel: rss.koreanDate(now), autoPlay, sections, log };
   // 기본 언론사 원고에 든 기사부터 요약한다 (같은 기사 객체에 summary가 붙는다)
+  const run = limiter(4);
   if (opts.summaryLimit) await summarize(brief.select(b).flatMap((s) => s.items), { mode: opts.summaryMode, get, translate, decodeEntities: rss.decodeEntities, log, run, key: opts.summaryKey, limit: opts.summaryLimit });
   b.script = brief.script(b); // 기본 언론사로 만든 원고: briefing.txt(아이폰 단축어, 옛 앱)
   return b;
@@ -160,4 +180,4 @@ if (require.main === module) {
   })();
 }
 
-module.exports = { collect, decode, googleUrl, translate, speechText };
+module.exports = { collect, decode, googleUrl, translate, speechText, RETRY };

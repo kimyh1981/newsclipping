@@ -52,13 +52,16 @@ test('베트남 섹션: 베트남판 구글 뉴스에서 찾아 제목을 우리
   const q = googleUrl('site:dantri.com.vn phân bón', '3d', 'vi');
   assert.match(q, /hl=vi&gl=VN&ceid=VN:vi$/);
   const ko = { 'Giá phân bón tăng mạnh': '비료 가격 급등', 'Nông dân trúng mùa lúa': '농민들 벼 풍작' };
+  let calls = 0;
   t.mock.method(globalThis, 'fetch', async (url) => {
     if (url === q) return new Response(feed('Giá phân bón tăng mạnh - Báo Dân trí', 'Video: Bão số 5 đổ bộ - Báo Dân trí', 'Nông dân trúng mùa lúa - Báo Dân trí', 'Bóng đá: đội tuyển thắng - Báo Dân trí'));
     if (url.startsWith('https://translate.googleapis.com/')) {
-      const src = new URL(url).searchParams.get('q');
+      const src = new URL(url).searchParams.get('q').split('\n');
       assert.equal(new URL(url).searchParams.get('sl'), 'vi');
-      if (!ko[src]) return new Response('busy', { status: 429 });
-      return Response.json([[[ko[src], src, null, null]]]);
+      calls++;
+      if (!src.every((t) => ko[t])) return new Response('busy', { status: 503 });
+      // 구글 번역처럼 줄마다 조각으로 돌려준다
+      return Response.json([src.map((t, i) => [ko[t] + (i < src.length - 1 ? '\n' : ''), t, null, null])]);
     }
     throw new Error('예상 못한 주소 ' + url);
   });
@@ -71,6 +74,29 @@ test('베트남 섹션: 베트남판 구글 뉴스에서 찾아 제목을 우리
   assert.match(b.script, /마지막으로|먼저/);
   assert.match(b.script, /비료 가격 급등\.\n농민들 벼 풍작\./);
   assert.doesNotMatch(b.script, /[ăâđêôơư]/i);
+  assert.equal(calls, 1, '한 언론사의 제목은 한 번에 번역한다');
+});
+
+test('구글 번역이 429면 쉬었다가 다시 보내고, 기본 언론사부터 번역한다', async (t) => {
+  const { RETRY } = require('../tools/collect.js');
+  const saved = RETRY.waits;
+  RETRY.waits = [0, 0];
+  t.after(() => { RETRY.waits = saved; });
+  const order = [];
+  let busy = 1;
+  t.mock.method(globalThis, 'fetch', async (url) => {
+    if (!url.startsWith('https://translate.googleapis.com/')) return new Response(feed(url.includes('extra') ? 'Extra news' : 'Main news'));
+    const q = new URL(url).searchParams.get('q');
+    if (busy-- > 0) return new Response('', { status: 429 });
+    order.push(q);
+    return Response.json([[[`번역 ${q}`, q]]]);
+  });
+  const b = await collect({ sections: [{ id: 'w', title: '국제', lang: 'en', limit: 5, sources: [
+    { id: 'x', name: '추가', url: 'https://extra', default: false },
+    { id: 'm', name: '기본', url: 'https://main' },
+  ] }] }, NOW);
+  assert.deepEqual(order, ['Main news', 'Extra news']);
+  assert.deepEqual(b.sections[0].sources.map((s) => s.items.map((i) => i.title)), [['번역 Extra news'], ['번역 Main news']]);
 });
 
 test('번역이 막히면 그 기사는 읽지 않고 기록만 남긴다', async (t) => {
