@@ -9,6 +9,13 @@ import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothManager;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.content.res.ColorStateList;
+import android.content.res.Configuration;
+import android.graphics.Typeface;
+import android.graphics.drawable.ColorDrawable;
+import android.graphics.drawable.Drawable;
+import android.graphics.drawable.GradientDrawable;
+import android.graphics.drawable.RippleDrawable;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -19,10 +26,9 @@ import android.speech.tts.Voice;
 import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.View;
-import android.widget.Button;
-import android.widget.CheckBox;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
+import android.widget.Switch;
 import android.widget.TextView;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -30,66 +36,88 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 
-/** 설정 화면: 권한 → 차 블루투스 → 시간대. 설정을 마치면 앱을 닫아도 차에 타면 자동으로 읽는다. */
+/**
+ * 설정 화면 (아이폰 설정 앱처럼 묶음 목록): 지금 듣기 → 처음 한 번만(권한) → 자동 재생 → 듣기 → 더 보기.
+ * 설정을 마치면 앱을 닫아도 차에 타면 자동으로 읽는다.
+ */
 public class MainActivity extends Activity {
     private static final String SITE = "https://kimyh1981.github.io/newsclipping/";
     private Prefs prefs;
-    private TextView status;
-    private Button permBtn, batteryBtn, carBtn, timeBtn, sourcesBtn, voiceBtn, rateBtn;
+    private TextView footer, permVal, batteryVal, carVal, timeVal, sourcesVal, voiceVal, rateVal;
+    private Switch enabledSw, weekdaysSw;
     private TextToSpeech preview; // 목소리·빠르기를 고를 때 미리 들려준다
     private boolean previewReady;
     private Runnable afterPreview;
-    private CheckBox enabledBox, weekdaysBox;
+    private boolean loadingSources;
+
+    // 아이폰 설정 앱의 색 (밝은 화면 / 어두운 화면)
+    private boolean dark;
+    private int bg, card, label, secondary, separator, tint, green, red;
 
     @Override
     protected void onCreate(Bundle b) {
         super.onCreate(b);
         prefs = new Prefs(this);
         NewsService.ensureChannel(this);
+        dark = (getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES;
+        bg = dark ? 0xFF000000 : 0xFFF2F2F7;
+        card = dark ? 0xFF1C1C1E : 0xFFFFFFFF;
+        label = dark ? 0xFFFFFFFF : 0xFF000000;
+        secondary = dark ? 0xFF8E8E93 : 0xFF8A8A8E;
+        separator = dark ? 0xFF38383A : 0xFFC6C6C8;
+        tint = dark ? 0xFF0A84FF : 0xFF007AFF;
+        green = dark ? 0xFF30D158 : 0xFF34C759;
+        red = dark ? 0xFFFF453A : 0xFFFF3B30;
+        getWindow().setStatusBarColor(bg);
+        getWindow().setNavigationBarColor(bg);
+        if (!dark) getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR | View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR);
 
         LinearLayout col = new LinearLayout(this);
         col.setOrientation(LinearLayout.VERTICAL);
-        int pad = dp(20);
-        col.setPadding(pad, pad, pad, pad);
+        col.setPadding(dp(16), dp(24), dp(16), dp(32));
 
-        TextView title = text("뉴스클리핑", 24);
-        title.setGravity(Gravity.START);
+        TextView title = text("뉴스클리핑", 34, label);
+        title.setTypeface(Typeface.DEFAULT_BOLD);
+        title.setPadding(dp(4), dp(8), 0, dp(4));
         col.addView(title);
-        col.addView(text("차 블루투스가 연결되면 평일 아침에 고른 언론사의 오늘 헤드라인을 읽어 드립니다 (외국 언론은 우리말로 번역). 아래 순서대로 한 번만 설정하면 앱을 닫아도 됩니다.", 15));
+        TextView intro = text("차 블루투스가 연결되면 평일 아침에 고른 언론사의 헤드라인을 읽어 드립니다.", 15, secondary);
+        intro.setPadding(dp(4), 0, dp(4), dp(16));
+        col.addView(intro);
 
-        permBtn = button("1. 블루투스·알림 권한 허용", v -> askPermissions());
-        batteryBtn = button("2. 배터리 사용 '제한 없음' 허용", v -> askBattery());
-        carBtn = button("", v -> pickCar());
-        timeBtn = button("", v -> pickTime());
-        col.addView(permBtn);
-        col.addView(batteryBtn);
-        col.addView(carBtn);
-        col.addView(timeBtn);
-        sourcesBtn = button("", v -> pickSources());
-        col.addView(sourcesBtn);
-        voiceBtn = button("", v -> withPreview(this::pickVoice));
-        rateBtn = button("", v -> withPreview(this::pickRate));
-        col.addView(voiceBtn);
-        col.addView(rateBtn);
+        // 지금 듣기 / 멈춤
+        LinearLayout play = new LinearLayout(this);
+        play.setOrientation(LinearLayout.HORIZONTAL);
+        play.addView(pill("▶  지금 듣기", tint, 0xFFFFFFFF, v -> NewsService.start(this, true)), new LinearLayout.LayoutParams(0, dp(50), 2f));
+        View gap = new View(this);
+        play.addView(gap, new LinearLayout.LayoutParams(dp(10), 1));
+        play.addView(pill("■  멈춤", card, red, v -> NewsService.stopIfRunning()), new LinearLayout.LayoutParams(0, dp(50), 1f));
+        col.addView(play);
 
-        weekdaysBox = new CheckBox(this);
-        weekdaysBox.setText("평일(월~금)에만 · 공휴일은 서버가 알아서 건너뜁니다");
-        weekdaysBox.setOnCheckedChangeListener((x, on) -> { prefs.setWeekdaysOnly(on); refresh(); });
-        col.addView(weekdaysBox);
-        enabledBox = new CheckBox(this);
-        enabledBox.setText("차에 타면 자동으로 읽기");
-        enabledBox.setOnCheckedChangeListener((x, on) -> { prefs.setEnabled(on); refresh(); });
-        col.addView(enabledBox);
+        LinearLayout setup = section(col, "처음 한 번만", "두 가지를 허용해야 차에 탔을 때 앱을 열지 않아도 자동으로 읽습니다.");
+        permVal = row(setup, "블루투스·알림 권한", v -> askPermissions(), true);
+        batteryVal = row(setup, "배터리 사용 제한 없음", v -> askBattery(), false);
 
-        col.addView(button("▶ 지금 들어보기", v -> NewsService.start(this, true)));
-        col.addView(button("■ 멈춤", v -> NewsService.stopIfRunning()));
-        col.addView(button("오늘 기사 목록 보기 (웹)", v -> startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(SITE)))));
+        LinearLayout auto = section(col, "자동 재생", "공휴일은 서버가 알아서 건너뜁니다.");
+        enabledSw = switchRow(auto, "차에 타면 자동으로 읽기", on -> prefs.setEnabled(on), true);
+        carVal = row(auto, "차 블루투스", v -> pickCar(), true);
+        timeVal = row(auto, "재생 시간", v -> pickTime(), true);
+        weekdaysSw = switchRow(auto, "평일에만", on -> prefs.setWeekdaysOnly(on), false);
 
-        status = text("", 14);
-        status.setPadding(0, dp(16), 0, 0);
-        col.addView(status);
+        LinearLayout listen = section(col, "듣기", "목소리와 빠르기는 고르는 동안 미리 들려 드립니다.");
+        sourcesVal = row(listen, "들을 언론사", v -> pickSources(), true);
+        voiceVal = row(listen, "목소리", v -> withPreview(this::pickVoice), true);
+        rateVal = row(listen, "말 빠르기", v -> withPreview(this::pickRate), false);
+
+        LinearLayout more = section(col, "더 보기", null);
+        row(more, "오늘 기사 목록 (웹)", v -> startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(SITE))), false).setText("");
+
+        footer = text("", 13, secondary);
+        footer.setGravity(Gravity.CENTER);
+        footer.setPadding(0, dp(24), 0, 0);
+        col.addView(footer);
 
         ScrollView scroll = new ScrollView(this);
+        scroll.setBackgroundColor(bg);
         scroll.addView(col);
         setContentView(scroll);
     }
@@ -107,22 +135,112 @@ public class MainActivity extends Activity {
     }
 
     private void refresh() {
-        boolean perms = hasBluetoothPermission() && hasNotifyPermission();
-        permBtn.setText((perms ? "✓ " : "") + "1. 블루투스·알림 권한 허용");
-        batteryBtn.setText((batteryOk() ? "✓ " : "") + "2. 배터리 사용 '제한 없음' 허용");
-        String car = prefs.carAddress().isEmpty() ? "자동 (오디오 블루투스 기기 모두)" : prefs.carName();
-        carBtn.setText("3. 차 블루투스: " + car);
-        timeBtn.setText("4. 재생 시간: " + Rules.hhmm(prefs.start()) + " ~ " + Rules.hhmm(prefs.end()));
+        status(permVal, hasBluetoothPermission() && hasNotifyPermission());
+        status(batteryVal, batteryOk());
+        carVal.setText(prefs.carAddress().isEmpty() ? "모든 오디오 기기" : prefs.carName());
+        timeVal.setText(Rules.hhmm(prefs.start()) + " – " + Rules.hhmm(prefs.end()));
         Set<String> chosen = prefs.sources();
-        sourcesBtn.setText("5. 들을 언론사: " + (chosen == null ? "기본" : chosen.size() + "곳 선택"));
-        voiceBtn.setText("6. 목소리: " + (prefs.voice().isEmpty() ? "자동 (가장 자연스러운 음성)" : "직접 고름"));
-        rateBtn.setText("7. 말 빠르기: " + Rules.rateLabel(prefs.rate()));
-        weekdaysBox.setChecked(prefs.weekdaysOnly());
-        enabledBox.setChecked(prefs.enabled());
+        sourcesVal.setText(chosen == null ? "기본" : chosen.size() + "곳");
+        voiceVal.setText(prefs.voice().isEmpty() ? "자동" : "직접 고름");
+        rateVal.setText(Rules.rateLabel(prefs.rate()));
+        enabledSw.setChecked(prefs.enabled());
+        weekdaysSw.setChecked(prefs.weekdaysOnly());
         String last = prefs.lastPlayed();
-        status.setText("버전 " + BuildConfig.VERSION_NAME
-                + (last.isEmpty() ? "" : "\n마지막 자동 재생: " + last)
-                + (perms && batteryOk() ? "" : "\n1·2번을 허용해야 차에서 자동으로 시작합니다."));
+        footer.setText("버전 " + BuildConfig.VERSION_NAME + (last.isEmpty() ? "" : " · 마지막 자동 재생 " + last));
+    }
+
+    private void status(TextView v, boolean ok) {
+        v.setText(ok ? "허용됨" : "허용 필요");
+        v.setTextColor(ok ? green : red);
+    }
+
+    // ── 아이폰 설정 앱 모양의 화면 조각 ──
+
+    private GradientDrawable rounded(int color, int radius) {
+        GradientDrawable d = new GradientDrawable();
+        d.setColor(color);
+        d.setCornerRadius(radius);
+        return d;
+    }
+
+    private Drawable pressable(Drawable content) {
+        return new RippleDrawable(ColorStateList.valueOf(dark ? 0x33FFFFFF : 0x1F000000), content, null);
+    }
+
+    private TextView pill(String s, int fill, int textColor, View.OnClickListener l) {
+        TextView t = text(s, 17, textColor);
+        t.setTypeface(Typeface.DEFAULT_BOLD);
+        t.setGravity(Gravity.CENTER);
+        t.setBackground(pressable(rounded(fill, dp(14))));
+        t.setOnClickListener(l);
+        return t;
+    }
+
+    /** 회색 소제목 + 흰 둥근 묶음 + 회색 설명. 묶음(행을 담는 곳)을 돌려준다 */
+    private LinearLayout section(LinearLayout parent, String header, String note) {
+        TextView h = text(header, 13, secondary);
+        h.setPadding(dp(16), dp(28), dp(16), dp(6));
+        parent.addView(h);
+        LinearLayout group = new LinearLayout(this);
+        group.setOrientation(LinearLayout.VERTICAL);
+        group.setBackground(rounded(card, dp(12)));
+        group.setClipToOutline(true);
+        parent.addView(group);
+        if (note != null) {
+            TextView n = text(note, 13, secondary);
+            n.setPadding(dp(16), dp(6), dp(16), 0);
+            parent.addView(n);
+        }
+        return group;
+    }
+
+    private LinearLayout line(LinearLayout group, String name) {
+        LinearLayout r = new LinearLayout(this);
+        r.setOrientation(LinearLayout.HORIZONTAL);
+        r.setGravity(Gravity.CENTER_VERTICAL);
+        r.setMinimumHeight(dp(48));
+        r.setPadding(dp(16), dp(6), dp(12), dp(6));
+        r.addView(text(name, 17, label), new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+        group.addView(r);
+        return r;
+    }
+
+    private void divider(LinearLayout group) {
+        View d = new View(this);
+        d.setBackgroundColor(separator);
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, Math.max(1, dp(1) / 2));
+        lp.leftMargin = dp(16);
+        group.addView(d, lp);
+    }
+
+    /** 누르면 고르는 행: 이름 · 회색 값 · ›. 값 TextView를 돌려준다 */
+    private TextView row(LinearLayout group, String name, View.OnClickListener l, boolean dividerAfter) {
+        LinearLayout r = line(group, name);
+        TextView value = text("", 17, secondary);
+        value.setPadding(dp(8), 0, dp(6), 0);
+        value.setSingleLine(true);
+        value.setMaxWidth(dp(170));
+        value.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        r.addView(value);
+        r.addView(text("›", 22, separator));
+        r.setBackground(pressable(new ColorDrawable(card)));
+        r.setOnClickListener(l);
+        if (dividerAfter) divider(group);
+        return value;
+    }
+
+    private Switch switchRow(LinearLayout group, String name, java.util.function.Consumer<Boolean> onChange, boolean dividerAfter) {
+        LinearLayout r = line(group, name);
+        Switch sw = new Switch(this);
+        int[][] states = {{android.R.attr.state_checked}, {}};
+        sw.setThumbTintList(new ColorStateList(states, new int[] {0xFFFFFFFF, 0xFFFFFFFF}));
+        sw.setTrackTintList(new ColorStateList(states, new int[] {green, dark ? 0xFF39393D : 0xFFE9E9EA}));
+        sw.setTrackTintMode(android.graphics.PorterDuff.Mode.SRC);
+        sw.setOnCheckedChangeListener((x, on) -> { onChange.accept(on); refresh(); });
+        r.addView(sw);
+        r.setOnClickListener(v -> sw.toggle());
+        if (dividerAfter) divider(group);
+        return sw;
     }
 
     private boolean hasBluetoothPermission() {
@@ -190,8 +308,9 @@ public class MainActivity extends Activity {
 
     /** 언론사 체크 목록: 오늘 브리핑에 든 언론사 전체를 섹션별로 보여 주고, 고른 것만 읽는다 */
     private void pickSources() {
-        sourcesBtn.setEnabled(false);
-        sourcesBtn.setText("언론사 목록을 불러오는 중…");
+        if (loadingSources) return;
+        loadingSources = true;
+        sourcesVal.setText("불러오는 중…");
         new Thread(() -> {
             Brief b;
             try {
@@ -201,7 +320,7 @@ public class MainActivity extends Activity {
             }
             final Brief brief = b;
             runOnUiThread(() -> {
-                sourcesBtn.setEnabled(true);
+                loadingSources = false;
                 refresh();
                 if (brief == null) {
                     new AlertDialog.Builder(this).setMessage("언론사 목록을 불러오지 못했습니다. 인터넷 연결을 확인해 주세요.").setPositiveButton("확인", null).show();
@@ -317,20 +436,12 @@ public class MainActivity extends Activity {
                 .show();
     }
 
-    private TextView text(String s, int sp) {
+    private TextView text(String s, int sp, int color) {
         TextView t = new TextView(this);
         t.setText(s);
         t.setTextSize(TypedValue.COMPLEX_UNIT_SP, sp);
-        t.setPadding(0, dp(6), 0, dp(6));
+        t.setTextColor(color);
         return t;
-    }
-
-    private Button button(String s, View.OnClickListener l) {
-        Button btn = new Button(this);
-        btn.setText(s);
-        btn.setAllCaps(false);
-        btn.setOnClickListener(l);
-        return btn;
     }
 
     private int dp(int v) {
