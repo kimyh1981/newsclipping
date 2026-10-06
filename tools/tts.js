@@ -15,6 +15,7 @@ const fs = require('fs');
 const path = require('path');
 const brief = require('../js/brief.js');
 
+const pron = require('../js/pron.js');
 const VOICE = 'ko-KR-Chirp3-HD-Aoede';
 const EDGE_VOICE = 'ko-KR-SunHiNeural';
 const ENDPOINT = 'https://texttospeech.googleapis.com/v1/text:synthesize';
@@ -96,7 +97,7 @@ async function record(b, opts) {
   const todo = [];
   for (const [text, kind] of wanted(b)) {
     const id = audioId(text);
-    const cached = cache && path.join(cache, `${voice}-${id}.mp3`);
+    const cached = cache && path.join(cache, `${voice}-p${pron.VERSION}-${id}.mp3`); // 읽는 규칙을 바꾸면 다시 녹음
     if (cached && fs.existsSync(cached)) {
       fs.copyFileSync(cached, path.join(dir, `${id}.mp3`));
       ids.push(id);
@@ -104,7 +105,7 @@ async function record(b, opts) {
     }
     if (spent + text.length > budget) { if (kind === 'fixed' || kind === 'headline') stop = '한도'; continue; }
     spent += text.length;
-    todo.push({ id, text, file: path.join(dir, `${id}.mp3`), cached });
+    todo.push({ id, text: pron.say(text), file: path.join(dir, `${id}.mp3`), cached }); // 이름은 쓴 글로, 녹음은 들리는 대로
   }
   const done = (job) => {
     if (job.cached) fs.copyFileSync(job.file, job.cached);
@@ -140,7 +141,7 @@ async function record(b, opts) {
   }
   // 캐시에는 오늘 쓰는 파일만 남긴다 (어제 기사 녹음은 지운다)
   if (cache) {
-    const keep = new Set(ids.map((id) => `${voice}-${id}.mp3`));
+    const keep = new Set(ids.map((id) => `${voice}-p${pron.VERSION}-${id}.mp3`));
     for (const f of fs.readdirSync(cache)) if (!keep.has(f)) fs.rmSync(path.join(cache, f), { force: true });
   }
   log.push(`음성 녹음(${engine} ${voice}): ${ids.length}줄 (새로 ${fresh}줄, ${spent}자)${stop === '한도' ? ' · 한도에 걸려 일부는 폰 음성' : ''}`);

@@ -406,7 +406,7 @@ public class NewsService extends Service {
         showCaption(s);
         File f = clips.get(s.text);
         if (f != null && playClip(f)) return;
-        tts.speak(s.text, TextToSpeech.QUEUE_FLUSH, speakParams, gen + ":" + s.id);
+        tts.speak(Pron.say(s.text), TextToSpeech.QUEUE_FLUSH, speakParams, gen + ":" + s.id); // 자막은 쓴 글, 소리는 들리는 대로
     }
 
     private void showCaption(Step s) {

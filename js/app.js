@@ -93,7 +93,7 @@
     const line = queue[pos];
     mark(line.el);
     const g = ++gen;
-    const u = new SpeechSynthesisUtterance(line.text);
+    const u = new SpeechSynthesisUtterance(Pron.say(line.text));
     u.lang = 'ko-KR';
     if (voice) u.voice = voice;
     u.rate = rate;
@@ -115,7 +115,7 @@
     setPlaying(true);
     mark(line.el);
     const g = ++gen;
-    const u = new SpeechSynthesisUtterance(line.summary);
+    const u = new SpeechSynthesisUtterance(Pron.say(line.summary));
     u.lang = 'ko-KR';
     if (voice) u.voice = voice;
     u.rate = rate;
