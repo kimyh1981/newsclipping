@@ -46,6 +46,13 @@ function articleText(html, decodeEntities) {
   const paras = (scope) => (scope.match(/<p[\s>][\s\S]*?<\/p>/gi) || [])
     .map((p) => decodeEntities(p.replace(/<br\s*\/?>/gi, ' ').replace(/<[^>]+>/g, ' ')).replace(/\s+/g, ' ').trim())
     .filter((t) => t.length >= 25);
+  // 네이버 기사 본문(dic_area)은 문단이 <p>가 아니라 <br>로 나뉜다. 사진 설명은 뺀다
+  const dic = clean.match(/<article[^>]*id="dic_area"[^>]*>([\s\S]*?)<\/article>/i);
+  if (dic) {
+    const lines = dic[1].replace(/<em class="img_desc"[\s\S]*?<\/em>/gi, ' ').replace(/<br\s*\/?>|<\/(?:p|div)>/gi, '\n').replace(/<[^>]+>/g, ' ');
+    const out = decodeEntities(lines).split('\n').map((t) => t.replace(/\s+/g, ' ').trim()).filter((t) => t.length >= 25).join('\n');
+    if (out.length >= 120) return out.slice(0, 12000);
+  }
   const art = clean.match(/<article[\s\S]*?<\/article>/i);
   let text = (art ? paras(art[0]) : []).join('\n');
   if (text.length < 200) text = paras(clean).join('\n');

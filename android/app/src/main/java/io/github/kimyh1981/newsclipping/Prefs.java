@@ -51,6 +51,10 @@ final class Prefs {
     boolean soften() { return p.getBoolean("soften", true); }
     void setSoften(boolean v) { p.edit().putBoolean("soften", v).apply(); }
 
+    /** 차에서 자동으로 읽기 시작하면 자막 화면(지금 읽는 헤드라인, 터치하면 전체 듣기)을 띄운다 */
+    boolean captions() { return p.getBoolean("captions", true); }
+    void setCaptions(boolean v) { p.edit().putBoolean("captions", v).apply(); }
+
     static String today() { return new SimpleDateFormat("yyyy-MM-dd", Locale.ROOT).format(new Date()); }
     boolean playedToday() { return today().equals(p.getString("lastPlayed", "")); }
     void markPlayed() { p.edit().putString("lastPlayed", today()).apply(); }

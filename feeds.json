@@ -1,5 +1,5 @@
 {
-  "_설명": "섹션별 뉴스 출처(언론사). id는 앱·웹에서 체크할 때 쓰는 이름(바꾸면 각자 고른 설정이 풀린다), default가 false면 기본으로 꺼져 있다. url은 RSS 주소, google은 구글 뉴스 검색어(url이 없거나 막히거나 비어 있을 때 쓴다), when은 구글 검색 기간(기본 1d). take는 그 출처에서 읽을 기사 수, limit은 섹션 전체 기사 수, hours는 이보다 오래된 기사를 뺀다(기본 36, 출처에도 줄 수 있다), must는 제목에 꼭 있어야 하는 낱말(정규식, 출처에도 줄 수 있다). lang은 외국 언론의 언어(en, vi, zh, ja; 섹션이나 출처에): 구글 뉴스를 그 나라판에서 찾고 제목을 우리말로 번역해 읽는다(must는 원문 제목에 적용). mix는 여러 언론사 모음(구글 검색)이라 기사마다 실제 언론사 이름을 쓴다.",
+  "_설명": "섹션별 뉴스 출처(언론사). id는 앱·웹에서 체크할 때 쓰는 이름(바꾸면 각자 고른 설정이 풀린다), default가 false면 기본으로 꺼져 있다. url은 RSS 주소, google은 구글 뉴스 검색어(url이 없거나 막히거나 비어 있을 때 쓴다), when은 구글 검색 기간(기본 1d). take는 그 출처에서 읽을 기사 수, limit은 섹션 전체 기사 수, hours는 이보다 오래된 기사를 뺀다(기본 36, 출처에도 줄 수 있다), must는 제목에 꼭 있어야 하는 낱말(정규식, 출처에도 줄 수 있다). lang은 외국 언론의 언어(en, vi, zh, ja; 섹션이나 출처에): 구글 뉴스를 그 나라판에서 찾고 제목을 우리말로 번역해 읽는다(must는 원문 제목에 적용). mix는 여러 언론사 모음(구글 검색)이라 기사마다 실제 언론사 이름을 쓴다. naver는 네이버 언론사 번호: front가 true면 그날 신문 1면(A1면) 기사를, 아니면 언론사가 고른 홈 '주요 뉴스'를 먼저 읽고, 안 되면 url·google로 넘어간다(페이지의 언론사 이름이 name과 다르면 쓰지 않는다).",
   "sections": [
     {
       "id": "papers",
@@ -12,90 +12,110 @@
           "url": "https://www.yna.co.kr/rss/news.xml",
           "google": "site:yna.co.kr",
           "take": 2,
-          "id": "yna"
+          "id": "yna",
+          "naver": "001"
         },
         {
           "name": "조선일보",
           "url": "https://www.chosun.com/arc/outboundfeeds/rss/?outputType=xml",
           "google": "site:chosun.com",
           "take": 2,
-          "id": "chosun"
+          "id": "chosun",
+          "naver": "023",
+          "front": true
         },
         {
           "name": "중앙일보",
           "google": "site:joongang.co.kr",
           "take": 2,
-          "id": "joongang"
+          "id": "joongang",
+          "naver": "025",
+          "front": true
         },
         {
           "name": "동아일보",
           "url": "https://rss.donga.com/total.xml",
           "google": "site:donga.com",
           "take": 2,
-          "id": "donga"
+          "id": "donga",
+          "naver": "020",
+          "front": true
         },
         {
           "name": "한겨레",
           "url": "https://www.hani.co.kr/rss/",
           "google": "site:hani.co.kr",
           "take": 2,
-          "id": "hani"
+          "id": "hani",
+          "naver": "028",
+          "front": true
         },
         {
           "name": "경향신문",
           "url": "https://www.khan.co.kr/rss/rssdata/total_news.xml",
           "google": "site:khan.co.kr",
           "take": 2,
-          "id": "khan"
+          "id": "khan",
+          "naver": "032",
+          "front": true
         },
         {
           "id": "hankookilbo",
           "name": "한국일보",
           "google": "site:hankookilbo.com",
           "take": 2,
-          "default": false
+          "default": false,
+          "naver": "469",
+          "front": true
         },
         {
           "id": "kmib",
           "name": "국민일보",
           "google": "site:kmib.co.kr",
           "take": 2,
-          "default": false
+          "default": false,
+          "naver": "005",
+          "front": true
         },
         {
           "id": "kbs",
           "name": "KBS",
           "google": "site:news.kbs.co.kr",
           "take": 2,
-          "default": false
+          "default": false,
+          "naver": "056"
         },
         {
           "id": "mbc",
           "name": "MBC",
           "google": "site:imnews.imbc.com",
           "take": 2,
-          "default": false
+          "default": false,
+          "naver": "214"
         },
         {
           "id": "sbs",
           "name": "SBS",
           "google": "site:news.sbs.co.kr",
           "take": 2,
-          "default": false
+          "default": false,
+          "naver": "055"
         },
         {
           "id": "ytn",
           "name": "YTN",
           "google": "site:ytn.co.kr",
           "take": 2,
-          "default": false
+          "default": false,
+          "naver": "052"
         },
         {
           "id": "jtbc",
           "name": "JTBC",
           "google": "site:news.jtbc.co.kr",
           "take": 2,
-          "default": false
+          "default": false,
+          "naver": "437"
         }
       ]
     },
@@ -110,49 +130,63 @@
           "name": "매일경제",
           "google": "site:mk.co.kr",
           "take": 2,
-          "default": false
+          "default": false,
+          "naver": "009",
+          "front": true
         },
         {
           "id": "hankyung",
           "name": "한국경제",
           "google": "site:hankyung.com",
           "take": 2,
-          "default": false
+          "default": false,
+          "naver": "015",
+          "front": true
         },
         {
           "id": "sedaily",
           "name": "서울경제",
           "google": "site:sedaily.com",
           "take": 2,
-          "default": false
+          "default": false,
+          "naver": "011",
+          "front": true
         },
         {
           "id": "mt",
           "name": "머니투데이",
           "google": "site:mt.co.kr",
           "take": 2,
-          "default": false
+          "default": false,
+          "naver": "008",
+          "front": true
         },
         {
           "id": "edaily",
           "name": "이데일리",
           "google": "site:edaily.co.kr",
           "take": 2,
-          "default": false
+          "default": false,
+          "naver": "018",
+          "front": true
         },
         {
           "id": "fnnews",
           "name": "파이낸셜뉴스",
           "google": "site:fnnews.com",
           "take": 2,
-          "default": false
+          "default": false,
+          "naver": "014",
+          "front": true
         },
         {
           "id": "heraldcorp",
           "name": "헤럴드경제",
           "google": "site:heraldcorp.com",
           "take": 2,
-          "default": false
+          "default": false,
+          "naver": "016",
+          "front": true
         }
       ]
     },
@@ -166,7 +200,9 @@
           "name": "농민신문",
           "google": "site:nongmin.com (농업 OR 농가 OR 농협 OR 농산물 OR 농촌 OR 축산 OR 쌀 OR 비료)",
           "take": 3,
-          "id": "nongmin"
+          "id": "nongmin",
+          "naver": "662",
+          "front": true
         },
         {
           "name": "한국농어민신문",
