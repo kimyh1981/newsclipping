@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { collect, decode, googleUrl } = require('../tools/collect.js');
+const { collect, decode, googleUrl, earlierKeys, itemKeys } = require('../tools/collect.js');
 const brief = require('../js/brief.js');
 
 const NOW = Date.parse('2026-10-05T21:00:00Z');
@@ -182,4 +182,25 @@ test('원고 규칙 고정: tests/fixtures의 브리핑으로 기본값·고른 
     if (process.env.UPDATE_FIXTURES) fs.writeFileSync(want, brief.script(b, sel));
     assert.equal(brief.script(b, sel), fs.readFileSync(want, 'utf8'), name);
   }
+});
+
+test('전날 원고에 나온 기사(같은 링크나 제목)는 빼고 그다음 기사로 채운다', async (t) => {
+  t.mock.method(globalThis, 'fetch', async () => new Response(feed('어제 1면 기사', '오늘 새 기사', '또 다른 새 기사')));
+  const config = { sections: [{ id: 'a', title: '가', perSourceLabel: true, limit: 5, sources: [{ id: 'a', name: '가', url: 'https://a', take: 2 }] }] };
+  const yesterday = { generatedAt: '2026-10-04T21:00:00Z', sections: [{ sources: [{ items: [{ title: '어제 1면 기사!', link: 'https://other' }] }] }] };
+  const earlier = earlierKeys(yesterday, NOW);
+  assert.deepEqual(Object.keys(earlier), ['20261005']);
+  const b = await collect(config, NOW, '', { earlier });
+  assert.deepEqual(b.sections[0].sources[0].items.map((i) => i.title), ['오늘 새 기사', '또 다른 새 기사']);
+  assert.ok(b.log.includes('전날과 겹친 기사 1건을 빼고 다음 기사로 채움'));
+  assert.deepEqual(b.earlier, earlier); // 다음 날로 넘겨준다
+});
+
+test('지난 원고 넘겨받기: 같은 날 다시 배포하면 그날 것은 빼고, 최근 이틀만 남긴다', () => {
+  const sameDay = { generatedAt: '2026-10-05T20:00:00Z', earlier: { 20261003: ['t:a'], 20261004: ['t:b'], 20261005: ['t:c'] }, sections: [{ sources: [{ items: [{ title: '오늘 것', link: 'l' }] }] }] };
+  assert.deepEqual(earlierKeys(sameDay, NOW), { 20261004: ['t:b'], 20261005: ['t:c'] });
+  const prevDay = { generatedAt: '2026-10-05T00:30:00Z', earlier: { 20261004: ['t:b'] }, sections: [{ sources: [{ items: [{ title: 'Hello', original: 'Hello!', link: 'x' }] }] }] };
+  assert.deepEqual(earlierKeys(prevDay, NOW), { 20261004: ['t:b'], 20261005: ['l:x', 't:hello'] });
+  assert.deepEqual(earlierKeys(null, NOW), {});
+  assert.deepEqual(itemKeys({}), []);
 });
