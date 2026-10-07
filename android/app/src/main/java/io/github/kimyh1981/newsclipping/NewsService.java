@@ -102,6 +102,14 @@ public class NewsService extends Service {
     private boolean paused;
     /** 잠깐 빼앗긴 소리(통화·내비 안내)라 돌려받으면 저절로 이어 읽는다 */
     private boolean resumeOnGain;
+    /** 통화·안내로 잠깐 멈춘 때. 이보다 오래 멈췄으면 끝나도 저절로 이어 읽지 않는다 (긴 통화 뒤 갑자기 소리가 나지 않게) */
+    private long pausedAt;
+    private static final long AUTO_RESUME_MS = 5 * 60 * 1000L;
+    /** 통화가 끝난 때. 차는 통화가 끝나면 '재생' 버튼 신호를 보내기도 해서, 직후의 재생 신호는 사람이 누른 것으로 보지 않는다 */
+    private long callEndedAt;
+    private boolean inCall;
+    private Object modeWatch; // AudioManager.OnModeChangedListener (안드로이드 12부터)
+    private static final long AFTER_CALL_MS = 5000;
     private final Bundle speakParams = new Bundle();
     private Equalizer eq;
     private final Runnable pauseLimit = this::finish;
@@ -358,6 +366,7 @@ public class NewsService extends Service {
             soften(audio.generateAudioSessionId());
             startedAt = System.currentTimeMillis();
             watchNavigation();
+            watchCalls();
             tts.setOnUtteranceProgressListener(new UtteranceProgressListener() {
                 @Override public void onStart(String id) { }
                 @Override public void onDone(String id) { main.post(() -> done(id)); }
@@ -526,7 +535,8 @@ public class NewsService extends Service {
 
     private void onFocus(int change) {
         if (change == AudioManager.AUDIOFOCUS_GAIN) {
-            if (paused && resumeOnGain) resume();
+            if (paused && resumeOnGain && System.currentTimeMillis() - pausedAt < AUTO_RESUME_MS) resume();
+            else if (paused) keepPaused(); // 손으로 멈췄거나 오래 멈춤: 이어 듣기를 누를 때까지 기다린다
         } else if (change == AudioManager.AUDIOFOCUS_LOSS && autoStart && retakes < 3 && System.currentTimeMillis() - startedAt < RETAKE_WINDOW_MS) {
             // 차에 연결되자마자 애플 뮤직·삼성 뮤직 같은 앱이 저절로 재생을 시작함: 소리를 되찾고 자막 화면을 다시 맨 위로
             retakes++;
@@ -568,8 +578,13 @@ public class NewsService extends Service {
 
     private void pause(boolean autoResume) {
         if (tts == null || stopped) return;
+        if (paused) { // 이미 멈춤: 손으로 멈춘 것을 통화가 '잠깐 멈춤'으로 바꾸면 통화 뒤 저절로 켜진다
+            if (!autoResume) keepPaused();
+            return;
+        }
         resumeOnGain = autoResume;
-        if (paused) return;
+        pausedAt = System.currentTimeMillis();
+        if (!autoResume && audio != null && focus != null) audio.abandonAudioFocusRequest(focus); // 손으로 멈추면 소리 차례를 내준다: 통화·음악이 끝나도 다시 켜지지 않게
         paused = true;
         stateChanged();
         halt();
@@ -577,6 +592,38 @@ public class NewsService extends Service {
         startInForeground(autoResume ? "잠깐 멈춤 · 통화나 안내가 끝나면 이어 읽습니다" : "멈춤 · '이어 듣기'를 누르면 멈춘 기사부터 읽습니다");
         main.removeCallbacks(pauseLimit);
         main.postDelayed(pauseLimit, PAUSE_LIMIT_MS);
+    }
+
+    /** 저절로 이어 읽지 않는 멈춤으로 바꾼다 */
+    private void keepPaused() {
+        resumeOnGain = false;
+        navPaused = false;
+        main.removeCallbacks(navResume);
+        if (audio != null && focus != null) audio.abandonAudioFocusRequest(focus);
+        startInForeground("멈춤 · '이어 듣기'를 누르면 멈춘 기사부터 읽습니다");
+    }
+
+    /** 통화 중인지, 통화가 언제 끝났는지 지켜본다 (안드로이드 12부터) */
+    private void watchCalls() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return;
+        AudioManager.OnModeChangedListener w = mode -> {
+            boolean call = mode == AudioManager.MODE_IN_CALL || mode == AudioManager.MODE_IN_COMMUNICATION || mode == AudioManager.MODE_RINGTONE || mode == AudioManager.MODE_CALL_SCREENING;
+            if (inCall && !call) callEndedAt = System.currentTimeMillis();
+            inCall = call;
+        };
+        audio.addOnModeChangedListener(getMainExecutor(), w);
+        modeWatch = w;
+    }
+
+    /** 차·이어폰의 '재생' 버튼: 통화 중이거나 통화가 막 끝났을 때 온 신호는 차가 저절로 보낸 것이라 무시한다 */
+    private void playButton() {
+        int mode = audio == null ? AudioManager.MODE_NORMAL : audio.getMode();
+        if (inCall || mode == AudioManager.MODE_IN_CALL || mode == AudioManager.MODE_IN_COMMUNICATION
+                || System.currentTimeMillis() - callEndedAt < AFTER_CALL_MS) {
+            Log.i(TAG, "통화 직후 재생 신호는 무시");
+            return;
+        }
+        resume();
     }
 
     private void resume() {
@@ -625,7 +672,7 @@ public class NewsService extends Service {
             @Override public void onSkipToPrevious() { handle(ACTION_PREV); }
             @Override public void onFastForward() { full(); }
             @Override public void onPause() { pause(false); }
-            @Override public void onPlay() { resume(); }
+            @Override public void onPlay() { playButton(); }
             @Override public void onStop() { finish(); }
         }, main);
         setState(PlaybackState.STATE_PLAYING);
@@ -676,6 +723,7 @@ public class NewsService extends Service {
         if (session != null) { session.setActive(false); session.release(); session = null; }
         main.removeCallbacks(navResume);
         if (audio != null && playbackWatch != null) audio.unregisterAudioPlaybackCallback(playbackWatch);
+        if (audio != null && modeWatch != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) audio.removeOnModeChangedListener((AudioManager.OnModeChangedListener) modeWatch);
         if (audio != null && focus != null) audio.abandonAudioFocusRequest(focus);
         if (running == this) running = null;
         caption = null;
