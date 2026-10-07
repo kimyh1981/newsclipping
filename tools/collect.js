@@ -8,6 +8,7 @@ const fs = require('fs');
 const path = require('path');
 const rss = require('./rss.js');
 const brief = require('../js/brief.js');
+const pron = require('../js/pron.js');
 const holidays = require('./holidays.js');
 const { summarize } = require('./summarize.js');
 const tts = require('./tts.js');
@@ -176,7 +177,15 @@ function speechText(b) {
 
 function iosPieces(b) {
   const ids = ['open', 'close', ...b.sections.flatMap((sec) => sec.sources.map((x) => x.id))];
-  return Object.fromEntries(ids.map((id) => [id, b.autoPlay.play ? brief.piece(b, id) : '']));
+  return Object.fromEntries(ids.map((id) => [id, b.autoPlay.play ? pron.say(brief.piece(b, id)) : '']));
+}
+
+// 아이폰 단축어(링크로 추가하는 기본 단축어)가 읽는 ios/at/<시>.txt: 지금 시각의 파일을 받아 읽는다.
+// 앱과 같은 읽기 시간(6~8시)에만 오늘 원고를 넣고, 다른 시간과 쉬는 날에는 빈 파일이라 아무것도 읽지 않는다
+const IOS_HOURS = [6, 7];
+function iosHours(b) {
+  const text = pron.say(speechText(b));
+  return Object.fromEntries([...Array(24).keys()].map((h) => [h, IOS_HOURS.includes(h) ? text : '']));
 }
 
 async function collect(config, now = Date.now(), key = '', opts = {}) {
@@ -239,6 +248,8 @@ if (require.main === module) {
     // 아이폰 단축어가 고른 언론사만 읽도록 언론사마다 조각 원고 (쉬는 날에는 모두 빈 파일)
     fs.mkdirSync(path.join(out, 'ios'), { recursive: true });
     for (const [id, text] of Object.entries(iosPieces(b))) fs.writeFileSync(path.join(out, 'ios', `${id}.txt`), text);
+    fs.mkdirSync(path.join(out, 'ios', 'at'), { recursive: true });
+    for (const [h, text] of Object.entries(iosHours(b))) fs.writeFileSync(path.join(out, 'ios', 'at', `${h}.txt`), text);
     console.log(`뉴스 브리핑 ${b.dateLabel} (기본 언론사): ` + brief.select(b).map((s) => `${s.title} ${s.items.length}건`).join(' · '));
     console.log(`언론사 ${b.sections.reduce((n, s) => n + s.sources.length, 0)}곳, 기사 ${b.sections.reduce((n, s) => n + s.sources.reduce((m, x) => m + x.items.length, 0), 0)}건`);
     b.log.forEach((l) => console.log('  ' + l));
@@ -250,4 +261,4 @@ if (require.main === module) {
   })();
 }
 
-module.exports = { collect, decode, googleUrl, translate, speechText, iosPieces, RETRY };
+module.exports = { collect, decode, googleUrl, translate, speechText, iosPieces, iosHours, RETRY };

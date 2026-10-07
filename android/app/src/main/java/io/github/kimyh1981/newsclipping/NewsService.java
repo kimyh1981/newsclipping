@@ -535,7 +535,8 @@ public class NewsService extends Service {
 
     private void onFocus(int change) {
         if (change == AudioManager.AUDIOFOCUS_GAIN) {
-            if (paused && resumeOnGain && System.currentTimeMillis() - pausedAt < AUTO_RESUME_MS) resume();
+            // 통화가 끝나면 이어 읽는 건 차(블루투스 오디오)에서만: 폰 스피커로 듣다 받은 통화 뒤에는 멈춘 채 기다린다
+            if (paused && resumeOnGain && System.currentTimeMillis() - pausedAt < AUTO_RESUME_MS && bluetoothOut()) resume();
             else if (paused) keepPaused(); // 손으로 멈췄거나 오래 멈춤: 이어 듣기를 누를 때까지 기다린다
         } else if (change == AudioManager.AUDIOFOCUS_LOSS && autoStart && retakes < 3 && System.currentTimeMillis() - startedAt < RETAKE_WINDOW_MS) {
             // 차에 연결되자마자 애플 뮤직·삼성 뮤직 같은 앱이 저절로 재생을 시작함: 소리를 되찾고 자막 화면을 다시 맨 위로
@@ -592,6 +593,16 @@ public class NewsService extends Service {
         startInForeground(autoResume ? "잠깐 멈춤 · 통화나 안내가 끝나면 이어 읽습니다" : "멈춤 · '이어 듣기'를 누르면 멈춘 기사부터 읽습니다");
         main.removeCallbacks(pauseLimit);
         main.postDelayed(pauseLimit, PAUSE_LIMIT_MS);
+    }
+
+    /** 소리가 블루투스(차·이어폰)로 나가는지 */
+    private boolean bluetoothOut() {
+        if (audio == null) return false;
+        for (android.media.AudioDeviceInfo d : audio.getDevices(AudioManager.GET_DEVICES_OUTPUTS)) {
+            int t = d.getType();
+            if (t == android.media.AudioDeviceInfo.TYPE_BLUETOOTH_A2DP || t == android.media.AudioDeviceInfo.TYPE_BLUETOOTH_SCO) return true;
+        }
+        return false;
     }
 
     /** 저절로 이어 읽지 않는 멈춤으로 바꾼다 */
