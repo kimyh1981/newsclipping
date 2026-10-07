@@ -43,6 +43,8 @@ jobs:
           cp -r index.html manifest.webmanifest js icons _site/
       # 원고 녹음용 무료 신경망 음성(MS 엣지 '소리 내어 읽기', edge-tts)
       - run: python3 -m pip install --user edge-tts==7.2.8
+      # 녹음 다듬기(고음 낮추기, 스테레오)에 쓰는 ffmpeg: 러너에 없으면 설치
+      - run: command -v ffmpeg || (sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg)
       # 음성 녹음 캐시: 같은 날 다시 배포해도 이미 녹음한 줄은 다시 녹음하지 않는다
       - uses: actions/cache@v4
         with:

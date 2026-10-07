@@ -70,15 +70,6 @@ public final class Rules {
         return 0;
     }
 
-    /**
-     * 치찰음 줄이기: 이퀄라이저 띠(가운데 주파수 Hz)마다 줄 세기(밀리벨). 'ㅅ' 소리가 몰린 4kHz 위를 낮추고,
-     * 목소리 몸통(150~400Hz)은 조금 올려 차 스피커에서 덜 날카롭게 한다. 기기가 허용하는 범위로 자른다.
-     */
-    public static short softenLevel(int centerHz, short min, short max) {
-        int mb = centerHz >= 9000 ? -900 : centerHz >= 2500 ? -450 : centerHz >= 150 && centerHz <= 400 ? 200 : 0;
-        return (short) Math.max(min, Math.min(max, mb));
-    }
-
     /** 말 빠르기(보통 = 100) */
     public static final int[] RATES = {85, 100, 115, 130};
     public static final String[] RATE_LABELS = {"조금 느리게", "보통", "조금 빠르게", "빠르게"};

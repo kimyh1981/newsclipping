@@ -42,6 +42,12 @@
   fieldset label { display: inline-flex; align-items: center; gap: 6px; margin: 4px 14px 4px 0; min-height: 32px; }
   fieldset input { width: 20px; height: 20px; }
   label small { color: var(--sub); }
+  .car { position: fixed; inset: 0; z-index: 10; background: var(--bg); display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 20px; padding: 24px 20px calc(24px + env(safe-area-inset-bottom)); text-align: center; }
+  .car[hidden] { display: none; }
+  .car #capMeta { color: var(--sub); margin: 0; }
+  .car #capText { font-size: 1.7rem; line-height: 1.45; font-weight: 700; margin: 0; max-width: 640px; }
+  .car .play { width: 100%; max-width: 420px; min-height: 96px; font-size: 1.5rem; }
+  .car .row { display: flex; gap: 10px; }
   code { background: var(--line); border-radius: 4px; padding: 0 4px; word-break: break-all; }
 </style>
 </head>
@@ -71,18 +77,19 @@
       <li>끝. 앱을 닫아도 차 블루투스가 연결되면 읽기 시작하고, 끊기면 멈춥니다.</li>
     </ol>
     <h3>아이폰</h3>
-    <p id="iosLink"><a class="cta" href="#" id="shortcutLink">'뉴스클리핑' 단축어 추가</a></p>
     <ol>
-      <li>위 버튼을 누르고 <b>단축어 추가</b>를 누릅니다.</li>
-      <li>단축어 앱 → <b>자동화</b> → <b>+</b> → <b>블루투스</b> → 차 블루투스 선택 → <b>연결될 때</b>, <b>즉시 실행</b> → 단축어 <b>'뉴스클리핑'</b>을 고릅니다.</li>
-      <li>끝. 평일 아침 6~8시에 차에 연결되면 오늘 뉴스를 읽고, 다른 시간과 주말·공휴일에는 아무것도 읽지 않습니다.</li>
+      <li>사파리에서 이 화면을 열고 <b>공유</b> → <b>홈 화면에 추가</b>를 누릅니다 (기사를 보며 들을 때 씁니다).</li>
+      <li>단축어 앱 → <b>자동화</b> → <b>+</b> → <b>블루투스</b> → 차 블루투스 선택 → <b>연결될 때</b>, <b>즉시 실행</b> → <b>새로운 빈 자동화</b> → 동작 <b>URL 열기</b>에 <code>https://kimyh1981.github.io/newsclipping/?car</code> 를 넣습니다.</li>
+      <li>끝. 평일 아침 6~8시에 차에 연결되면 큰 '눌러서 듣기' 화면이 뜹니다. 한 번 누르면 자연스러운 녹음 음성과 자막으로 끝까지 읽습니다 (사파리는 사람이 한 번 눌러야 소리를 낼 수 있습니다).</li>
     </ol>
     <details>
-      <summary>단축어 직접 만들기 (버튼이 없을 때, 동작 3개)</summary>
+      <summary>누르지 않고 듣기 (Siri 음성, 단축어 동작 3개)</summary>
+      <p id="iosLink"><a class="cta" href="#" id="shortcutLink">'뉴스클리핑' 단축어 추가</a></p>
       <ol>
-        <li>단축어 앱 → <b>+</b> → 이름 '뉴스클리핑'</li>
+        <li>위 버튼으로 단축어를 추가하거나, 직접 만듭니다: 단축어 앱 → <b>+</b> → 이름 '뉴스클리핑'</li>
         <li><b>URL</b>: <code>https://kimyh1981.github.io/newsclipping/ios/at/</code>를 쓰고, 키보드 위 변수에서 <b>현재 날짜</b>를 넣은 뒤 그 변수를 눌러 날짜 형식 <b>사용자 지정</b> <code>H</code>로 바꾸고, 이어서 <code>.txt</code>를 씁니다.</li>
         <li><b>URL의 콘텐츠 가져오기</b> → <b>텍스트 말하기</b> (언어 한국어, Siri 음성이 가장 자연스럽습니다)</li>
+        <li>자동화의 동작으로 'URL 열기' 대신 <b>단축어 실행 → '뉴스클리핑'</b>을 고릅니다. 6~8시가 아니거나 쉬는 날에는 아무것도 읽지 않습니다.</li>
       </ol>
     </details>
     <details>
@@ -97,6 +104,17 @@
     <p class="meta">아이폰은 앱이 블루투스 연결을 알아차리는 것을 허용하지 않아, 자동화 연결만 직접 한 번 해야 합니다 (Apple이 자동화는 링크로 나눌 수 없게 막아 두었습니다).</p>
   </section>
 </main>
+
+<!-- 차 화면: 아이폰 자동화가 ?car 주소로 열면 뜬다. 사파리는 한 번 눌러야 소리를 내므로 큰 버튼 하나, 누르면 자막과 함께 끝까지 읽는다 -->
+<div class="car" id="car" hidden>
+  <p id="capMeta"></p>
+  <p id="capText">화면을 누르면 오늘 뉴스를 읽어요</p>
+  <button id="carPlay" class="play">▶ 눌러서 듣기</button>
+  <div class="row">
+    <button id="carNext" aria-label="다음 섹션">다음 ⏭</button>
+    <button id="carClose">목록 보기</button>
+  </div>
+</div>
 
 <div class="player">
   <button id="back" aria-label="이전 섹션">⏮</button>

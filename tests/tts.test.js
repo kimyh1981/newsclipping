@@ -3,7 +3,8 @@ const assert = require('node:assert/strict');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const { record, wanted, audioId } = require('../tools/tts.js');
+const { record, wanted, audioId, shape } = require('../tools/tts.js');
+const { spawnSync } = require('child_process');
 const brief = require('../js/brief.js');
 
 const B = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'briefing.json'), 'utf8'));
@@ -81,4 +82,17 @@ test('edge(무료): 키 없이 한꺼번에 녹음하고, 실패한 줄은 빼�
   assert.equal(await record(B, { out: tmp(), engine: 'edge', log: log2, run, batch: () => { throw new Error('No module named edge_tts'); } }), null);
   assert.match(log2.join('\n'), /음성 녹음\(edge\)을 못 함: No module named edge_tts/);
   assert.equal(await record(B, { out: tmp(), engine: 'off', key: 'k', log: [], run }), null);
+});
+
+test('녹음 다듬기: 한쪽 채널(모노) 녹음을 양쪽 스피커로 나오게 스테레오로 바꾼다 (ffmpeg가 없으면 그대로)', (t) => {
+  if (spawnSync('ffmpeg', ['-version']).status !== 0) { t.skip('ffmpeg 없음'); return; }
+  const file = path.join(tmp(), 'a.mp3');
+  spawnSync('ffmpeg', ['-y', '-loglevel', 'error', '-f', 'lavfi', '-i', 'sine=f=440:d=1', '-ac', '1', '-ar', '24000', file]);
+  assert.ok(shape(file));
+  const probe = spawnSync('ffprobe', ['-v', 'error', '-show_entries', 'stream=channels', '-of', 'csv=p=0', file], { encoding: 'utf8' });
+  assert.equal(probe.stdout.trim(), '2');
+  const bad = path.join(tmp(), 'b.mp3');
+  fs.writeFileSync(bad, 'not audio');
+  assert.equal(shape(bad), false);
+  assert.equal(fs.readFileSync(bad, 'utf8'), 'not audio');
 });

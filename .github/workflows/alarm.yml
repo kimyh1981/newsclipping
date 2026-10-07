@@ -1,0 +1,48 @@
+# 새벽 원고 자명종: GitHub 예약 실행은 몇 시간씩 늦게 오거나 빠져서(2026-10-08엔 아침 8시가 넘도록 안 옴)
+# 전날 밤에 미리 깨어나 기다렸다가, 한국 시간 새벽 4시 40분과 5시 50분에 'Deploy news site'를 직접 돌린다.
+# 밤 예약이 몇 시간 늦어도 새벽 시각에 맞출 수 있게 여러 번 걸어 두고, 새로 깬 것이 앞서 기다리던 것을 대신한다.
+name: Morning alarm
+
+on:
+  schedule:
+    - cron: '17 14 * * *' # 한국 시간 밤 11시 17분
+    - cron: '47 15 * * *'
+    - cron: '17 17 * * *'
+  workflow_dispatch:
+
+permissions:
+  actions: write
+
+concurrency:
+  group: alarm
+  cancel-in-progress: true
+
+jobs:
+  wait:
+    runs-on: ubuntu-latest
+    timeout-minutes: 355
+    steps:
+      - name: Wait for dawn, then build today's briefing
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          start=$(date -u +%s)
+          day=$(date -u +%F)
+          ran=0
+          for at in 19:40 20:50; do # UTC = 한국 04:40, 05:50
+            target=$(date -u -d "$day $at" +%s)
+            now=$(date -u +%s)
+            wait=$((target - now))
+            # 이 작업은 6시간까지만 돈다: 그 안에 못 닿는 시각은 다음 예약에 맡긴다
+            if [ $((now - start + wait)) -gt $((345 * 60)) ]; then echo "$at UTC까지 너무 멀어 건너뜀"; continue; fi
+            if [ $wait -lt 0 ]; then
+              # 예약이 늦게 와서 시각이 지났으면, 아침 7시(22:00 UTC) 전일 때 한 번만 바로 돌린다
+              [ $ran = 1 ] && continue
+              [ $now -gt $(date -u -d "$day 22:00" +%s) ] && { echo "$at UTC가 이미 지남"; continue; }
+            else
+              echo "$at UTC까지 $((wait / 60))분 기다림"
+              sleep $wait
+            fi
+            gh workflow run pages.yml --ref main -R "$GITHUB_REPOSITORY"
+            ran=1
+          done

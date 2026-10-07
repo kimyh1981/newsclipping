@@ -20,6 +20,19 @@ const VOICE = 'ko-KR-Chirp3-HD-Aoede';
 const EDGE_VOICE = 'ko-KR-SunHiNeural';
 const ENDPOINT = 'https://texttospeech.googleapis.com/v1/text:synthesize';
 
+// 녹음 뒤 다듬기(ffmpeg): 차 스피커에서 'ㅅ' 소리가 날카롭지 않게 고음을 낮추고 목소리 몸통을 조금 올린 뒤 스테레오로.
+// 녹음은 한쪽 채널(모노)이라 폰에서 효과를 걸면 왼쪽 스피커로만 나오는 차가 있었다 (2026-10-08). 바꾸면 SHAPE를 올린다
+const SHAPE = 's1';
+const SHAPE_FILTER = 'equalizer=f=250:t=o:w=1.3:g=2,highshelf=f=2500:g=-4.5,highshelf=f=9000:g=-4.5';
+
+function shape(file) {
+  const tmp = `${file}.shape.mp3`;
+  const r = spawnSync('ffmpeg', ['-y', '-loglevel', 'error', '-i', file, '-af', SHAPE_FILTER, '-ac', '2', '-ar', '24000', '-b:a', '64k', tmp], { timeout: 30e3 });
+  if (r.status === 0 && fs.existsSync(tmp) && fs.statSync(tmp).size > 0) { fs.renameSync(tmp, file); return true; }
+  fs.rmSync(tmp, { force: true });
+  return false;
+}
+
 const audioId = (text) => crypto.createHash('sha1').update(text.trim(), 'utf8').digest('hex').slice(0, 16);
 
 // 앱이 읽을 수 있는 줄을 중요한 순서대로: [글자, 묶음] (묶음별로 한도를 나눠 쓴다)
@@ -97,7 +110,7 @@ async function record(b, opts) {
   const todo = [];
   for (const [text, kind] of wanted(b)) {
     const id = audioId(text);
-    const cached = cache && path.join(cache, `${voice}-p${pron.VERSION}-${id}.mp3`); // 읽는 규칙을 바꾸면 다시 녹음
+    const cached = cache && path.join(cache, `${voice}-p${pron.VERSION}-${SHAPE}-${id}.mp3`); // 읽는 규칙을 바꾸면 다시 녹음
     if (cached && fs.existsSync(cached)) {
       fs.copyFileSync(cached, path.join(dir, `${id}.mp3`));
       ids.push(id);
@@ -107,7 +120,9 @@ async function record(b, opts) {
     spent += text.length;
     todo.push({ id, text: pron.say(text), file: path.join(dir, `${id}.mp3`), cached }); // 이름은 쓴 글로, 녹음은 들리는 대로
   }
+  let unshaped = 0;
   const done = (job) => {
+    if (!shape(job.file)) unshaped++;
     if (job.cached) fs.copyFileSync(job.file, job.cached);
     ids.push(job.id);
     fresh++;
@@ -141,11 +156,12 @@ async function record(b, opts) {
   }
   // 캐시에는 오늘 쓰는 파일만 남긴다 (어제 기사 녹음은 지운다)
   if (cache) {
-    const keep = new Set(ids.map((id) => `${voice}-p${pron.VERSION}-${id}.mp3`));
+    const keep = new Set(ids.map((id) => `${voice}-p${pron.VERSION}-${SHAPE}-${id}.mp3`));
     for (const f of fs.readdirSync(cache)) if (!keep.has(f)) fs.rmSync(path.join(cache, f), { force: true });
   }
+  if (unshaped) log.push(`녹음 다듬기(ffmpeg)를 못 한 줄 ${unshaped}개: 모노 그대로`);
   log.push(`음성 녹음(${engine} ${voice}): ${ids.length}줄 (새로 ${fresh}줄, ${spent}자)${stop === '한도' ? ' · 한도에 걸려 일부는 폰 음성' : ''}`);
   return ids.length ? { voice, base: 'audio/', ids: ids.sort() } : null;
 }
 
-module.exports = { record, wanted, audioId, synthesize, edgeBatch, VOICE, EDGE_VOICE };
+module.exports = { record, wanted, audioId, synthesize, edgeBatch, shape, VOICE, EDGE_VOICE };

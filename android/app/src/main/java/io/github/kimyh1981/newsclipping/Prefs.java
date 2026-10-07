@@ -48,8 +48,6 @@ final class Prefs {
     void setRate(int rate) { p.edit().putInt("rate", rate).apply(); }
 
     /** 차 블루투스에서 'ㅅ·ㅆ' 소리(치찰음)가 날카롭지 않게 고음을 줄인다 */
-    boolean soften() { return p.getBoolean("soften", true); }
-    void setSoften(boolean v) { p.edit().putBoolean("soften", v).apply(); }
 
     /** 차에서 자동으로 읽기 시작하면 자막 화면(지금 읽는 헤드라인, 터치하면 전체 듣기)을 띄운다 */
     boolean captions() { return p.getBoolean("captions", true); }
