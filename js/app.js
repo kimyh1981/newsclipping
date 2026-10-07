@@ -2,6 +2,11 @@
 (function () {
   const $ = (id) => document.getElementById(id);
   const synth = window.speechSynthesis;
+  // 서버가 녹음해 둔 자연스러운 음성(audio/<id>.mp3)을 하나의 audio로 차례로 튼다. 녹음이 없는 줄만 브라우저 음성으로 읽는다.
+  // 아이폰 사파리는 처음 한 번 사람이 눌렀을 때 소리를 허락하므로, 같은 audio를 계속 쓴다
+  const player = new Audio();
+  player.preload = 'auto';
+  let unlocked = false;
   const RATES = [0.9, 1.0, 1.15, 1.3];
   const store = {
     get(k) { try { return localStorage.getItem(k); } catch { return null; } },
@@ -30,6 +35,22 @@
     return new Date(iso).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit' });
   }
 
+  // 녹음 파일 이름: 줄 글자(앞뒤 공백 뺌)의 SHA-1 앞 16자리 (서버 tools/tts.js, 앱 Brief.audioId와 같은 규칙)
+  async function audioId(text) {
+    const h = new Uint8Array(await crypto.subtle.digest('SHA-1', new TextEncoder().encode(text.trim())));
+    return [...h.slice(0, 8)].map((x) => x.toString(16).padStart(2, '0')).join('');
+  }
+
+  async function attachClips(b, lines) {
+    const ids = new Set((b.audio && b.audio.ids) || []);
+    if (!ids.size || !window.crypto || !crypto.subtle) return;
+    const base = (b.audio && b.audio.base) || 'audio/';
+    await Promise.all(lines.map(async (line) => {
+      const id = await audioId(line.text);
+      if (ids.has(id)) line.clip = `${base}${id}.mp3`;
+    }));
+  }
+
   function render(b) {
     const age = (Date.now() - Date.parse(b.generatedAt)) / 3600e3;
     $('meta').textContent = `${b.dateLabel} · ${kstTime(b.generatedAt)} 수집` + (age > 20 ? ' · 어제 소식일 수 있어요' : '') +
@@ -48,6 +69,7 @@
       const ii = s ? s.items.findIndex((it) => text === Brief.sentence(it.spoken)) : -1;
       return { text, sec, el: ii >= 0 ? $(`i${sec}-${ii}`) : null, summary: ii >= 0 ? s.items[ii].summary || '' : '' };
     });
+    attachClips(b, queue).catch(() => {}); // 녹음을 못 찾으면 브라우저 음성으로 읽는다
   }
 
   // 언론사 체크 목록: 섹션마다 언론사를 보여 주고, 고른 것을 이 기기에 저장한다
@@ -85,6 +107,24 @@
   function setPlaying(on) {
     playing = on;
     $('play').textContent = on ? '⏸ 멈춤' : pos > 0 && pos < queue.length ? '▶ 이어 듣기' : '▶ 듣기';
+    $('carPlay').textContent = on ? '⏸ 멈춤' : pos > 0 && pos < queue.length ? '▶ 눌러서 이어 듣기' : '▶ 눌러서 듣기';
+  }
+
+  function caption(text) {
+    $('capText').textContent = text;
+  }
+
+  // 사람이 누른 순간에 audio를 한 번 틀었다 멈춰, 이후 줄을 차례로 틀 수 있게 한다 (아이폰 사파리)
+  function unlock() {
+    if (unlocked) return;
+    unlocked = true;
+    const first = queue.find((q) => q.clip);
+    if (!first || (queue[pos] && queue[pos].clip)) { unlocked = !!first; return; } // 첫 줄이 녹음이면 바로 그 줄을 트는 것으로 충분
+    player.src = first.clip;
+    player.muted = true;
+    const p = player.play();
+    if (p && p.then) p.then(() => { if (player.muted) { player.pause(); player.muted = false; } }, () => { player.muted = false; unlocked = false; });
+    else player.muted = false;
   }
 
   function speak() {
@@ -92,12 +132,25 @@
     if (pos >= queue.length) { pos = 0; mark(null); setPlaying(false); return; }
     const line = queue[pos];
     mark(line.el);
+    caption(line.text);
     const g = ++gen;
+    const next = () => { if (playing && g === gen) { pos++; speak(); } };
+    if (line.clip) {
+      player.onended = next;
+      player.onerror = () => { if (g === gen) { line.clip = null; speak(); } }; // 녹음을 못 받으면 이 줄은 브라우저 음성으로
+      player.muted = false;
+      player.src = line.clip;
+      player.playbackRate = rate;
+      const p = player.play();
+      if (p && p.catch) p.catch((e) => { if (g === gen && e && e.name === 'NotAllowedError') setPlaying(false); });
+      return;
+    }
+    if (!synth) { next(); return; }
     const u = new SpeechSynthesisUtterance(Pron.say(line.text));
     u.lang = 'ko-KR';
     if (voice) u.voice = voice;
     u.rate = rate;
-    u.onend = () => { if (playing && g === gen) { pos++; speak(); } };
+    u.onend = next;
     u.onerror = (e) => {
       if (e.error === 'interrupted' || e.error === 'canceled') return;
       setPlaying(false); // 'not-allowed': 화면을 한 번 눌러야 소리를 낼 수 있는 브라우저
@@ -111,9 +164,11 @@
     while (i > 0 && !queue[i].summary && !queue[i].el) i--;
     const line = queue[i];
     if (!synth || !line || !line.summary) return;
+    player.pause();
     synth.cancel();
     setPlaying(true);
     mark(line.el);
+    caption(line.summary);
     const g = ++gen;
     const u = new SpeechSynthesisUtterance(Pron.say(line.summary));
     u.lang = 'ko-KR';
@@ -124,14 +179,18 @@
   }
 
   function play() {
-    if (!synth || !queue.length) return;
-    synth.cancel();
+    if (!queue.length) return;
+    unlock();
+    player.pause();
+    if (synth) synth.cancel();
     setPlaying(true);
     speak();
   }
 
   function stop() {
     setPlaying(false);
+    gen++;
+    player.pause();
     if (synth) synth.cancel();
   }
 
@@ -149,6 +208,11 @@
   }
 
   $('play').onclick = () => (playing ? stop() : play());
+  $('carPlay').onclick = () => (playing ? stop() : play());
+  $('carNext').onclick = () => jump(1);
+  $('carClose').onclick = () => { $('car').hidden = true; };
+  // 운전 중에도 쉽게: 차 화면 아무 곳이나 누르면 시작한다 (버튼은 각자 동작)
+  $('car').onclick = (e) => { if (!e.target.closest('button') && !playing) play(); };
   $('next').onclick = () => jump(1);
   $('more').onclick = more;
   $('back').onclick = () => jump(-1);
@@ -163,10 +227,16 @@
   // 아이폰 단축어 iCloud 링크: 아이폰에서 한 번 만들어 공유 링크를 여기에 넣는다 (README 참고)
   const SHORTCUT_URL = '';
   if (SHORTCUT_URL) $('shortcutLink').href = SHORTCUT_URL;
-  else $('iosLink').innerHTML = '<span class="meta">단축어 링크를 준비 중입니다. 그동안은 README의 "아이폰 단축어 만들기"대로 직접 만들 수 있습니다.</span>';
+  else $('iosLink').innerHTML = '<span class="meta">단축어 링크는 준비 중이에요. 아래대로 직접 만들 수 있어요.</span>';
 
-  if (!synth) $('play').disabled = true;
-  else { pickVoice(); synth.onvoiceschanged = pickVoice; }
+  if (synth) { pickVoice(); synth.onvoiceschanged = pickVoice; }
+
+  // 차 화면(?car): 평일 아침 6~8시이고 쉬는 날이 아니면 큰 '눌러서 듣기' 화면을 띄운다. 다른 때에는 보통 화면
+  function carTime(b) {
+    const kst = new Date(Date.now() + 9 * 3600e3);
+    const h = kst.getUTCHours();
+    return (!b.autoPlay || b.autoPlay.play) && h >= 6 && h < 8;
+  }
 
   fetch('briefing.json', { cache: 'no-store' })
     .then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); })
@@ -174,7 +244,12 @@
       data = b;
       render(b);
       renderPicker(b);
-      if (new URLSearchParams(location.search).has('autoplay')) play();
+      const q = new URLSearchParams(location.search);
+      if (q.has('car') && carTime(b)) {
+        $('capMeta').textContent = `${b.dateLabel} 아침 뉴스`;
+        $('car').hidden = false;
+      }
+      if (q.has('autoplay')) play();
     })
     .catch(() => { $('meta').textContent = '오늘 브리핑을 아직 만들지 못했어요. 잠시 후 다시 열어 주세요.'; });
 })();
