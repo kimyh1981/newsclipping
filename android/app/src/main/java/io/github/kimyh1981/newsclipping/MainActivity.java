@@ -52,7 +52,7 @@ public class MainActivity extends Activity {
     private static final String SITE = "https://kimyh1981.github.io/newsclipping/";
     private Prefs prefs;
     private TextView footer, permVal, batteryVal, overlayVal, carVal, timeVal, sourcesVal, voiceVal, rateVal;
-    private Switch enabledSw, weekdaysSw, softenSw, captionsSw;
+    private Switch enabledSw, weekdaysSw, captionsSw;
     private ImageView playBtn;
     private TextToSpeech preview; // 목소리·빠르기를 고를 때 미리 들려준다
     private boolean previewReady;
@@ -143,8 +143,7 @@ public class MainActivity extends Activity {
 
         LinearLayout listen = section(col, "듣기", "목소리와 빠르기는 고르는 동안 미리 들려 드립니다.");
         voiceVal = row(listen, "목소리", v -> withPreview(this::pickVoice), true);
-        rateVal = row(listen, "말 빠르기", v -> withPreview(this::pickRate), true);
-        softenSw = switchRow(listen, "치찰음 줄이기 (차 블루투스)", on -> prefs.setSoften(on), false);
+        rateVal = row(listen, "말 빠르기", v -> withPreview(this::pickRate), false);
 
         footer = text("", 13, secondary);
         footer.setGravity(Gravity.CENTER);
@@ -194,7 +193,6 @@ public class MainActivity extends Activity {
         rateVal.setText(Rules.rateLabel(prefs.rate()));
         enabledSw.setChecked(prefs.enabled());
         weekdaysSw.setChecked(prefs.weekdaysOnly());
-        softenSw.setChecked(prefs.soften());
         captionsSw.setChecked(prefs.captions());
         status(overlayVal, Settings.canDrawOverlays(this));
         String last = prefs.lastPlayed();

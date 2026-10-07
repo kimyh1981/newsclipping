@@ -14,7 +14,8 @@ import android.media.AudioManager;
 import android.media.AudioPlaybackConfiguration;
 import android.media.MediaMetadata;
 import android.media.MediaPlayer;
-import android.media.audiofx.Equalizer;
+import android.media.AudioFormat;
+import android.media.AudioTrack;
 import android.media.session.MediaSession;
 import android.media.session.PlaybackState;
 import android.os.Build;
@@ -84,7 +85,6 @@ public class NewsService extends Service {
     private int gen;
     private MediaPlayer player;
     private AudioAttributes attrs;
-    private int sessionId;
     private final Runnable afterSilence = this::advance;
     /** 차 연결로 저절로 시작했다 (자막 화면을 띄운다) */
     private boolean autoStart;
@@ -111,7 +111,7 @@ public class NewsService extends Service {
     private Object modeWatch; // AudioManager.OnModeChangedListener (안드로이드 12부터)
     private static final long AFTER_CALL_MS = 5000;
     private final Bundle speakParams = new Bundle();
-    private Equalizer eq;
+    private AudioTrack hold;
     private final Runnable pauseLimit = this::finish;
 
     /** 자동(차 연결) 또는 수동(앱의 '지금 듣기')으로 읽기 시작. 백그라운드 시작이 막히면 탭해서 듣는 알림을 띄운다. */
@@ -286,7 +286,8 @@ public class NewsService extends Service {
         for (Brief.Line l : script) {
             if (l.item != null) texts.addAll(l.item.fullSentences());
         }
-        File dir = new File(getCacheDir(), "audio");
+        File dir = new File(getCacheDir(), "audio2"); // 2: 서버가 스테레오로 다시 녹음한 파일 (예전 폴더는 아래에서 지운다)
+        deleteTree(new File(getCacheDir(), "audio"));
         dir.mkdirs();
         String base = BuildConfig.NEWS_URL.substring(0, BuildConfig.NEWS_URL.lastIndexOf('/') + 1) + brief.audioBase;
         Set<String> keep = new HashSet<>();
@@ -317,6 +318,12 @@ public class NewsService extends Service {
         File[] old = dir.listFiles(); // 어제 받은 파일은 지운다
         if (old != null) for (File f : old) if (!keep.contains(f.getName()) && !f.getName().endsWith(".part")) f.delete();
         Log.i(TAG, "녹음 " + keep.size() + "줄 중 " + clips.size() + "줄 받고 시작");
+    }
+
+    private static void deleteTree(File dir) {
+        File[] fs = dir.listFiles();
+        if (fs != null) for (File f : fs) f.delete();
+        dir.delete();
     }
 
     private static void download(String url, File to) throws Exception {
@@ -363,7 +370,6 @@ public class NewsService extends Service {
                     .setWillPauseWhenDucked(true)
                     .setOnAudioFocusChangeListener(this::onFocus, main).build();
             audio.requestAudioFocus(focus); // 라디오·음악은 잠시 멈췄다가 끝나면 다시 나온다
-            soften(audio.generateAudioSessionId());
             startedAt = System.currentTimeMillis();
             watchNavigation();
             watchCalls();
@@ -406,6 +412,7 @@ public class NewsService extends Service {
         if (stopped || paused || tts == null) return;
         if (pos >= queue.size()) { finish(); return; }
         Step s = queue.get(pos++);
+        holdButtons(true); // 차례마다 다시 틀어 '가장 최근에 소리 낸 앱'이 되게
         if (s.id.startsWith("L")) {
             int i = Integer.parseInt(s.id.substring(1, s.id.indexOf('.')));
             current = i;
@@ -437,13 +444,12 @@ public class NewsService extends Service {
         }
     }
 
-    /** 녹음 파일을 앱에서 직접 튼다. 치찰음 줄이기(이퀄라이저)가 걸리도록 같은 오디오 세션으로 */
+    /** 녹음 파일을 앱에서 직접 튼다 (치찰음 줄이기와 스테레오는 서버가 녹음할 때 해 둔다) */
     private boolean playClip(File f) {
         int g = gen;
         MediaPlayer mp = new MediaPlayer();
         try {
             mp.setAudioAttributes(attrs);
-            if (sessionId > 0) mp.setAudioSessionId(sessionId);
             mp.setDataSource(f.getPath());
             mp.setOnCompletionListener(p -> done(g + ":"));
             mp.setOnErrorListener((p, what, extra) -> { done(g + ":"); return true; });
@@ -589,6 +595,7 @@ public class NewsService extends Service {
         paused = true;
         stateChanged();
         halt();
+        holdButtons(false);
         setState(PlaybackState.STATE_PAUSED);
         startInForeground(autoResume ? "잠깐 멈춤 · 통화나 안내가 끝나면 이어 읽습니다" : "멈춤 · '이어 듣기'를 누르면 멈춘 기사부터 읽습니다");
         main.removeCallbacks(pauseLimit);
@@ -648,22 +655,29 @@ public class NewsService extends Service {
         jump(Math.min(current, lines.size() - 1));
     }
 
-    /** 치찰음 줄이기: 이 서비스의 음성만 이퀄라이저로 고음을 낮춘다. 기기가 지원하지 않으면 그냥 읽는다 */
-    private void soften(int sessionId) {
-        if (sessionId <= 0) return;
-        this.sessionId = sessionId;
-        speakParams.putInt(TextToSpeech.Engine.KEY_PARAM_SESSION_ID, sessionId);
-        if (!new Prefs(this).soften()) return;
+    /**
+     * 차 핸들의 다음·이전 버튼은 안드로이드가 '가장 최근에 소리를 내기 시작한 앱'에 보낸다. 폰 음성은 음성 엔진 앱이 소리를 내고,
+     * 차에 연결되면 음악 앱이 먼저 재생을 시작하므로, 그대로 두면 버튼이 음악 앱으로 간다.
+     * 읽는 동안 이 앱이 소리 없는 소리를 함께 틀고 차례마다 다시 시작해 버튼을 이 앱이 받는다.
+     */
+    private void holdButtons(boolean on) {
         try {
-            eq = new Equalizer(0, sessionId);
-            short[] range = eq.getBandLevelRange();
-            for (short band = 0; band < eq.getNumberOfBands(); band++) {
-                eq.setBandLevel(band, Rules.softenLevel(eq.getCenterFreq(band) / 1000, range[0], range[1]));
+            if (!on) { if (hold != null) hold.pause(); return; }
+            if (hold == null) {
+                int rate = 8000, frames = rate / 2;
+                hold = new AudioTrack.Builder().setAudioAttributes(attrs)
+                        .setAudioFormat(new AudioFormat.Builder().setEncoding(AudioFormat.ENCODING_PCM_16BIT)
+                                .setSampleRate(rate).setChannelMask(AudioFormat.CHANNEL_OUT_STEREO).build())
+                        .setTransferMode(AudioTrack.MODE_STATIC).setBufferSizeInBytes(frames * 4).build();
+                hold.write(new short[frames * 2], 0, frames * 2);
+                hold.setLoopPoints(0, frames, -1);
+            } else {
+                hold.pause();
             }
-            eq.setEnabled(true);
+            hold.play();
         } catch (RuntimeException e) {
-            Log.w(TAG, "이퀄라이저를 쓸 수 없음: " + e);
-            eq = null;
+            Log.w(TAG, "버튼 받기용 소리를 못 틈: " + e);
+            if (hold != null) { hold.release(); hold = null; }
         }
     }
 
@@ -729,7 +743,7 @@ public class NewsService extends Service {
         main.removeCallbacks(afterSilence);
         releasePlayer();
         if (pool != null) pool.shutdownNow();
-        if (eq != null) { eq.release(); eq = null; }
+        if (hold != null) { hold.release(); hold = null; }
         if (tts != null) { tts.stop(); tts.shutdown(); tts = null; }
         if (session != null) { session.setActive(false); session.release(); session = null; }
         main.removeCallbacks(navResume);

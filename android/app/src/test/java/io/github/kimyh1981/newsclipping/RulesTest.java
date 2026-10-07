@@ -63,12 +63,4 @@ public class RulesTest {
         assertEquals(5, Rules.prevItem(f, 9));
     }
 
-    @Test public void softenCutsHissKeepsBody() {
-        short min = -1500, max = 1500;
-        assertTrue(Rules.softenLevel(14000, min, max) < Rules.softenLevel(3600, min, max));
-        assertTrue(Rules.softenLevel(3600, min, max) < 0);
-        assertEquals(0, Rules.softenLevel(910, min, max));
-        assertTrue(Rules.softenLevel(230, min, max) > 0);
-        assertEquals(-300, Rules.softenLevel(14000, (short) -300, max)); // 기기 한도 안으로
-    }
 }
