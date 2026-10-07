@@ -125,9 +125,9 @@ public class MainActivity extends Activity {
         col.addView(nav);
 
         LinearLayout today = section(col, "오늘 뉴스", null);
+        row(today, "오늘 기사 목록 (웹)", v -> startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(SITE))), true).setText("");
         sourcesVal = row(today, "들을 언론사", v -> pickSources(), true);
-        row(today, "자막 화면 (터치하면 전체 듣기)", v -> startActivity(new Intent(this, CaptionActivity.class)), true).setText("");
-        row(today, "오늘 기사 목록 (웹)", v -> startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(SITE))), false).setText("");
+        row(today, "자막 화면 (터치하면 전체 듣기)", v -> startActivity(new Intent(this, CaptionActivity.class)), false).setText("");
 
         LinearLayout setup = section(col, "처음 한 번만", "두 가지를 허용해야 차에 탔을 때 앱을 열지 않아도 자동으로 읽습니다.");
         permVal = row(setup, "블루투스·알림 권한", v -> askPermissions(), true);

@@ -252,6 +252,54 @@
           "google": "site:chuksannews.co.kr",
           "take": 2,
           "default": false
+        },
+        {
+          "id": "nongkija",
+          "name": "농기자재신문",
+          "google": "site:newsam.co.kr",
+          "take": 2,
+          "default": false,
+          "when": "3d"
+        },
+        {
+          "id": "n-news",
+          "name": "한국농업신문",
+          "google": "site:n-news.co.kr",
+          "take": 2,
+          "default": false,
+          "when": "3d"
+        },
+        {
+          "id": "youngnong",
+          "name": "한국영농신문",
+          "google": "site:youngnong.co.kr",
+          "take": 2,
+          "default": false,
+          "when": "3d"
+        },
+        {
+          "id": "chukkyung",
+          "name": "축산경제신문",
+          "google": "site:chukkyung.co.kr",
+          "take": 2,
+          "default": false,
+          "when": "3d"
+        },
+        {
+          "id": "rwn",
+          "name": "농촌여성신문",
+          "google": "site:rwn.co.kr",
+          "take": 2,
+          "default": false,
+          "when": "3d"
+        },
+        {
+          "id": "wonyesanup",
+          "name": "원예산업신문",
+          "google": "site:wonyesanup.co.kr",
+          "take": 2,
+          "default": false,
+          "when": "3d"
         }
       ]
     },

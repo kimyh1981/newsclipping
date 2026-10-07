@@ -170,6 +170,33 @@ async function readSource(src, log, lang, now = Date.now()) {
   return [];
 }
 
+// 전날(과 그 전날) 원고에 나온 기사: 링크나 제목이 같으면 오늘은 빼고 그다음 기사로 채운다.
+// 1면이 아직 안 올라온 신문이나 하루에 몇 건 안 쓰는 전문지·RSS가 어제 기사를 그대로 내놓아 겹쳐 들렸다 (2026-10-08)
+const SITE = 'https://kimyh1981.github.io/newsclipping/';
+const titleKey = (t) => 't:' + String(t || '').normalize('NFC').replace(/[^\p{L}\p{N}]/gu, '').toLowerCase();
+
+function itemKeys(b) {
+  const keys = new Set();
+  for (const sec of b.sections || []) for (const src of sec.sources || []) for (const it of src.items || []) {
+    if (it.link) keys.add('l:' + it.link);
+    keys.add(titleKey(it.original || it.title));
+  }
+  return [...keys];
+}
+
+// 지금 사이트에 올라가 있는 원고(live)에서 오늘 이전 날들의 기사 열쇠를 이어 받는다 (최근 days일).
+// 같은 날 두 번째 배포라면 그날 것은 넣지 않는다: 새벽 첫 배포와 같은 기사를 다시 빼면 안 되니까
+function earlierKeys(live, now, days = 2) {
+  const today = naver.seoulDate(now);
+  const out = { ...(live && live.earlier) };
+  if (live && live.generatedAt) {
+    const d = naver.seoulDate(Date.parse(live.generatedAt));
+    if (d !== today) out[d] = itemKeys(live);
+  }
+  const keep = Object.keys(out).filter((d) => d < today).sort().slice(-days);
+  return Object.fromEntries(keep.map((d) => [d, out[d]]));
+}
+
 // 아이폰 단축어가 읽는 briefing.txt: 주말·공휴일에는 비워 두어 아무것도 읽지 않게 한다
 function speechText(b) {
   return b.autoPlay.play ? b.script : '';
@@ -190,6 +217,9 @@ function iosHours(b) {
 
 async function collect(config, now = Date.now(), key = '', opts = {}) {
   const log = [];
+  const earlier = opts.earlier || {};
+  const old = new Set(Object.values(earlier).flat());
+  let repeated = 0;
   const autoPlay = await holidays.playDay(now, key);
   const sections = await Promise.all(config.sections.map(async (sec) => ({
     id: sec.id,
@@ -200,7 +230,10 @@ async function collect(config, now = Date.now(), key = '', opts = {}) {
       const lang = source.lang || sec.lang || 'ko';
       const take = source.take || 3;
       const read = await readSource(source, log, lang, now);
-      const items = rss.pick({ ...sec, limit: 99 }, [{ source: { ...source, lang, take: take + SPARE }, items: read }], now, []);
+      const picked = rss.pick({ ...sec, limit: 99 }, [{ source: { ...source, lang, take: take + SPARE + 10 }, items: read }], now, []);
+      const isOld = (it) => old.has('l:' + it.link) || old.has(titleKey(it.title));
+      repeated += picked.slice(0, take + SPARE).filter(isOld).length;
+      const items = picked.filter((it) => !isOld(it)).slice(0, take + SPARE);
       return { id: source.id, name: source.name, lang, default: source.default !== false, take, items };
     })),
   })));
@@ -212,9 +245,10 @@ async function collect(config, now = Date.now(), key = '', opts = {}) {
   for (const batch of [foreign.filter((s) => s.default), foreign.filter((s) => !s.default)]) {
     await Promise.all(batch.map((src) => tr(async () => { src.items = await translateItems(src.name, src.lang, src.items, log); })));
   }
+  if (old.size) log.push(`전날과 겹친 기사 ${repeated}건을 빼고 다음 기사로 채움`);
   if (foreign.length) log.push(`번역기: ${Object.entries(used).map(([k, n]) => `${k} ${n}번`).join(', ') || '없음'}${blocked.size ? ` (429로 막힘: ${[...blocked].join(', ')})` : ''}`);
   group(sections);
-  const b = { version: 2, generatedAt: new Date(now).toISOString(), dateLabel: rss.koreanDate(now), autoPlay, sections, log };
+  const b = { version: 2, generatedAt: new Date(now).toISOString(), dateLabel: rss.koreanDate(now), autoPlay, sections, log, earlier };
   // 기본 언론사 원고에 든 기사부터 요약한다 (같은 기사 객체에 summary가 붙는다)
   const run = limiter(4);
   if (opts.summaryLimit) await summarize(brief.select(b).flatMap((s) => s.items), { mode: opts.summaryMode, get, translate, decodeEntities: rss.decodeEntities, log, run, key: opts.summaryKey, limit: opts.summaryLimit });
@@ -232,7 +266,10 @@ if (require.main === module) {
     const out = path.resolve(process.argv[2] || 'dist');
     fs.mkdirSync(out, { recursive: true });
     const config = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'feeds.json'), 'utf8'));
+    let live = null;
+    try { live = JSON.parse(await get(`${SITE}briefing.json`)); } catch (err) { console.log(`지난 원고를 못 받음: ${err.message}`); }
     const b = await collect(config, Date.now(), process.env.DATA_GO_KR_KEY || '', {
+      earlier: earlierKeys(live, Date.now()),
       summaryMode: process.env.SUMMARY_MODE || 'lead', // 저장소 Variables에서 SUMMARY_MODE=claude로 바꾸면 Claude 요약
       summaryKey: process.env.ANTHROPIC_API_KEY || '',
       summaryLimit: process.env.SUMMARY_LIMIT === undefined ? 40 : Number(process.env.SUMMARY_LIMIT),
@@ -261,4 +298,4 @@ if (require.main === module) {
   })();
 }
 
-module.exports = { collect, decode, googleUrl, translate, speechText, iosPieces, iosHours, RETRY };
+module.exports = { collect, earlierKeys, itemKeys, titleKey, decode, googleUrl, translate, speechText, iosPieces, iosHours, RETRY };
