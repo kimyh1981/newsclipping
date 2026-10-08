@@ -197,6 +197,18 @@ function earlierKeys(live, now, days = 2) {
   return Object.fromEntries(keep.map((d) => [d, out[d]]));
 }
 
+// 섹션의 boost(정규식 목록, 앞일수록 중요): 제목에 그 말이 든 기사를 언론사 안에서 앞으로 올린다.
+// 농업 기사는 바이오플랜과 이어지는 비료·탄소중립·벼·과수 기사를 먼저 듣고 싶다 (2026-10-08)
+function boostScore(patterns, title) {
+  const i = patterns.findIndex((p) => p.test(title));
+  return i < 0 ? 0 : patterns.length - i;
+}
+
+function boosted(patterns, items) {
+  if (!patterns.length) return items;
+  return items.map((it, i) => [boostScore(patterns, it.title), i, it]).sort((a, b) => b[0] - a[0] || a[1] - b[1]).map((x) => x[2]);
+}
+
 // 아이폰 단축어가 읽는 briefing.txt: 주말·공휴일에는 비워 두어 아무것도 읽지 않게 한다
 function speechText(b) {
   return b.autoPlay.play ? b.script : '';
@@ -221,22 +233,25 @@ async function collect(config, now = Date.now(), key = '', opts = {}) {
   const old = new Set(Object.values(earlier).flat());
   let repeated = 0;
   const autoPlay = await holidays.playDay(now, key);
-  const sections = await Promise.all(config.sections.map(async (sec) => ({
-    id: sec.id,
-    title: sec.title,
-    perSourceLabel: !!sec.perSourceLabel,
-    limit: sec.limit,
-    sources: await Promise.all(sec.sources.map(async (source) => {
-      const lang = source.lang || sec.lang || 'ko';
-      const take = source.take || 3;
-      const read = await readSource(source, log, lang, now);
-      const picked = rss.pick({ ...sec, limit: 99 }, [{ source: { ...source, lang, take: take + SPARE + 10 }, items: read }], now, []);
-      const isOld = (it) => old.has('l:' + it.link) || old.has(titleKey(it.title));
-      repeated += picked.slice(0, take + SPARE).filter(isOld).length;
-      const items = picked.filter((it) => !isOld(it)).slice(0, take + SPARE);
-      return { id: source.id, name: source.name, lang, default: source.default !== false, take, items };
-    })),
-  })));
+  const sections = await Promise.all(config.sections.map(async (sec) => {
+    const boost = (sec.boost || []).map((p) => new RegExp(p, 'i'));
+    return {
+      id: sec.id,
+      title: sec.title,
+      perSourceLabel: !!sec.perSourceLabel,
+      limit: sec.limit,
+      sources: await Promise.all(sec.sources.map(async (source) => {
+        const lang = source.lang || sec.lang || 'ko';
+        const take = source.take || 3;
+        const read = await readSource(source, log, lang, now);
+        const picked = boosted(boost, rss.pick({ ...sec, limit: 99 }, [{ source: { ...source, lang, take: take + SPARE + 10 }, items: read }], now, []));
+        const isOld = (it) => old.has('l:' + it.link) || old.has(titleKey(it.title));
+        repeated += picked.slice(0, take + SPARE).filter(isOld).length;
+        const items = picked.filter((it) => !isOld(it)).slice(0, take + SPARE);
+        return { id: source.id, name: source.name, lang, default: source.default !== false, take, items };
+      })),
+    };
+  }));
   // 번역: 기본 언론사부터, 두 곳씩 차례로 (한꺼번에 보내면 구글 번역이 429로 막는다)
   blocked.clear();
   for (const k of Object.keys(used)) delete used[k];
@@ -298,4 +313,4 @@ if (require.main === module) {
   })();
 }
 
-module.exports = { collect, earlierKeys, itemKeys, titleKey, decode, googleUrl, translate, speechText, iosPieces, iosHours, RETRY };
+module.exports = { collect, boosted, earlierKeys, itemKeys, titleKey, decode, googleUrl, translate, speechText, iosPieces, iosHours, RETRY };
