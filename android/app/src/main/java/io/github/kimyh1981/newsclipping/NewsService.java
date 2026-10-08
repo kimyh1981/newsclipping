@@ -60,6 +60,8 @@ public class NewsService extends Service {
     /** 멈춘 채로 이만큼 지나면 끝낸다 */
     private static final long PAUSE_LIMIT_MS = 30 * 60 * 1000L;
     static final String EXTRA_MANUAL = "manual";
+    /** 이 제목의 기사부터 읽는다 (웹 기사 목록의 ▶) */
+    static final String EXTRA_FROM = "from";
     private static final String TAG = "newsclipping";
     private static final String CHANNEL = "news";
     private static final int NOTIFY_ID = 1;
@@ -113,10 +115,26 @@ public class NewsService extends Service {
     private final Bundle speakParams = new Bundle();
     private AudioTrack hold;
     private final Runnable pauseLimit = this::finish;
+    /** 이 제목의 기사부터 읽기 시작한다. 없으면 오늘 멈춘 기사부터 */
+    private String from;
+    /** 원고를 끝까지 다 읽었다: 다음에는 처음부터 */
+    private boolean completed;
 
     /** 자동(차 연결) 또는 수동(앱의 '지금 듣기')으로 읽기 시작. 백그라운드 시작이 막히면 탭해서 듣는 알림을 띄운다. */
     static void start(Context c, boolean manual) {
+        start(c, manual, null);
+    }
+
+    /** title 기사부터 듣는다. 읽는 중이면 그 기사로 건너뛰고, 멈춰 있었으면 거기서 이어 읽는다 */
+    static void playFrom(Context c, String title) {
+        NewsService s = running;
+        if (s != null) s.main.post(() -> s.playTitle(title));
+        else start(c, true, title);
+    }
+
+    private static void start(Context c, boolean manual, String from) {
         Intent i = new Intent(c, NewsService.class).setAction(ACTION_PLAY).putExtra(EXTRA_MANUAL, manual);
+        if (from != null) i.putExtra(EXTRA_FROM, from);
         try {
             c.startForegroundService(i);
         } catch (RuntimeException e) { // Android 12+: ForegroundServiceStartNotAllowedException (배터리 제한 앱)
@@ -212,6 +230,7 @@ public class NewsService extends Service {
         stateChanged();
         boolean manual = intent != null && intent.getBooleanExtra(EXTRA_MANUAL, false);
         autoStart = !manual;
+        from = intent == null ? null : intent.getStringExtra(EXTRA_FROM);
         new Thread(() -> prepare(manual), "news-fetch").start();
         return START_NOT_STICKY;
     }
@@ -235,7 +254,8 @@ public class NewsService extends Service {
              .addAction(new Notification.Action.Builder(null, "전체 듣기", act(2, ACTION_MORE)).build())
              .addAction(new Notification.Action.Builder(null, "다음", act(4, ACTION_NEXT)).build())
              .addAction(paused ? new Notification.Action.Builder(null, "이어 듣기", act(5, ACTION_RESUME)).build()
-                               : new Notification.Action.Builder(null, "멈춤", act(1, ACTION_STOP)).build());
+                               : new Notification.Action.Builder(null, "멈춤", act(1, ACTION_PAUSE)).build());
+            if (paused) b.addAction(new Notification.Action.Builder(null, "끄기", act(7, ACTION_STOP)).build());
             Notification.MediaStyle style = new Notification.MediaStyle().setShowActionsInCompactView(0, 1, 2);
             if (session != null) style.setMediaSession(session.getSessionToken());
             b.setStyle(style);
@@ -381,7 +401,9 @@ public class NewsService extends Service {
             startSession();
             startInForeground(PLAYING_TEXT);
             openCaptions();
-            play(stepsFrom(0));
+            int first = lineOf(from != null ? from : new Prefs(this).resumeTitle());
+            from = null;
+            if (first > 0) jump(first); else play(stepsFrom(0));
         });
     }
 
@@ -410,7 +432,7 @@ public class NewsService extends Service {
     /** 다음 차례를 튼다. 다 읽었으면 끝낸다 */
     private void advance() {
         if (stopped || paused || tts == null) return;
-        if (pos >= queue.size()) { finish(); return; }
+        if (pos >= queue.size()) { completed = true; finish(); return; }
         Step s = queue.get(pos++);
         holdButtons(true); // 차례마다 다시 틀어 '가장 최근에 소리 낸 앱'이 되게
         if (s.id.startsWith("L")) {
@@ -529,7 +551,7 @@ public class NewsService extends Service {
         List<String> sentences = it == null ? new ArrayList<>() : new ArrayList<>(it.fullSentences());
         if (sentences.isEmpty()) sentences.add(it == null ? "전체로 들을 기사가 아직 없습니다." : "이 기사는 본문을 가져오지 못했습니다.");
         current = i;
-        if (paused) { paused = false; stateChanged(); main.removeCallbacks(pauseLimit); audio.requestAudioFocus(focus); setState(PlaybackState.STATE_PLAYING); startInForeground(PLAYING_TEXT); }
+        if (paused) unpause();
         int max = Math.min(3900, TextToSpeech.getMaxSpeechInputLength());
         List<Step> steps = new ArrayList<>();
         int k = 0;
@@ -646,13 +668,46 @@ public class NewsService extends Service {
 
     private void resume() {
         if (tts == null || stopped || !paused) return;
+        unpause();
+        jump(Math.min(current, lines.size() - 1));
+    }
+
+    private void unpause() {
         paused = false;
         stateChanged();
         main.removeCallbacks(pauseLimit);
         audio.requestAudioFocus(focus);
         setState(PlaybackState.STATE_PLAYING);
         startInForeground(PLAYING_TEXT);
-        jump(Math.min(current, lines.size() - 1));
+    }
+
+    /** 제목이 title인 기사 줄. 없으면 -1 */
+    private int lineOf(String title) {
+        if (title == null || title.isEmpty()) return -1;
+        for (int i = 0; i < lines.size(); i++) {
+            Brief.Item it = lines.get(i).item;
+            if (it != null && it.title.equals(title)) return i;
+        }
+        return -1;
+    }
+
+    /** 웹 기사 목록의 ▶: 그 기사부터 읽는다 (원고에 없는 기사면 멈춘 곳부터 이어 읽기만) */
+    private void playTitle(String title) {
+        if (stopped) return;
+        if (tts == null || session == null) { from = title; return; } // 아직 원고를 가져오는 중: 시작할 때 그 기사부터
+        int i = lineOf(title);
+        if (paused) unpause();
+        else if (i < 0) return;
+        jump(i >= 0 ? i : Math.min(current, lines.size() - 1));
+    }
+
+    /** 멈춘(끈) 기사: 기사 줄이면 그 기사, 섹션·언론사 소개를 읽던 중이면 바로 뒤 기사 (첫인사·맺음말이면 없음) */
+    private Brief.Item stoppedAt() {
+        if (current <= 0) return null; // 첫인사 중이면 처음부터
+        for (int i = current; i < lines.size(); i++) {
+            if (lines.get(i).item != null) return lines.get(i).item;
+        }
+        return null;
     }
 
     /**
@@ -738,6 +793,11 @@ public class NewsService extends Service {
     }
 
     private void finish() {
+        // 멈춤·끄기로 끝나면 그 기사를 기억해 오늘 다시 들을 때 거기서 시작하고, 끝까지 다 들었으면 다음엔 처음부터
+        if (tts != null && !stopped) {
+            Brief.Item at = completed ? null : stoppedAt();
+            new Prefs(this).setResumeTitle(at == null ? "" : at.title);
+        }
         stopped = true;
         main.removeCallbacks(pauseLimit);
         main.removeCallbacks(afterSilence);

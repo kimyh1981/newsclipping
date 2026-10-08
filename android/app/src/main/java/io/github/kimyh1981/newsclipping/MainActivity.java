@@ -125,7 +125,7 @@ public class MainActivity extends Activity {
         col.addView(nav);
 
         LinearLayout today = section(col, "오늘 뉴스", null);
-        row(today, "오늘 기사 목록 (웹)", v -> startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(SITE))), true).setText("");
+        row(today, "오늘 기사 목록 (웹)", v -> startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(SITE + "?app"))), true).setText("");
         sourcesVal = row(today, "들을 언론사", v -> pickSources(), true);
         row(today, "자막 화면 (터치하면 전체 듣기)", v -> startActivity(new Intent(this, CaptionActivity.class)), false).setText("");
 

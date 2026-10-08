@@ -1,6 +1,8 @@
 package io.github.kimyh1981.newsclipping;
 
 import android.app.Activity;
+import android.content.Intent;
+import android.net.Uri;
 import android.graphics.Typeface;
 import android.os.Bundle;
 import android.util.TypedValue;
@@ -9,6 +11,7 @@ import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.WindowManager;
+import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
@@ -16,6 +19,7 @@ import android.widget.TextView;
  * 자막 화면: 지금 읽는 헤드라인(전체 듣기 중이면 지금 읽는 문장)을 큰 글씨로 보여 준다. 화면 아무 데나 누르면 그 기사 전체를 읽고,
  * 다 읽거나 왼쪽으로 쓸어 넘기면 다음 헤드라인으로 넘어간다.
  * 차 연결로 자동 재생이 시작되면 잠금 화면 위에도 뜨고, 읽는 동안 화면을 켜 둔다. 읽기가 끝나면 저절로 닫힌다.
+ * 웹 기사 목록의 ▶(newsclipping://play?t=기사 제목)로 열리면 그 기사부터 읽는다.
  */
 public class CaptionActivity extends Activity {
     private TextView head, body, hint;
@@ -37,8 +41,23 @@ public class CaptionActivity extends Activity {
         col.setBackgroundColor(0xFF000000);
         col.setPadding(dp(24), dp(32), dp(24), dp(24));
 
+        // 맨 위 줄: 언론사(왼쪽) · 앱 설정 화면으로 가는 버튼(오른쪽). 설정 화면으로 가도 읽기는 이어진다
+        LinearLayout top = new LinearLayout(this);
+        top.setGravity(Gravity.CENTER_VERTICAL);
         head = text(20, 0xFF8E8E93);
-        col.addView(head);
+        top.addView(head, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+        Button settings = new Button(this);
+        settings.setText("⚙ 설정");
+        settings.setTextSize(TypedValue.COMPLEX_UNIT_SP, 17);
+        settings.setTextColor(0xFFFFFFFF);
+        settings.setAllCaps(false);
+        settings.setBackgroundColor(0xFF2C2C2E);
+        settings.setOnClickListener(v -> {
+            startActivity(new Intent(this, MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+            finish();
+        });
+        top.addView(settings, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, dp(48)));
+        col.addView(top);
         body = text(36, 0xFFFFFFFF);
         body.setTypeface(Typeface.DEFAULT_BOLD);
         body.setGravity(Gravity.CENTER_VERTICAL);
@@ -67,6 +86,24 @@ public class CaptionActivity extends Activity {
         });
         col.setOnTouchListener((v, e) -> gestures.onTouchEvent(e));
         setContentView(col);
+        if (b == null) playLink(getIntent());
+    }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        playLink(intent);
+    }
+
+    /** 웹 기사 목록의 ▶: 그 기사부터 (제목이 없으면 듣던 곳부터) */
+    private void playLink(Intent intent) {
+        Uri u = intent == null ? null : intent.getData();
+        if (u == null || !"play".equals(u.getHost())) return;
+        String t = u.getQueryParameter("t");
+        if (t != null && !t.isEmpty()) NewsService.playFrom(this, t);
+        else if (NewsService.state() == NewsService.PAUSED) NewsService.control(NewsService.ACTION_RESUME);
+        else if (!NewsService.isRunning()) NewsService.start(this, true);
     }
 
     @Override

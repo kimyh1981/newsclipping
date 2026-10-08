@@ -36,14 +36,21 @@
             </intent-filter>
         </activity>
 
-        <!-- 자막 화면: 잠금 화면 위에도 뜨고, 최근 앱 목록에는 남기지 않는다 -->
+        <!-- 자막 화면: 잠금 화면 위에도 뜨고, 최근 앱 목록에는 남기지 않는다. 웹 기사 목록의 ▶(newsclipping://play)로도 열린다 -->
         <activity
             android:name=".CaptionActivity"
-            android:exported="false"
+            android:exported="true"
             android:excludeFromRecents="true"
             android:launchMode="singleTask"
             android:taskAffinity="io.github.kimyh1981.newsclipping.captions"
-            android:theme="@android:style/Theme.Material.NoActionBar" />
+            android:theme="@android:style/Theme.Material.NoActionBar">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="newsclipping" android:host="play" />
+            </intent-filter>
+        </activity>
 
         <!-- 블루투스 ACL 연결·끊김은 Android 8 이상에서도 매니페스트 수신기로 받을 수 있는 예외 브로드캐스트다 -->
         <receiver

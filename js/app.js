@@ -21,6 +21,11 @@
   let data = null; // 보고 있는 날의 원고 (오늘 briefing.json 또는 archive/<날짜>.json)
   let today = null; // 오늘 briefing.json
   let enabled = null; // 고른 언론사 id 목록, null이면 기본값
+  // 안드로이드 앱의 '오늘 기사 목록'으로 열었다(?app): 재생은 앱의 자막 화면이 맡는다
+  const inApp = (() => {
+    try { if (new URLSearchParams(location.search).has('app')) sessionStorage.setItem('news.app', '1'); return sessionStorage.getItem('news.app') === '1'; } catch { return false; }
+  })();
+  const appLink = (title) => `intent://play${title ? `?t=${encodeURIComponent(title)}` : ''}#Intent;scheme=newsclipping;package=io.github.kimyh1981.newsclipping;end`;
   try { enabled = JSON.parse(store.get('news.sources')); } catch { enabled = null; }
 
   const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -58,7 +63,7 @@
       (b.autoPlay && !b.autoPlay.play ? ` · 오늘은 ${b.autoPlay.reason}이라 차에서 자동 재생은 쉬어요` : '');
     const sections = Brief.select(b, enabled);
     $('list').innerHTML = sections.map((s, si) => `<section><h2>${esc(s.title)}</h2>` + (s.items.length
-      ? `<ol>${s.items.map((it, ii) => `<li id="i${si}-${ii}"><a href="${esc(it.link)}" target="_blank" rel="noopener">${esc(it.title)}</a><small>${esc(it.source)}${it.original ? ` · 원문: ${esc(it.original)}` : ''}</small>${it.summary ? `<details><summary>자세히</summary><p class="sum">${esc(it.summary)}</p></details>` : ''}</li>`).join('')}</ol>`
+      ? `<ol>${s.items.map((it, ii) => `<li id="i${si}-${ii}"><a href="${esc(it.link)}" target="_blank" rel="noopener">${esc(it.title)}</a><small>${esc(it.source)}${it.original ? ` · 원문: ${esc(it.original)}` : ''}</small><div class="acts"><button class="go" type="button" data-t="${esc(it.title)}" aria-label="이 기사부터 듣기">▶ 여기부터</button>${it.summary ? `<details><summary>자세히</summary><p class="sum">${esc(it.summary)}</p></details>` : ''}</div></li>`).join('')}</ol>`
       : '<p class="empty">새 소식 없음</p>') + '</section>').join('') || '<p class="empty">고른 언론사가 없어요. 아래에서 언론사를 골라 주세요.</p>';
 
     // 원고 줄을 화면의 섹션·기사와 짝지어, 읽는 중인 기사를 표시하고 섹션 단위로 건너뛴다
@@ -71,6 +76,19 @@
       return { text, sec, el: ii >= 0 ? $(`i${sec}-${ii}`) : null, summary: ii >= 0 ? s.items[ii].summary || '' : '' };
     });
     attachClips(b, queue).catch(() => {}); // 녹음을 못 찾으면 브라우저 음성으로 읽는다
+    // 같은 날 원고를 멈췄던 줄이 있으면 거기서 이어 듣는다 (페이지를 다시 열어도)
+    const saved = savedAt(b);
+    const at = saved ? queue.findIndex((q) => q.text === saved) : -1;
+    pos = at > 0 ? at : 0;
+  }
+
+  // 멈춘 줄: 원고(만든 시각)마다 하나, 이 기기에 저장한다. 끝까지 들으면 지운다
+  function savedAt(b) {
+    try { const v = JSON.parse(store.get('news.at')); return v && v.gen === b.generatedAt ? v.text : null; } catch { return null; }
+  }
+  function saveAt() {
+    if (!data) return;
+    store.set('news.at', JSON.stringify({ gen: data.generatedAt, text: queue[pos] && pos > 0 ? queue[pos].text : '' }));
   }
 
   // 언론사 체크 목록: 섹션마다 언론사를 보여 주고, 고른 것을 이 기기에 저장한다
@@ -86,7 +104,6 @@
     enabled = ids;
     if (ids) store.set('news.sources', JSON.stringify(ids)); else store.set('news.sources', '');
     stop();
-    pos = 0;
     render(data);
     renderPicker(data);
     setPlaying(false);
@@ -130,7 +147,7 @@
 
   function speak() {
     if (!playing) return;
-    if (pos >= queue.length) { pos = 0; mark(null); setPlaying(false); return; }
+    if (pos >= queue.length) { pos = 0; saveAt(); mark(null); setPlaying(false); return; }
     const line = queue[pos];
     mark(line.el);
     caption(line.text);
@@ -193,6 +210,36 @@
     gen++;
     player.pause();
     if (synth) synth.cancel();
+    saveAt();
+  }
+
+  // 자막 화면(큰 글씨)을 띄운다. '목록 보기'로 닫아도 읽기는 이어진다
+  function openCar() {
+    $('capMeta').textContent = data ? `${data.dateLabel} 뉴스` : '';
+    if (queue[pos]) caption(queue[pos].text);
+    $('car').hidden = false;
+  }
+
+  // 기사 옆 ▶: 그 기사부터 자막 화면에서 읽는다. 앱에서 연 목록(오늘 원고)이면 앱의 자막 화면으로 넘긴다
+  function playFrom(li, title) {
+    if (inApp && data === today) { location.href = appLink(title); return; }
+    let i = queue.findIndex((q) => q.el === li);
+    if (i < 0) return;
+    if (i > 0 && !queue[i - 1].el && queue[i - 1].text.endsWith('소식입니다.')) i--; // 그 언론사 소개부터
+    pos = i;
+    openCar();
+    play();
+  }
+  $('list').addEventListener('click', (e) => {
+    const b = e.target.closest('button.go');
+    if (b) playFrom(b.closest('li'), b.dataset.t);
+  });
+
+  function listen() {
+    if (playing) { stop(); return; }
+    if (inApp && data === today) { location.href = appLink(''); return; }
+    openCar();
+    play();
   }
 
   function jump(dir) {
@@ -205,10 +252,10 @@
       target = queue.findIndex((q) => q.sec === prevSec);
     }
     pos = target < 0 ? (dir > 0 ? queue.length : 0) : target;
-    if (playing) play(); else { mark(queue[pos] && queue[pos].el); setPlaying(false); }
+    if (playing) play(); else { mark(queue[pos] && queue[pos].el); setPlaying(false); saveAt(); }
   }
 
-  $('play').onclick = () => (playing ? stop() : play());
+  $('play').onclick = listen;
   $('carPlay').onclick = () => (playing ? stop() : play());
   $('carNext').onclick = () => jump(1);
   $('carClose').onclick = () => { $('car').hidden = true; };
@@ -242,7 +289,6 @@
   // 지난 7일 원고: 서버가 archive/에 남겨 둔 날짜를 골라 그날 기사 목록을 본다 (첫 줄이 오늘)
   function show(b) {
     stop();
-    pos = 0;
     data = b;
     render(b);
     renderPicker(b);
@@ -278,6 +324,7 @@
       loadDays();
       render(b);
       renderPicker(b);
+      setPlaying(false);
       const q = new URLSearchParams(location.search);
       if (q.has('car') && carTime(b)) {
         $('capMeta').textContent = `${b.dateLabel} 아침 뉴스`;

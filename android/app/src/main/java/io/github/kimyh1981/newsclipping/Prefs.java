@@ -47,8 +47,6 @@ final class Prefs {
     int rate() { return p.getInt("rate", 100); }
     void setRate(int rate) { p.edit().putInt("rate", rate).apply(); }
 
-    /** 차 블루투스에서 'ㅅ·ㅆ' 소리(치찰음)가 날카롭지 않게 고음을 줄인다 */
-
     /** 차에서 자동으로 읽기 시작하면 자막 화면(지금 읽는 헤드라인, 터치하면 전체 듣기)을 띄운다 */
     boolean captions() { return p.getBoolean("captions", true); }
     void setCaptions(boolean v) { p.edit().putBoolean("captions", v).apply(); }
@@ -57,4 +55,8 @@ final class Prefs {
     boolean playedToday() { return today().equals(p.getString("lastPlayed", "")); }
     void markPlayed() { p.edit().putString("lastPlayed", today()).apply(); }
     String lastPlayed() { return p.getString("lastPlayed", ""); }
+
+    /** 오늘 멈추거나 끈 기사 제목: 다시 들으면 거기서 시작한다. 날이 바뀌었거나 끝까지 들었으면 "" */
+    String resumeTitle() { return today().equals(p.getString("resumeDay", "")) ? p.getString("resumeTitle", "") : ""; }
+    void setResumeTitle(String title) { p.edit().putString("resumeTitle", title).putString("resumeDay", today()).apply(); }
 }
