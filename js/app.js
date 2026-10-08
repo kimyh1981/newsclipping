@@ -18,7 +18,8 @@
   let playing = false;
   let gen = 0; // 말하기를 새로 시작할 때마다 바뀐다: 취소된 문장의 onend가 뒤늦게 와도 무시한다
   let voice = null;
-  let data = null; // 오늘 briefing.json
+  let data = null; // 보고 있는 날의 원고 (오늘 briefing.json 또는 archive/<날짜>.json)
+  let today = null; // 오늘 briefing.json
   let enabled = null; // 고른 언론사 id 목록, null이면 기본값
   try { enabled = JSON.parse(store.get('news.sources')); } catch { enabled = null; }
 
@@ -53,7 +54,7 @@
 
   function render(b) {
     const age = (Date.now() - Date.parse(b.generatedAt)) / 3600e3;
-    $('meta').textContent = `${b.dateLabel} · ${kstTime(b.generatedAt)} 수집` + (age > 20 ? ' · 어제 소식일 수 있어요' : '') +
+    $('meta').textContent = `${b.dateLabel} · ${kstTime(b.generatedAt)} 수집` + (b !== today ? ' · 지난 기사' : age > 20 ? ' · 어제 소식일 수 있어요' : '') +
       (b.autoPlay && !b.autoPlay.play ? ` · 오늘은 ${b.autoPlay.reason}이라 차에서 자동 재생은 쉬어요` : '');
     const sections = Brief.select(b, enabled);
     $('list').innerHTML = sections.map((s, si) => `<section><h2>${esc(s.title)}</h2>` + (s.items.length
@@ -238,10 +239,42 @@
     return (!b.autoPlay || b.autoPlay.play) && h >= 6 && h < 8;
   }
 
+  // 지난 7일 원고: 서버가 archive/에 남겨 둔 날짜를 골라 그날 기사 목록을 본다 (첫 줄이 오늘)
+  function show(b) {
+    stop();
+    pos = 0;
+    data = b;
+    render(b);
+    renderPicker(b);
+    setPlaying(false);
+  }
+
+  function loadDays() {
+    fetch('archive/index.json', { cache: 'no-store' })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((idx) => {
+        const days = (idx && idx.days) || [];
+        if (days.length < 2) return;
+        $('day').innerHTML = days.map((d, i) => `<option value="${i ? esc(d.ymd) : ''}">${esc(d.label)}${i ? '' : ' (오늘)'}</option>`).join('');
+        $('days').hidden = false;
+      })
+      .catch(() => {});
+    $('day').onchange = () => {
+      const ymd = $('day').value;
+      if (!ymd) { show(today); return; }
+      fetch(`archive/${ymd}.json`, { cache: 'no-store' })
+        .then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); })
+        .then(show)
+        .catch(() => { $('meta').textContent = '그날 기사를 불러오지 못했어요.'; });
+    };
+  }
+
   fetch('briefing.json', { cache: 'no-store' })
     .then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); })
     .then((b) => {
       data = b;
+      today = b;
+      loadDays();
       render(b);
       renderPicker(b);
       const q = new URLSearchParams(location.search);
