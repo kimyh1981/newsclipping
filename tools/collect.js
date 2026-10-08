@@ -197,6 +197,33 @@ function earlierKeys(live, now, days = 2) {
   return Object.fromEntries(keep.map((d) => [d, out[d]]));
 }
 
+// 지난 원고 보관: archive/<서울 날짜>.json을 최근 ARCHIVE_DAYS일치 남기고 archive/index.json에 날짜 목록을 둔다.
+// 사이트는 배포마다 통째로 바뀌므로, 지금 사이트에 있는 지난 날짜 파일을 받아 다시 올린다 (웹 화면에서 날짜를 골라 본다)
+const ARCHIVE_DAYS = 7;
+const slim = (b) => { const { audio, earlier, ...rest } = b; return rest; }; // 녹음은 그날 것만 남으니 빼고, 겹침 열쇠도 뺀다
+
+async function archive(out, b, live, now, getText) {
+  const today = naver.seoulDate(now);
+  const days = { [today]: slim(b) };
+  const index = await getText(`${SITE}archive/index.json`).then(JSON.parse).catch(() => null);
+  const past = ((index && index.days) || []).map((d) => d.ymd).filter((d) => d < today).sort().reverse().slice(0, ARCHIVE_DAYS - 1);
+  for (const d of past) {
+    const old = await getText(`${SITE}archive/${d}.json`).then(JSON.parse).catch(() => null);
+    if (old) days[d] = old;
+  }
+  // 보관을 처음 시작할 때: 지금 사이트의 원고가 지난 날 것이면 그것부터 남긴다
+  if (live && live.generatedAt) {
+    const d = naver.seoulDate(Date.parse(live.generatedAt));
+    if (d < today && !days[d]) days[d] = slim(live);
+  }
+  const keep = Object.keys(days).sort().reverse().slice(0, ARCHIVE_DAYS);
+  fs.mkdirSync(path.join(out, 'archive'), { recursive: true });
+  for (const d of keep) fs.writeFileSync(path.join(out, 'archive', `${d}.json`), JSON.stringify(days[d]));
+  const list = keep.map((d) => ({ ymd: d, label: days[d].dateLabel }));
+  fs.writeFileSync(path.join(out, 'archive', 'index.json'), JSON.stringify({ days: list }));
+  return list;
+}
+
 // 섹션의 boost(정규식 목록, 앞일수록 중요): 제목에 그 말이 든 기사를 언론사 안에서 앞으로 올린다.
 // 농업 기사는 바이오플랜과 이어지는 비료·탄소중립·벼·과수 기사를 먼저 듣고 싶다 (2026-10-08)
 function boostScore(patterns, title) {
@@ -297,6 +324,8 @@ if (require.main === module) {
     });
     fs.writeFileSync(path.join(out, 'briefing.json'), JSON.stringify(b, null, 1));
     fs.writeFileSync(path.join(out, 'briefing.txt'), speechText(b));
+    const kept = await archive(out, b, live, Date.now(), get);
+    console.log(`보관한 원고 ${kept.length}일: ${kept.map((d) => d.ymd).join(', ')}`);
     // 아이폰 단축어가 고른 언론사만 읽도록 언론사마다 조각 원고 (쉬는 날에는 모두 빈 파일)
     fs.mkdirSync(path.join(out, 'ios'), { recursive: true });
     for (const [id, text] of Object.entries(iosPieces(b))) fs.writeFileSync(path.join(out, 'ios', `${id}.txt`), text);
@@ -313,4 +342,4 @@ if (require.main === module) {
   })();
 }
 
-module.exports = { collect, boosted, earlierKeys, itemKeys, titleKey, decode, googleUrl, translate, speechText, iosPieces, iosHours, RETRY };
+module.exports = { collect, archive, boosted, earlierKeys, itemKeys, titleKey, decode, googleUrl, translate, speechText, iosPieces, iosHours, RETRY };

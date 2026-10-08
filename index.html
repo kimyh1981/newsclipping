@@ -48,6 +48,7 @@
   .car #capText { font-size: 1.7rem; line-height: 1.45; font-weight: 700; margin: 0; max-width: 640px; }
   .car .play { width: 100%; max-width: 420px; min-height: 96px; font-size: 1.5rem; }
   .car .row { display: flex; gap: 10px; }
+  .days select { font: inherit; padding: 4px 8px; border-radius: 8px; border: 1px solid var(--line); background: transparent; color: inherit; }
   code { background: var(--line); border-radius: 4px; padding: 0 4px; word-break: break-all; }
 </style>
 </head>
@@ -55,6 +56,7 @@
 <main>
   <h1>뉴스클리핑</h1>
   <p class="meta" id="meta">불러오는 중…</p>
+  <p class="days" id="days" hidden><label>날짜 <select id="day"></select></label></p>
   <div id="list"></div>
 
   <details class="picker" id="picker">

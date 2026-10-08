@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { collect, boosted, decode, googleUrl, earlierKeys, itemKeys } = require('../tools/collect.js');
+const { collect, archive, boosted, decode, googleUrl, earlierKeys, itemKeys } = require('../tools/collect.js');
 const brief = require('../js/brief.js');
 
 const NOW = Date.parse('2026-10-05T21:00:00Z');
@@ -215,4 +215,26 @@ test('농업 섹션: 바이오플랜·비료·탄소중립·벼·과수 키워�
   t.mock.method(globalThis, 'fetch', async () => new Response(feed('농협 조합장 선거', '한우 수급 점검', '과수 냉해 대책')));
   const b = await collect({ sections: [{ id: 'farm', title: '농업', boost: farm.boost, limit: 5, sources: [{ id: 'a', name: '가', url: 'https://a', take: 2 }] }] }, NOW);
   assert.deepEqual(b.sections[0].sources[0].items.map((i) => i.title).slice(0, 2), ['과수 냉해 대책', '농협 조합장 선거']);
+});
+
+test('지난 원고 보관: 오늘 것과 사이트에 있던 지난 날짜를 합쳐 최근 7일만 archive/에 남긴다', async () => {
+  const fs = require('fs');
+  const path = require('path');
+  const out = fs.mkdtempSync(path.join(require('os').tmpdir(), 'arch-'));
+  const site = 'https://kimyh1981.github.io/newsclipping/archive/';
+  const old = Object.fromEntries(['20260926', '20260927', '20260928', '20260929', '20260930', '20261001', '20261002', '20261003', '20261004']
+    .map((d) => [d, { dateLabel: d, generatedAt: 'x', sections: [] }]));
+  const files = { [`${site}index.json`]: JSON.stringify({ days: Object.keys(old).map((ymd) => ({ ymd })) }) };
+  for (const [d, b] of Object.entries(old)) files[`${site}${d}.json`] = JSON.stringify(b);
+  delete files[`${site}20261003.json`]; // 받지 못한 날은 건너뛴다
+  const getText = async (url) => { if (!(url in files)) throw new Error('404'); return files[url]; };
+  const live = { generatedAt: '2026-10-04T22:00:00Z', dateLabel: '10월 5일', sections: [], audio: {}, earlier: {} }; // 서울 10월 5일
+  const b = { generatedAt: '2026-10-05T21:00:00Z', dateLabel: '10월 6일', sections: [], audio: { ids: [] }, earlier: { x: [] } };
+  const list = await archive(out, b, live, NOW, getText);
+  assert.deepEqual(list.map((d) => d.ymd), ['20261006', '20261005', '20261004', '20261002', '20261001', '20260930', '20260929']);
+  const saved = JSON.parse(fs.readFileSync(path.join(out, 'archive', '20261006.json'), 'utf8'));
+  assert.equal(saved.audio, undefined); // 녹음·겹침 열쇠는 보관하지 않는다
+  assert.equal(saved.earlier, undefined);
+  assert.equal(JSON.parse(fs.readFileSync(path.join(out, 'archive', 'index.json'), 'utf8')).days[0].label, '10월 6일');
+  assert.ok(!fs.existsSync(path.join(out, 'archive', '20260928.json')));
 });
