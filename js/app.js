@@ -254,8 +254,9 @@
       .then((r) => (r.ok ? r.json() : null))
       .then((idx) => {
         const days = (idx && idx.days) || [];
-        if (days.length < 2) return;
+        if (!days.length) return;
         $('day').innerHTML = days.map((d, i) => `<option value="${i ? esc(d.ymd) : ''}">${esc(d.label)}${i ? '' : ' (오늘)'}</option>`).join('');
+        $('dayNote').textContent = days.length < 2 ? '지난 날 기사는 내일부터 하루씩 쌓여요 (최근 7일)' : '최근 7일';
         $('days').hidden = false;
       })
       .catch(() => {});
