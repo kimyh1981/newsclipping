@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { collect, decode, googleUrl, earlierKeys, itemKeys } = require('../tools/collect.js');
+const { collect, boosted, decode, googleUrl, earlierKeys, itemKeys } = require('../tools/collect.js');
 const brief = require('../js/brief.js');
 
 const NOW = Date.parse('2026-10-05T21:00:00Z');
@@ -203,4 +203,16 @@ test('지난 원고 넘겨받기: 같은 날 다시 배포하면 그날 것은 �
   assert.deepEqual(earlierKeys(prevDay, NOW), { 20261004: ['t:b'], 20261005: ['l:x', 't:hello'] });
   assert.deepEqual(earlierKeys(null, NOW), {});
   assert.deepEqual(itemKeys({}), []);
+});
+
+test('농업 섹션: 바이오플랜·비료·탄소중립·벼·과수 키워드 기사를 언론사 안에서 앞으로 (앞 키워드일수록 먼저, 나머지는 원래 순서)', async (t) => {
+  const config = JSON.parse(require('fs').readFileSync(require('path').join(__dirname, '..', 'feeds.json'), 'utf8'));
+  const farm = config.sections.find((s) => s.id === 'farm');
+  const patterns = farm.boost.map((p) => new RegExp(p, 'i'));
+  const titles = ['농협 조합장 선거', '쌀값 하락에 농가 시름', '바이오플랜, 미생물 비료 출시', '한우 수급 점검', '탄소중립 농업 확대'];
+  assert.deepEqual(boosted(patterns, titles.map((title) => ({ title }))).map((i) => i.title),
+    ['바이오플랜, 미생물 비료 출시', '탄소중립 농업 확대', '쌀값 하락에 농가 시름', '농협 조합장 선거', '한우 수급 점검']);
+  t.mock.method(globalThis, 'fetch', async () => new Response(feed('농협 조합장 선거', '한우 수급 점검', '과수 냉해 대책')));
+  const b = await collect({ sections: [{ id: 'farm', title: '농업', boost: farm.boost, limit: 5, sources: [{ id: 'a', name: '가', url: 'https://a', take: 2 }] }] }, NOW);
+  assert.deepEqual(b.sections[0].sources[0].items.map((i) => i.title).slice(0, 2), ['과수 냉해 대책', '농협 조합장 선거']);
 });
