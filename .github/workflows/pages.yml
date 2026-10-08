@@ -41,6 +41,8 @@ jobs:
         run: |
           mkdir -p _site
           cp -r index.html manifest.webmanifest js icons _site/
+          # 휴대폰 브라우저가 예전 스크립트를 붙잡고 있지 않게, 배포마다 스크립트 주소에 버전을 붙인다
+          sed -i "s#\(src=\"js/[a-z]*\.js\)\"#\1?v=${GITHUB_SHA::7}\"#g" _site/index.html
       # 원고 녹음용 무료 신경망 음성(MS 엣지 '소리 내어 읽기', edge-tts)
       - run: python3 -m pip install --user edge-tts==7.2.8
       # 녹음 다듬기(고음 낮추기, 스테레오)에 쓰는 ffmpeg: 러너에 없으면 설치
