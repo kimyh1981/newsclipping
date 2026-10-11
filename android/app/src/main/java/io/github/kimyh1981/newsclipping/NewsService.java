@@ -748,6 +748,12 @@ public class NewsService extends Service {
     private void startSession() {
         session = new MediaSession(this, "newsclipping");
         session.setCallback(new MediaSession.Callback() {
+            // 차 버튼이 앱까지 오는지 앱 화면 맨 아래에 남긴다 (다음 버튼이 안 먹힐 때 원인 찾기)
+            @Override public boolean onMediaButtonEvent(Intent i) {
+                android.view.KeyEvent k = i.getParcelableExtra(Intent.EXTRA_KEY_EVENT);
+                if (k != null && k.getAction() == android.view.KeyEvent.ACTION_DOWN) new Prefs(NewsService.this).noteButton(android.view.KeyEvent.keyCodeToString(k.getKeyCode()).replace("KEYCODE_MEDIA_", ""));
+                return super.onMediaButtonEvent(i);
+            }
             @Override public void onSkipToNext() { handle(ACTION_NEXT); }
             @Override public void onSkipToPrevious() { handle(ACTION_PREV); }
             @Override public void onFastForward() { full(); }

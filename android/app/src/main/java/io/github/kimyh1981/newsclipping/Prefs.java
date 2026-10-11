@@ -56,6 +56,10 @@ final class Prefs {
     void markPlayed() { p.edit().putString("lastPlayed", today()).apply(); }
     String lastPlayed() { return p.getString("lastPlayed", ""); }
 
+    /** 마지막으로 받은 차·이어폰 버튼과 시각 (앱 화면 맨 아래에 보인다) */
+    String lastButton() { return p.getString("lastButton", ""); }
+    void noteButton(String key) { p.edit().putString("lastButton", new SimpleDateFormat("M/d HH:mm", Locale.KOREA).format(new Date()) + " " + key).apply(); }
+
     /** 오늘 멈추거나 끈 기사 제목: 다시 들으면 거기서 시작한다. 날이 바뀌었거나 끝까지 들었으면 "" */
     String resumeTitle() { return today().equals(p.getString("resumeDay", "")) ? p.getString("resumeTitle", "") : ""; }
     void setResumeTitle(String title) { p.edit().putString("resumeTitle", title).putString("resumeDay", today()).apply(); }
