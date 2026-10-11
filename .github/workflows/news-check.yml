@@ -20,6 +20,8 @@ jobs:
       - run: npm ci
       - run: npm test
       - run: python3 -m pip install --user edge-tts==7.2.8
+      - name: Probe empty sources (임시)
+        run: node tools/probe.js
       - name: Live collection
         timeout-minutes: 8
         env:
