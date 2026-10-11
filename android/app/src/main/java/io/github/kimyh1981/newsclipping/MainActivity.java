@@ -196,7 +196,8 @@ public class MainActivity extends Activity {
         captionsSw.setChecked(prefs.captions());
         status(overlayVal, Settings.canDrawOverlays(this));
         String last = prefs.lastPlayed();
-        footer.setText("버전 " + BuildConfig.VERSION_NAME + (last.isEmpty() ? "" : " · 마지막 자동 재생 " + last));
+        String button = prefs.lastButton();
+        footer.setText("버전 " + BuildConfig.VERSION_NAME + (last.isEmpty() ? "" : " · 마지막 자동 재생 " + last) + (button.isEmpty() ? "" : "\n마지막 차 버튼 " + button));
     }
 
     private void status(TextView v, boolean ok) {

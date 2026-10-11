@@ -231,9 +231,11 @@ function boostScore(patterns, title) {
   return i < 0 ? 0 : patterns.length - i;
 }
 
-function boosted(patterns, items) {
-  if (!patterns.length) return items;
-  return items.map((it, i) => [boostScore(patterns, it.title), i, it]).sort((a, b) => b[0] - a[0] || a[1] - b[1]).map((x) => x[2]);
+// demote: 행사·기부·시상 같은 홍보성 기사는 맨 뒤로 (다른 기사가 모자랄 때만 나온다)
+function boosted(patterns, items, demote = []) {
+  if (!patterns.length && !demote.length) return items;
+  const score = (t) => boostScore(patterns, t) - (demote.some((p) => p.test(t)) ? 100 : 0);
+  return items.map((it, i) => [score(it.title), i, it]).sort((a, b) => b[0] - a[0] || a[1] - b[1]).map((x) => x[2]);
 }
 
 // 아이폰 단축어가 읽는 briefing.txt: 주말·공휴일에는 비워 두어 아무것도 읽지 않게 한다
@@ -262,6 +264,7 @@ async function collect(config, now = Date.now(), key = '', opts = {}) {
   const autoPlay = await holidays.playDay(now, key);
   const sections = await Promise.all(config.sections.map(async (sec) => {
     const boost = (sec.boost || []).map((p) => new RegExp(p, 'i'));
+    const demote = (sec.demote || []).map((p) => new RegExp(p, 'i'));
     return {
       id: sec.id,
       title: sec.title,
@@ -271,7 +274,7 @@ async function collect(config, now = Date.now(), key = '', opts = {}) {
         const lang = source.lang || sec.lang || 'ko';
         const take = source.take || 3;
         const read = await readSource(source, log, lang, now);
-        const picked = boosted(boost, rss.pick({ ...sec, limit: 99 }, [{ source: { ...source, lang, take: take + SPARE + 10 }, items: read }], now, []));
+        const picked = boosted(boost, rss.pick({ ...sec, limit: 99 }, [{ source: { ...source, lang, take: take + SPARE + 10 }, items: read }], now, []), demote);
         const isOld = (it) => old.has('l:' + it.link) || old.has(titleKey(it.title));
         repeated += picked.slice(0, take + SPARE).filter(isOld).length;
         const items = picked.filter((it) => !isOld(it)).slice(0, take + SPARE);

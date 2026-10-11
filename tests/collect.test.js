@@ -238,3 +238,17 @@ test('지난 원고 보관: 오늘 것과 사이트에 있던 지난 날짜를 �
   assert.equal(JSON.parse(fs.readFileSync(path.join(out, 'archive', 'index.json'), 'utf8')).days[0].label, '10월 6일');
   assert.ok(!fs.existsSync(path.join(out, 'archive', '20260928.json')));
 });
+
+test('고른 언론사가 섹션 한도보다 많아도 언론사마다 한 건씩은 나온다 (돌아가며 고름)', () => {
+  const it = (t) => ({ title: t, spoken: t, group: t });
+  const src = (id, ...titles) => ({ id, name: id, take: 3, default: true, items: titles.map(it) });
+  const b = { generatedAt: '2026-10-12T00:00:00Z', sections: [{ id: 'f', title: '농업', limit: 3, sources: [src('a', 'a1', 'a2', 'a3'), src('b', 'b1', 'b2'), src('c'), src('d', 'd1'), src('e', 'e1', 'e2')] }] };
+  assert.deepEqual(brief.select(b, ['a', 'b', 'c', 'd', 'e'])[0].items.map((x) => x.title), ['a1', 'a2', 'b1', 'd1', 'e1'], '기사 있는 언론사 넷 모두, 언론사 순서대로 (한도는 고른 언론사 수만큼)');
+  assert.deepEqual(brief.select(b, ['a', 'b'])[0].items.map((x) => x.title), ['a1', 'a2', 'b1'], '한도 안에서 앞 언론사가 한 건 더');
+});
+
+test('홍보성 기사(행사·기부·대회)는 맨 뒤로', () => {
+  const demote = [/축제|대회|기부/];
+  const titles = ['농협 파크골프 대회 열려', '쌀값 반등', '지역 축제 성황', '비료값 안정'];
+  assert.deepEqual(boosted([/비료/], titles.map((title) => ({ title })), demote).map((i) => i.title), ['비료값 안정', '쌀값 반등', '농협 파크골프 대회 열려', '지역 축제 성황']);
+});

@@ -65,7 +65,9 @@
   }
 
   // 고른 언론사(없으면 기본값)로 섹션을 만든다. 고른 언론사가 하나도 없는 섹션은 뺀다.
-  // 같은 사건(group)은 처음 나온 곳에서 한 번만, 언론사마다 take건, 섹션마다 limit건까지
+  // 같은 사건(group)은 처음 나온 곳에서 한 번만, 언론사마다 take건, 섹션마다 limit건까지.
+  // 언론사를 돌아가며 한 건씩 고르므로 고른 언론사는 기사가 있으면 모두 한 건 이상 나오고,
+  // 고른 언론사가 limit보다 많으면 섹션은 고른 언론사 수만큼 늘어난다 (원고는 언론사 순서대로)
   function select(b, enabled) {
     const on = new Set(enabled || defaults(b));
     const groups = new Set();
@@ -73,18 +75,26 @@
     for (const sec of b.sections) {
       const srcs = sec.sources.filter((s) => on.has(s.id));
       if (!srcs.length) continue;
-      const items = [];
-      for (const src of srcs) {
-        let taken = 0;
-        for (const it of src.items) {
-          if (items.length >= sec.limit || taken >= src.take) break;
-          if (groups.has(it.group)) continue;
-          groups.add(it.group);
-          items.push(it);
-          taken++;
-        }
+      const cap = Math.max(sec.limit, srcs.length);
+      const per = srcs.map(() => []);
+      const at = srcs.map(() => 0);
+      let total = 0;
+      for (let more = true; more && total < cap;) {
+        more = false;
+        srcs.forEach((src, k) => {
+          if (total >= cap || per[k].length >= (src.take ?? 3)) return;
+          while (at[k] < src.items.length) {
+            const it = src.items[at[k]++];
+            if (groups.has(it.group)) continue;
+            groups.add(it.group);
+            per[k].push(it);
+            total++;
+            more = true;
+            return;
+          }
+        });
       }
-      out.push({ id: sec.id, title: sec.title, perSourceLabel: !!sec.perSourceLabel, items });
+      out.push({ id: sec.id, title: sec.title, perSourceLabel: !!sec.perSourceLabel, items: per.flat() });
     }
     return out;
   }

@@ -47,6 +47,9 @@ test('사진·부고 기사는 건너뛰고, 36시간 넘은 기사도 뺀다', 
   assert.ok(rss.skip('[포토] 가을 들녘'));
   assert.ok(rss.skip('[부고] 홍길동씨 별세'));
   assert.ok(!rss.skip('비료값 내린다'));
+  assert.ok(rss.skip('Calgary Roughnecks 낯선 게임도 요소별로 이해하는 핑카지노'), '도박 광고');
+  assert.ok(rss.skip('4월 1일, 4월 31일'), '날짜뿐인 제목');
+  assert.ok(!rss.skip('10월 쌀값 3% 올라'));
   const items = rss.parseFeed(RSS);
   assert.ok(rss.fresh(items[0], NOW));
   assert.ok(!rss.fresh(items[3], NOW));

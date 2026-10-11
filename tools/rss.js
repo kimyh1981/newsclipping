@@ -60,10 +60,15 @@ const SKIP = /\[(포토|사진|영상|그래픽|카드뉴스|부고|인사|게�
 // 일본어판·영문판 기사(한글이 거의 없는 제목)도 뺀다. 번역할 외국어 섹션(lang)은 한글 검사 대신 영상·사진 기사만 거른다
 const SKIP_FOREIGN = /^\s*(video|clip|ảnh|infographic|emagazine|podcast)\b|\[(video|clip|ảnh|infographic)\]/i;
 
+// 검색 결과에 섞여 드는 광고·도박 글 (2026-10-12 '…핑카지노'가 농업 섹션에 들어옴)
+const SPAM = /카지노|바카라|토토사이트|슬롯사이트|먹튀|홀덤|casino|baccarat/i;
+
 function skip(title, lang = 'ko') {
+  if (SPAM.test(title)) return true;
   if (lang !== 'ko') return SKIP_FOREIGN.test(title);
   if (/[\u3040-\u30ff]/.test(title)) return true;
-  const hangul = (title.match(/[가-힣]/g) || []).length;
+  // 날짜·숫자를 빼고 우리말이 네 글자도 안 되면 제목이 아니다 ('4월 1일, 4월 31일.' 같은 것)
+  const hangul = (title.replace(/\d+\s*(년|월|일|시|분|호|면)/g, '').match(/[가-힣]/g) || []).length;
   return hangul < 4 || SKIP.test(title);
 }
 
