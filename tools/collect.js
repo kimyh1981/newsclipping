@@ -294,9 +294,12 @@ async function collect(config, now = Date.now(), key = '', opts = {}) {
   if (foreign.length) log.push(`번역기: ${Object.entries(used).map(([k, n]) => `${k} ${n}번`).join(', ') || '없음'}${blocked.size ? ` (429로 막힘: ${[...blocked].join(', ')})` : ''}`);
   group(sections);
   const b = { version: 2, generatedAt: new Date(now).toISOString(), dateLabel: rss.koreanDate(now), autoPlay, sections, log, earlier };
-  // 기본 언론사 원고에 든 기사부터 요약한다 (같은 기사 객체에 summary가 붙는다)
-  const run = limiter(4);
-  if (opts.summaryLimit) await summarize(brief.select(b).flatMap((s) => s.items), { mode: opts.summaryMode, get, translate, decodeEntities: rss.decodeEntities, log, run, key: opts.summaryKey, limit: opts.summaryLimit });
+  // 기본 언론사 원고에 든 기사부터, 그다음 언론사를 다 골랐을 때 원고에 들 기사까지 요약·본문을 붙인다 (같은 기사 객체에 summary가 붙는다).
+  // 예전에는 기본 언론사 기사만 해서, 언론사를 많이 고르면 '전체 듣기'에서 본문을 못 가져왔다고 나왔다 (2026-10-12)
+  const run = limiter(6);
+  const all = sections.flatMap((s) => s.sources.map((x) => x.id));
+  const toRead = [...new Set([...brief.select(b), ...brief.select(b, all)].flatMap((s) => s.items))];
+  if (opts.summaryLimit) await summarize(toRead, { mode: opts.summaryMode, get, translate, decodeEntities: rss.decodeEntities, log, run, key: opts.summaryKey, limit: opts.summaryLimit });
   // '전체 듣기'로 읽을 문장들: 소리 내어 읽기 좋게 다듬어 문장마다 나눈다 (앱 자막·녹음 단위)
   for (const sec of sections) for (const src of sec.sources) for (const it of src.items) {
     const say = rss.speechSentences(it.body || it.summary);
@@ -317,7 +320,7 @@ if (require.main === module) {
       earlier: earlierKeys(live, Date.now()),
       summaryMode: process.env.SUMMARY_MODE || 'lead', // 저장소 Variables에서 SUMMARY_MODE=claude로 바꾸면 Claude 요약
       summaryKey: process.env.ANTHROPIC_API_KEY || '',
-      summaryLimit: process.env.SUMMARY_LIMIT === undefined ? 40 : Number(process.env.SUMMARY_LIMIT),
+      summaryLimit: process.env.SUMMARY_LIMIT === undefined ? 300 : Number(process.env.SUMMARY_LIMIT),
     });
     // 원고 줄을 신경망 음성으로 미리 녹음 (기본: 무료 MS 엣지 음성, GOOGLE_TTS_KEY가 있으면 구글, TTS_ENGINE=off면 안 함). 녹음이 없으면 앱이 폰 음성으로 읽는다
     const key = process.env.GOOGLE_TTS_KEY || '';
