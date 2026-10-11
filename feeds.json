@@ -456,15 +456,6 @@
           "when": "3d"
         },
         {
-          "id": "agropages",
-          "name": "애그로페이지스",
-          "google": "site:agropages.com",
-          "lang": "en",
-          "take": 2,
-          "default": false,
-          "when": "3d"
-        },
-        {
           "id": "argus-fert",
           "name": "아거스 비료 시황",
           "google": "site:argusmedia.com fertilizer",
