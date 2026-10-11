@@ -159,25 +159,40 @@ final class Brief {
         return ids;
     }
 
-    /** enabled가 null이면 기본 언론사. 같은 사건(group)은 처음 나온 곳에서 한 번만, 언론사마다 take건, 섹션마다 limit건까지 */
+    /** enabled가 null이면 기본 언론사. 같은 사건(group)은 처음 나온 곳에서 한 번만, 언론사마다 take건, 섹션마다 limit건까지.
+     *  언론사를 돌아가며 한 건씩 고르므로 고른 언론사는 기사가 있으면 모두 한 건 이상 나오고,
+     *  고른 언론사가 limit보다 많으면 섹션은 고른 언론사 수만큼 늘어난다 (원고는 언론사 순서대로). js/brief.js와 같은 규칙 */
     List<Picked> select(Set<String> enabled) {
         Set<String> on = enabled == null ? defaults() : enabled;
         Set<String> groups = new HashSet<>();
         List<Picked> out = new ArrayList<>();
         for (Section sec : sections) {
-            Picked p = null;
-            for (Source src : sec.sources) {
-                if (!on.contains(src.id)) continue;
-                if (p == null) p = new Picked(sec.title, sec.perSourceLabel);
-                int taken = 0;
-                for (Item it : src.items) {
-                    if (p.items.size() >= sec.limit || taken >= src.take) break;
-                    if (!groups.add(it.group)) continue;
-                    p.items.add(it);
-                    taken++;
+            List<Source> srcs = new ArrayList<>();
+            for (Source src : sec.sources) if (on.contains(src.id)) srcs.add(src);
+            if (srcs.isEmpty()) continue;
+            int cap = Math.max(sec.limit, srcs.size());
+            List<List<Item>> per = new ArrayList<>();
+            int[] at = new int[srcs.size()];
+            for (int k = 0; k < srcs.size(); k++) per.add(new ArrayList<>());
+            int total = 0;
+            for (boolean more = true; more && total < cap; ) {
+                more = false;
+                for (int k = 0; k < srcs.size() && total < cap; k++) {
+                    Source src = srcs.get(k);
+                    if (per.get(k).size() >= src.take) continue;
+                    while (at[k] < src.items.size()) {
+                        Item it = src.items.get(at[k]++);
+                        if (!groups.add(it.group)) continue;
+                        per.get(k).add(it);
+                        total++;
+                        more = true;
+                        break;
+                    }
                 }
             }
-            if (p != null) out.add(p);
+            Picked p = new Picked(sec.title, sec.perSourceLabel);
+            for (List<Item> l : per) p.items.addAll(l);
+            out.add(p);
         }
         return out;
     }

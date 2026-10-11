@@ -193,6 +193,9 @@
     {
       "id": "farm",
       "title": "농업 신문 헤드라인",
+      "demote": [
+        "축제|대회|기부|성금|후원|봉사|나눔|시상|수상자|표창|협약식|업무협약|MOU|간담회|발대식|기념식|위촉|취임|선출|캠페인|골프|체육|장학금|동정"
+      ],
       "boost": [
         "바이오플랜",
         "비료|퇴비|탄소중립|저탄소|온실가스|미생물|토양|바이오차|농자재|biochar",
@@ -239,6 +242,7 @@
         },
         {
           "id": "nongupin",
+          "url": "https://www.nongupin.co.kr/rss/allArticle.xml",
           "name": "농업인신문",
           "google": "site:nongupin.co.kr",
           "take": 2,
@@ -253,6 +257,7 @@
         },
         {
           "id": "chuksannews",
+          "url": "https://www.chuksannews.co.kr/rss/allArticle.xml",
           "name": "축산신문",
           "google": "site:chuksannews.co.kr",
           "take": 2,
@@ -260,6 +265,7 @@
         },
         {
           "id": "nongkija",
+          "url": "https://www.newsam.co.kr/rss/allArticle.xml",
           "name": "농기자재신문",
           "google": "site:newsam.co.kr",
           "take": 2,
@@ -268,6 +274,7 @@
         },
         {
           "id": "n-news",
+          "url": "https://www.n-news.co.kr/rss/allArticle.xml",
           "name": "한국농업신문",
           "google": "site:n-news.co.kr",
           "take": 2,
@@ -292,6 +299,7 @@
         },
         {
           "id": "rwn",
+          "url": "https://www.rwn.co.kr/rss/allArticle.xml",
           "name": "농촌여성신문",
           "google": "site:rwn.co.kr",
           "take": 2,
@@ -311,6 +319,9 @@
     {
       "id": "fertilizer",
       "title": "비료 관련 뉴스",
+      "demote": [
+        "축제|대회|기부|성금|후원|봉사|나눔|시상|수상자|표창|협약식|업무협약|MOU|간담회|발대식|기념식|위촉|취임|선출|캠페인|골프|체육|장학금|동정"
+      ],
       "boost": [
         "바이오플랜",
         "비료|퇴비|탄소중립|저탄소|온실가스|미생물|토양|바이오차|농자재|biochar",
