@@ -193,8 +193,8 @@
     {
       "id": "farm",
       "title": "농업 신문 헤드라인",
-      "demote": [
-        "축제|대회|기부|성금|후원|봉사|나눔|시상|수상자|표창|협약식|업무협약|MOU|간담회|발대식|기념식|위촉|취임|선출|캠페인|골프|체육|장학금|동정"
+      "promo": [
+        "축제|대회|기부|기탁|성금|후원|봉사|나눔|시상|수상자|표창|협약식|업무협약|MOU|간담회|발대식|선포식|전달식|기념식|위촉|취임|선출|캠페인|골프|체육|장학금|동정|개막"
       ],
       "boost": [
         "바이오플랜",
@@ -257,7 +257,7 @@
         },
         {
           "id": "chuksannews",
-          "url": "https://www.chuksannews.co.kr/rss/allArticle.xml",
+          "url": "https://www.chuksannews.co.kr/data/rss/news.xml",
           "name": "축산신문",
           "google": "site:chuksannews.co.kr",
           "take": 2,
@@ -265,7 +265,7 @@
         },
         {
           "id": "nongkija",
-          "url": "https://www.newsam.co.kr/rss/allArticle.xml",
+          "url": "https://www.newsam.co.kr/data/rss/news.xml",
           "name": "농기자재신문",
           "google": "site:newsam.co.kr",
           "take": 2,
@@ -274,9 +274,9 @@
         },
         {
           "id": "n-news",
-          "url": "https://www.n-news.co.kr/rss/allArticle.xml",
+          "url": "https://www.newsfarm.co.kr/rss/allArticle.xml",
           "name": "한국농업신문",
-          "google": "site:n-news.co.kr",
+          "google": "site:newsfarm.co.kr",
           "take": 2,
           "default": false,
           "when": "3d"
@@ -319,8 +319,8 @@
     {
       "id": "fertilizer",
       "title": "비료 관련 뉴스",
-      "demote": [
-        "축제|대회|기부|성금|후원|봉사|나눔|시상|수상자|표창|협약식|업무협약|MOU|간담회|발대식|기념식|위촉|취임|선출|캠페인|골프|체육|장학금|동정"
+      "promo": [
+        "축제|대회|기부|기탁|성금|후원|봉사|나눔|시상|수상자|표창|협약식|업무협약|MOU|간담회|발대식|선포식|전달식|기념식|위촉|취임|선출|캠페인|골프|체육|장학금|동정|개막"
       ],
       "boost": [
         "바이오플랜",
@@ -456,14 +456,6 @@
           "when": "3d"
         },
         {
-          "id": "agropages",
-          "name": "애그로페이지스",
-          "google": "site:agropages.com",
-          "take": 2,
-          "default": false,
-          "when": "3d"
-        },
-        {
           "id": "argus-fert",
           "name": "아거스 비료 시황",
           "google": "site:argusmedia.com fertilizer",
@@ -528,7 +520,8 @@
         {
           "id": "farmer-cn",
           "name": "농민일보",
-          "google": "site:farmer.com.cn",
+          "google": "\"农民日报\"",
+          "lang": "zh",
           "take": 2,
           "default": false,
           "when": "3d",

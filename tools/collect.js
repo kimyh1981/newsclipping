@@ -231,11 +231,9 @@ function boostScore(patterns, title) {
   return i < 0 ? 0 : patterns.length - i;
 }
 
-// demote: 행사·기부·시상 같은 홍보성 기사는 맨 뒤로 (다른 기사가 모자랄 때만 나온다)
-function boosted(patterns, items, demote = []) {
-  if (!patterns.length && !demote.length) return items;
-  const score = (t) => boostScore(patterns, t) - (demote.some((p) => p.test(t)) ? 100 : 0);
-  return items.map((it, i) => [score(it.title), i, it]).sort((a, b) => b[0] - a[0] || a[1] - b[1]).map((x) => x[2]);
+function boosted(patterns, items) {
+  if (!patterns.length) return items;
+  return items.map((it, i) => [boostScore(patterns, it.title), i, it]).sort((a, b) => b[0] - a[0] || a[1] - b[1]).map((x) => x[2]);
 }
 
 // 아이폰 단축어가 읽는 briefing.txt: 주말·공휴일에는 비워 두어 아무것도 읽지 않게 한다
@@ -264,7 +262,8 @@ async function collect(config, now = Date.now(), key = '', opts = {}) {
   const autoPlay = await holidays.playDay(now, key);
   const sections = await Promise.all(config.sections.map(async (sec) => {
     const boost = (sec.boost || []).map((p) => new RegExp(p, 'i'));
-    const demote = (sec.demote || []).map((p) => new RegExp(p, 'i'));
+    // promo: 행사·대회·기부·협약식 같은 홍보성 기사는 아예 뺀다 (주인 요청 2026-10-12)
+    const promo = (sec.promo || []).map((p) => new RegExp(p, 'i'));
     return {
       id: sec.id,
       title: sec.title,
@@ -274,10 +273,11 @@ async function collect(config, now = Date.now(), key = '', opts = {}) {
         const lang = source.lang || sec.lang || 'ko';
         const take = source.take || 3;
         const read = await readSource(source, log, lang, now);
-        const picked = boosted(boost, rss.pick({ ...sec, limit: 99 }, [{ source: { ...source, lang, take: take + SPARE + 10 }, items: read }], now, []), demote);
+        const picked = boosted(boost, rss.pick({ ...sec, limit: 99 }, [{ source: { ...source, lang, take: take + SPARE + 10 }, items: read }], now, []));
         const isOld = (it) => old.has('l:' + it.link) || old.has(titleKey(it.title));
+        const isPromo = (it) => promo.some((p) => p.test(it.title));
         repeated += picked.slice(0, take + SPARE).filter(isOld).length;
-        const items = picked.filter((it) => !isOld(it)).slice(0, take + SPARE);
+        const items = picked.filter((it) => !isOld(it) && !isPromo(it)).slice(0, take + SPARE);
         return { id: source.id, name: source.name, lang, default: source.default !== false, take, items };
       })),
     };
@@ -294,9 +294,12 @@ async function collect(config, now = Date.now(), key = '', opts = {}) {
   if (foreign.length) log.push(`번역기: ${Object.entries(used).map(([k, n]) => `${k} ${n}번`).join(', ') || '없음'}${blocked.size ? ` (429로 막힘: ${[...blocked].join(', ')})` : ''}`);
   group(sections);
   const b = { version: 2, generatedAt: new Date(now).toISOString(), dateLabel: rss.koreanDate(now), autoPlay, sections, log, earlier };
-  // 기본 언론사 원고에 든 기사부터 요약한다 (같은 기사 객체에 summary가 붙는다)
-  const run = limiter(4);
-  if (opts.summaryLimit) await summarize(brief.select(b).flatMap((s) => s.items), { mode: opts.summaryMode, get, translate, decodeEntities: rss.decodeEntities, log, run, key: opts.summaryKey, limit: opts.summaryLimit });
+  // 기본 언론사 원고에 든 기사부터, 그다음 언론사를 다 골랐을 때 원고에 들 기사까지 요약·본문을 붙인다 (같은 기사 객체에 summary가 붙는다).
+  // 예전에는 기본 언론사 기사만 해서, 언론사를 많이 고르면 '전체 듣기'에서 본문을 못 가져왔다고 나왔다 (2026-10-12)
+  const run = limiter(6);
+  const all = sections.flatMap((s) => s.sources.map((x) => x.id));
+  const toRead = [...new Set([...brief.select(b), ...brief.select(b, all)].flatMap((s) => s.items))];
+  if (opts.summaryLimit) await summarize(toRead, { mode: opts.summaryMode, get, translate, decodeEntities: rss.decodeEntities, log, run, key: opts.summaryKey, limit: opts.summaryLimit });
   // '전체 듣기'로 읽을 문장들: 소리 내어 읽기 좋게 다듬어 문장마다 나눈다 (앱 자막·녹음 단위)
   for (const sec of sections) for (const src of sec.sources) for (const it of src.items) {
     const say = rss.speechSentences(it.body || it.summary);
@@ -317,7 +320,7 @@ if (require.main === module) {
       earlier: earlierKeys(live, Date.now()),
       summaryMode: process.env.SUMMARY_MODE || 'lead', // 저장소 Variables에서 SUMMARY_MODE=claude로 바꾸면 Claude 요약
       summaryKey: process.env.ANTHROPIC_API_KEY || '',
-      summaryLimit: process.env.SUMMARY_LIMIT === undefined ? 40 : Number(process.env.SUMMARY_LIMIT),
+      summaryLimit: process.env.SUMMARY_LIMIT === undefined ? 300 : Number(process.env.SUMMARY_LIMIT),
     });
     // 원고 줄을 신경망 음성으로 미리 녹음 (기본: 무료 MS 엣지 음성, GOOGLE_TTS_KEY가 있으면 구글, TTS_ENGINE=off면 안 함). 녹음이 없으면 앱이 폰 음성으로 읽는다
     const key = process.env.GOOGLE_TTS_KEY || '';

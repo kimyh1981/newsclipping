@@ -247,8 +247,10 @@ test('고른 언론사가 섹션 한도보다 많아도 언론사마다 한 건�
   assert.deepEqual(brief.select(b, ['a', 'b'])[0].items.map((x) => x.title), ['a1', 'a2', 'b1'], '한도 안에서 앞 언론사가 한 건 더');
 });
 
-test('홍보성 기사(행사·기부·대회)는 맨 뒤로', () => {
-  const demote = [/축제|대회|기부/];
-  const titles = ['농협 파크골프 대회 열려', '쌀값 반등', '지역 축제 성황', '비료값 안정'];
-  assert.deepEqual(boosted([/비료/], titles.map((title) => ({ title })), demote).map((i) => i.title), ['비료값 안정', '쌀값 반등', '농협 파크골프 대회 열려', '지역 축제 성황']);
+
+test('홍보성 기사(행사·대회·기부)는 원고에서 아예 빠진다', async (t) => {
+  t.mock.method(globalThis, 'fetch', async () => new Response(feed('농협 파크골프 대회 열려', '쌀값 반등', '지역 축제 성황', '비료값 안정')));
+  const config = { sections: [{ id: 'f', title: '농업 신문 헤드라인', limit: 5, promo: ['축제|대회|기부'], sources: [{ id: 'a', name: '가신문', url: 'https://a/rss', take: 4 }] }] };
+  const b = await collect(config, NOW);
+  assert.deepEqual(b.sections[0].sources[0].items.map((i) => i.title), ['쌀값 반등', '비료값 안정']);
 });
