@@ -19,13 +19,16 @@ permissions:
   pages: write
   id-token: write
 
+# 새 실행이 오면 앞선 실행은 그만둔다: 2026-10-10 밤 배포 하나가 'waiting'에 멈춘 채 순서를 막아
+# 그 뒤 새벽 원고가 모두 대기·취소됐다. 원고는 늘 가장 새로 만든 것이 맞으므로 앞선 것을 기다릴 까닭이 없다
 concurrency:
   group: pages
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
