@@ -20,12 +20,10 @@ jobs:
       - run: npm ci
       - run: npm test
       - run: python3 -m pip install --user edge-tts==7.2.8
-      - name: Probe empty sources (임시)
-        run: node tools/probe.js
       - name: Live collection
-        timeout-minutes: 14
+        timeout-minutes: 8
         env:
-          SUMMARY_LIMIT: '300' # 임시: 실제 배포처럼 모든 기사의 본문을 시험한다
+          SUMMARY_LIMIT: '8' # 요약은 앞의 8건만 시험한다 (기본 리드 방식, 무료)
           TTS_ENGINE: edge
           TTS_DAILY_CHARS: '600' # 엣지 음성 녹음이 되는지 몇 줄만 시험한다
         run: |
