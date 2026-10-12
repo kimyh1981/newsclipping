@@ -296,7 +296,7 @@ async function collect(config, now = Date.now(), key = '', opts = {}) {
     if (!config.sections[i].region) return;
     for (const src of sec.sources) {
       for (const it of src.items) {
-        it.region = region.regionOf(it.title, src.country);
+        it.region = region.regionOf(it.spoken, src.country); // 읽을 제목(美→미국 같은 한자 약칭을 푼 것)에서 찾는다
         it.spoken = region.withRegion(it.spoken, it.region);
       }
       delete src.country;
