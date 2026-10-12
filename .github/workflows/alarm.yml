@@ -36,9 +36,15 @@ jobs:
             # 이 작업은 6시간까지만 돈다: 그 안에 못 닿는 시각은 다음 예약에 맡긴다
             if [ $((now - start + wait)) -gt $((345 * 60)) ]; then echo "$at UTC까지 너무 멀어 건너뜀"; continue; fi
             if [ $wait -lt 0 ]; then
-              # 예약이 늦게 와서 시각이 지났으면, 아침 7시(22:00 UTC) 전일 때 한 번만 바로 돌린다
+              # 예약이 늦게 와서 시각이 지났으면 한 번만 바로 돌린다. 아침 7시(22:00 UTC)가 넘었어도 오늘 원고가 아직 없으면 돌린다
+              # (2026-10-13: 밤 11시 자명종이 아침 7시 8분에야 와서 그냥 건너뛰는 바람에 그날 원고가 없었다)
               [ $ran = 1 ] && continue
-              [ $now -gt $(date -u -d "$day 22:00" +%s) ] && { echo "$at UTC가 이미 지남"; continue; }
+              if [ $now -gt $(date -u -d "$day 22:00" +%s) ]; then
+                live=$(curl -fsS "https://kimyh1981.github.io/newsclipping/briefing.json" | jq -r '.generatedAt // empty' 2>/dev/null || true)
+                live_day=$( [ -n "$live" ] && TZ=Asia/Seoul date -d "$live" +%F || true)
+                [ "$live_day" = "$(TZ=Asia/Seoul date +%F)" ] && { echo "$at UTC가 이미 지났고 오늘 원고도 있음"; continue; }
+                echo "$at UTC가 지났지만 오늘 원고가 없어 지금 만듦 (지금 원고: ${live_day:-없음})"
+              fi
             else
               echo "$at UTC까지 $((wait / 60))분 기다림"
               sleep $wait

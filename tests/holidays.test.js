@@ -54,7 +54,7 @@ test('아이폰 조각 원고: 언론사마다 따로, 쉬는 날에는 모두 �
   const config = { sections: [{ id: 'a', title: '가', perSourceLabel: true, limit: 3, sources: [{ id: 'ga', name: '가신문', url: 'https://a' }] }] };
   const work = iosPieces(await collect(config, at('2026-10-06')));
   assert.deepEqual(Object.keys(work), ['open', 'close', 'ga']);
-  assert.match(work.open, /^좋은 아침입니다\. 10월 6일 화요일/);
+  assert.match(work.open, /^좋은 아침입니다\. 시월 육일 화요일/); // 아이폰 음성도 숫자를 아나운서처럼 읽게 소리대로 적는다
   assert.equal(work.ga, '가신문 소식입니다.\n오늘의 주요 소식입니다.\n');
   assert.match(work.close, /좋은 하루 보내세요/);
   const off = iosPieces(await collect(config, at('2026-10-09')));
@@ -66,7 +66,7 @@ test('아이폰 기본 단축어: 6·7시 파일에만 오늘 원고, 다른 시
   const config = { sections: [{ id: 'a', title: '가', perSourceLabel: true, limit: 3, sources: [{ id: 'ga', name: '가신문', url: 'https://a' }] }] };
   const work = iosHours(await collect(config, at('2026-10-06')));
   assert.equal(Object.keys(work).length, 24);
-  assert.match(work[6], /^좋은 아침입니다\. 10월 6일 화요일/);
+  assert.match(work[6], /^좋은 아침입니다\. 시월 육일 화요일/);
   assert.equal(work[7], work[6]);
   assert.equal(work[8], '');
   assert.equal(work[18], '');

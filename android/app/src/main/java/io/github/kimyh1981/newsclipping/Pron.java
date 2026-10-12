@@ -61,7 +61,7 @@ final class Pron {
 
     static String say(String text) {
         if (text == null || text.isEmpty()) return text;
-        String s = text;
+        String s = symbols(numbers(text));
         for (int i = 0; i < WORDS.length; i++) s = WORD_RES[i].matcher(s).replaceAll("$1" + Matcher.quoteReplacement(WORDS[i][1]));
         s = adnominal(s);
         s = stations(s);
@@ -121,5 +121,99 @@ final class Pron {
         }
         m.appendTail(sb);
         return sb.toString();
+    }
+
+    // 숫자·기호 읽기: js/pron.js의 numbers·symbols와 같은 규칙
+    private static final String[] DIG = {"영", "일", "이", "삼", "사", "오", "육", "칠", "팔", "구"};
+    private static final String[] N1 = {"", "한", "두", "세", "네", "다섯", "여섯", "일곱", "여덟", "아홉"};
+    private static final String[] N10 = {"", "열", "스물", "서른", "마흔", "쉰", "예순", "일흔", "여든", "아흔"};
+    private static final java.util.Map<String, String> UNITS = new java.util.HashMap<>();
+    static {
+        String[][] u = {{"%p", "퍼센트포인트"}, {"%포인트", "퍼센트포인트"}, {"%", "퍼센트"}, {"퍼센트포인트", "퍼센트포인트"}, {"퍼센트", "퍼센트"},
+            {"kWh", "킬로와트시"}, {"km", "킬로미터"}, {"kg", "킬로그램"}, {"cm", "센티미터"}, {"mm", "밀리미터"}, {"㎡", "제곱미터"}, {"m²", "제곱미터"},
+            {"MW", "메가와트"}, {"GW", "기가와트"}, {"GB", "기가바이트"}, {"TB", "테라바이트"}, {"ha", "헥타르"}, {"℃", "도"}, {"°C", "도"}};
+        for (String[] x : u) UNITS.put(x[0], x[1]);
+    }
+    private static final Pattern NUM = Pattern.compile("(?<![\\w.,-])(-)?(\\d{1,3}(?:,\\d{3})+|\\d+)(?:\\.(\\d+))?(?:\\s*(%p|%포인트|%|퍼센트포인트|퍼센트|kWh|km|kg|cm|mm|㎡|m²|MW|GW|GB|TB|ha|℃|°C)(?![A-Za-z])|(?!\\.?\\d)(?![A-Za-z]))");
+    private static final Pattern NATIVE = Pattern.compile("^\\s?(?:번째|시간|군데|차례|켤레|송이|그루|마리|가지|사람|개(?!월|국|사|년|소|항|교|층|조)|명|살|곳|달(?!러)|권(?!리|한|역|고|자|위)|잔|벌(?!금|써|어)|채|척|통(?!화|신|계|합|과|령))");
+    private static final Pattern CLOCK = Pattern.compile("^시(?!간|장|즌|청|민|군|의회)");
+
+    private static String sino4(int n) {
+        String d = String.format(java.util.Locale.ROOT, "%04d", n);
+        StringBuilder out = new StringBuilder();
+        String[] u = {"천", "백", "십", ""};
+        for (int i = 0; i < 4; i++) {
+            int k = d.charAt(i) - '0';
+            if (k > 0) out.append(k == 1 && i < 3 ? "" : DIG[k]).append(u[i]);
+        }
+        return out.toString();
+    }
+
+    static String sino(String digits) {
+        if (digits.matches("0\\d.*") || digits.length() > 16) {
+            StringBuilder b = new StringBuilder();
+            for (int i = 0; i < digits.length(); i++) b.append(i > 0 ? " " : "").append(DIG[digits.charAt(i) - '0']);
+            return b.toString();
+        }
+        if (digits.matches("0+")) return "영";
+        java.util.LinkedList<String> parts = new java.util.LinkedList<>();
+        String n = digits;
+        String[] units = {"", "만", "억", "조"};
+        for (int i = 0; !n.isEmpty(); i++) {
+            int cut = Math.max(0, n.length() - 4);
+            int g = Integer.parseInt(n.substring(cut));
+            n = n.substring(0, cut);
+            if (g > 0) parts.addFirst((g == 1 && i == 1 ? "" : sino4(g)) + units[i]);
+        }
+        return String.join(" ", parts);
+    }
+
+    private static String nativeNum(int n) {
+        if (n == 20) return "스무";
+        return N10[n / 10] + N1[n % 10];
+    }
+
+    static String numbers(String s) {
+        s = s.replaceAll("(\\d{4})\\s?[.\\-/]\\s?(\\d{1,2})\\s?[.\\-/]\\s?(\\d{1,2})(?!\\d)\\.?", "$1년 $2월 $3일");
+        s = s.replaceAll("\\$\\s?(\\d[\\d,]*(?:\\.\\d+)?)(\\s?[조억만천])?", "$1$2달러");
+        s = s.replaceAll("(\\d)\\s*~\\s*(?=\\d)", "$1에서 ").replaceAll("(\\d)-(?=\\d)", "$1에서 ").replaceAll("(\\d)\\s?:\\s?(?=\\d)", "$1 대 ");
+        Matcher m = NUM.matcher(s);
+        StringBuffer sb = new StringBuffer();
+        while (m.find()) {
+            String minus = m.group(1), num = m.group(2), frac = m.group(3), unit = m.group(4);
+            String digits = num.replace(",", "");
+            String rest = s.substring(m.end());
+            boolean plain = minus == null && frac == null && unit == null;
+            int n = digits.length() <= 9 ? Integer.parseInt(digits) : Integer.MAX_VALUE;
+            String out;
+            if (plain && !num.contains(",") && n >= 1 && n <= 99 && NATIVE.matcher(rest).find() && !(n > 20 && rest.matches("(?s)^\\s?시간.*"))) {
+                out = n == 1 && rest.matches("(?s)^\\s?번째.*") ? "첫 " : nativeNum(n) + " ";
+            } else if (plain && n >= 1 && n <= 12 && CLOCK.matcher(rest).find()) {
+                out = nativeNum(n) + " ";
+            } else if (plain && rest.startsWith("월") && (n == 6 || n == 10)) {
+                out = n == 6 ? "유" : "시";
+            } else if (plain && n == 1 && rest.matches("(?s)^[십백천만].*")) {
+                out = "";
+            } else {
+                out = sino(digits);
+                if (frac != null) {
+                    StringBuilder f = new StringBuilder();
+                    for (int i = 0; i < frac.length(); i++) f.append(DIG[frac.charAt(i) - '0']);
+                    out += " 점 " + f;
+                }
+                if (minus != null) out = "마이너스 " + out;
+                if (unit != null) out += " " + UNITS.get(unit);
+            }
+            m.appendReplacement(sb, Matcher.quoteReplacement(out));
+        }
+        m.appendTail(sb);
+        return sb.toString();
+    }
+
+    static String symbols(String s) {
+        s = s.replaceAll("[“”\"‘’'`「」『』《》〈〉<>\\[\\]【】]", "").replaceAll("[()]", ", ").replaceAll("…|\\.{2,}", ", ");
+        s = s.replaceAll("[ \\t]*[|/·][ \\t]*", ", ").replace("&", " 앤 ").replace("%", " 퍼센트").replaceAll("[#*=^_~+]", " ").replaceAll("(?<=\\S)[ \\t]*-[ \\t]*(?=\\S)", " ");
+        s = s.replaceAll("[ \\t]*,(?:[ \\t]*,)*[ \\t]*", ", ").replaceAll(",[ \\t]*([.?!])", "$1").replaceAll("[ \\t]{2,}", " ").replaceAll("(?m)^[ \\t,]+|[ \\t,]+$", "");
+        return s;
     }
 }

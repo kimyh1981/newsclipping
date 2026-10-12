@@ -16,7 +16,8 @@ async def one(sem, job, voice, rate):
         for attempt in range(3):
             try:
                 part = job["file"] + ".part"  # 끝까지 받은 파일만 이름을 바꾼다: 도중에 멈춰도 반쪽 파일이 남지 않게
-                await edge_tts.Communicate(job["text"], voice, rate=rate).save(part)
+                # 한 줄이 30초 넘게 걸리면 끊고 다시 (2026-10-13: 연결이 멈춘 채 6분을 다 써서 한 줄도 못 녹음했다)
+                await asyncio.wait_for(edge_tts.Communicate(job["text"], voice, rate=rate).save(part), timeout=30)
                 os.replace(part, job["file"])
                 return job["id"], None
             except Exception as e:  # 연결이 끊기거나 잠깐 막히면 쉬었다가 다시
@@ -28,7 +29,7 @@ async def one(sem, job, voice, rate):
 async def main():
     with open(sys.argv[1], encoding="utf-8") as f:
         jobs = json.load(f)
-    sem = asyncio.Semaphore(4)
+    sem = asyncio.Semaphore(8)
     res = await asyncio.gather(*(one(sem, j, sys.argv[2], sys.argv[3]) for j in jobs))
     json.dump(dict(res), sys.stdout)
 

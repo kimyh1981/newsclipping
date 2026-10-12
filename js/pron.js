@@ -9,7 +9,7 @@
   else root.Pron = factory();
 })(typeof self !== 'undefined' ? self : this, function () {
   // 규칙을 바꾸면 올린다: 서버가 예전 규칙으로 녹음해 둔 파일을 다시 녹음한다
-  const VERSION = 1;
+  const VERSION = 2;
 
   // [쓴 글, 소리, 뒤에 오면 바꾸지 않는 말]. 낱말 첫머리에서만 찾는다 (재평가처럼 앞에 붙은 말은 그대로)
   // 제26·28항 경음화(한자어 ㄹ 뒤 ㄷㅅㅈ, 사이시옷 없는 사잇소리), 제29항 ㄴ첨가
@@ -106,10 +106,81 @@
     });
   }
 
-  function say(text) {
-    if (!text) return text;
-    return pauses(stations(adnominal(words(text))));
+  // 숫자는 아나운서처럼 읽는다: 한자어 수(이천이십육 년, 삼 점 오 퍼센트)가 기본이고, 세는 말(명·개·시간·번째…) 앞
+  // 1~99는 고유어(세 명, 스물한 개, 첫 번째), 시각은 열두 시까지 고유어(세 시), 6월·10월은 유월·시월.
+  // 기호(따옴표·괄호·%·~·:)는 읽지 않고 말로 바꾸거나 잠깐 쉰다. 영문과 붙은 숫자(GPT-4, 5G)는 그대로 둔다
+  const DIG = ['영', '일', '이', '삼', '사', '오', '육', '칠', '팔', '구'];
+  const N1 = ['', '한', '두', '세', '네', '다섯', '여섯', '일곱', '여덟', '아홉'];
+  const N10 = ['', '열', '스물', '서른', '마흔', '쉰', '예순', '일흔', '여든', '아흔'];
+  const UNITS = { '%p': '퍼센트포인트', '%포인트': '퍼센트포인트', '%': '퍼센트', '퍼센트포인트': '퍼센트포인트', '퍼센트': '퍼센트', kWh: '킬로와트시', km: '킬로미터', kg: '킬로그램', cm: '센티미터', mm: '밀리미터', '㎡': '제곱미터', 'm²': '제곱미터', MW: '메가와트', GW: '기가와트', GB: '기가바이트', TB: '테라바이트', ha: '헥타르', '℃': '도', '°C': '도' };
+  const NUM = /(?<![\w.,-])(-)?(\d{1,3}(?:,\d{3})+|\d+)(?:\.(\d+))?(?:\s*(%p|%포인트|%|퍼센트포인트|퍼센트|kWh|km|kg|cm|mm|㎡|m²|MW|GW|GB|TB|ha|℃|°C)(?![A-Za-z])|(?!\.?\d)(?![A-Za-z]))/g;
+  // 1~99를 고유어로 읽는 세는 말 (개월·개국·달러·통화처럼 한자어로 읽는 말은 뺀다)
+  const NATIVE = /^\s?(?:번째|시간|군데|차례|켤레|송이|그루|마리|가지|사람|개(?!월|국|사|년|소|항|교|층|조)|명|살|곳|달(?!러)|권(?!리|한|역|고|자|위)|잔|벌(?!금|써|어)|채|척|통(?!화|신|계|합|과|령))/;
+  const CLOCK = /^시(?!간|장|즌|청|민|군|의회)/;
+
+  function sino4(n) {
+    const d = String(n).padStart(4, '0');
+    let out = '';
+    for (let i = 0; i < 4; i++) {
+      const k = +d[i];
+      if (k) out += (k === 1 && i < 3 ? '' : DIG[k]) + ['천', '백', '십', ''][i];
+    }
+    return out;
   }
 
-  return { VERSION, say, tense };
+  // 한자어 수: 1234 → 천이백삼십사, 120000 → 십이만, 100000000 → 일억
+  function sino(digits) {
+    if (/^0\d/.test(digits) || digits.length > 16) return digits.split('').map((c) => DIG[c]).join(' ');
+    if (/^0+$/.test(digits)) return '영';
+    const parts = [];
+    let n = digits;
+    for (let i = 0; n.length; i++) {
+      const g = +n.slice(-4);
+      n = n.slice(0, -4);
+      if (g) parts.unshift((g === 1 && i === 1 ? '' : sino4(g)) + ['', '만', '억', '조'][i]);
+    }
+    return parts.join(' ');
+  }
+
+  function nativeNum(n) {
+    if (n === 20) return '스무';
+    return N10[Math.floor(n / 10)] + N1[n % 10];
+  }
+
+  function numbers(s) {
+    s = s.replace(/(\d{4})\s?[.\-/]\s?(\d{1,2})\s?[.\-/]\s?(\d{1,2})(?!\d)\.?/g, '$1년 $2월 $3일');
+    s = s.replace(/\$\s?(\d[\d,]*(?:\.\d+)?)(\s?[조억만천])?/g, (m, n, u) => `${n}${u || ''}달러`);
+    s = s.replace(/(\d)\s*~\s*(?=\d)/g, '$1에서 ').replace(/(\d)-(?=\d)/g, '$1에서 ').replace(/(\d)\s?:\s?(?=\d)/g, '$1 대 ');
+    return s.replace(NUM, (m, minus, int, frac, unit, at, all) => {
+      const digits = int.replace(/,/g, '');
+      const rest = all.slice(at + m.length);
+      const n = Number(digits);
+      if (!minus && !frac && !unit && !/,/.test(int) && n >= 1 && n <= 99 && NATIVE.test(rest) && !(n > 20 && /^\s?시간/.test(rest))) {
+        return /^\s?번째/.test(rest) && n === 1 ? '첫 ' : `${nativeNum(n)} `; // 스물네 시간보다 이십사 시간
+      }
+      if (!minus && !frac && !unit && n >= 1 && n <= 12 && CLOCK.test(rest)) return `${nativeNum(n)} `;
+      if (!minus && !frac && !unit && /^월/.test(rest) && (n === 6 || n === 10)) return n === 6 ? '유' : '시';
+      if (!minus && !frac && !unit && n === 1 && /^[십백천만]/.test(rest)) return '';
+      let out = sino(digits);
+      if (frac) out += ` 점 ${frac.split('').map((c) => DIG[c]).join('')}`;
+      if (minus) out = `마이너스 ${out}`;
+      if (unit) out += ` ${UNITS[unit]}`;
+      return out;
+    });
+  }
+
+  // 읽지 않을 기호: 따옴표·꺾쇠는 지우고, 괄호·말줄임·빗금은 잠깐 쉬고, &는 '앤'
+  function symbols(s) {
+    s = s.replace(/[“”"‘’'`「」『』《》〈〉<>\[\]【】]/g, '').replace(/[()]/g, ', ').replace(/…|\.{2,}/g, ', ');
+    s = s.replace(/[ \t]*[|/·][ \t]*/g, ', ').replace(/&/g, ' 앤 ').replace(/%/g, ' 퍼센트').replace(/[#*=^_~+]/g, ' ').replace(/(?<=\S)[ \t]*-[ \t]*(?=\S)/g, ' ');
+    s = s.replace(/[ \t]*,(?:[ \t]*,)*[ \t]*/g, ', ').replace(/,[ \t]*([.?!])/g, '$1').replace(/[ \t]{2,}/g, ' ').replace(/^[ \t,]+|[ \t,]+$/gm, '');
+    return s;
+  }
+
+  function say(text) {
+    if (!text) return text;
+    return pauses(stations(adnominal(words(symbols(numbers(text))))));
+  }
+
+  return { VERSION, say, tense, numbers, symbols };
 });

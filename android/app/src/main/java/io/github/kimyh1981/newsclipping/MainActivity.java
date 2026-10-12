@@ -508,7 +508,7 @@ public class MainActivity extends Activity {
             return;
         }
         String[] labels = new String[voices.size() + 1];
-        labels[0] = "자동 (가장 자연스러운 음성)";
+        labels[0] = "자동 (서버 녹음 음성, 다 녹음되지 않은 날은 폰 음성)";
         int[] choice = {0};
         for (int i = 0; i < voices.size(); i++) {
             labels[i + 1] = Voices.label(voices.get(i), i);

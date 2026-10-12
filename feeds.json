@@ -370,6 +370,56 @@
       "must": "비료|요소|퇴비|농자재|농기자재|칼륨|인산|미생물|토양|바이오플랜"
     },
     {
+      "id": "ai",
+      "title": "AI 뉴스",
+      "limit": 6,
+      "hours": 48,
+      "sources": [
+        {
+          "id": "aitimes",
+          "url": "https://www.aitimes.com/rss/allArticle.xml",
+          "name": "AI타임스",
+          "google": "site:aitimes.com",
+          "take": 2,
+          "default": false,
+          "when": "2d"
+        },
+        {
+          "id": "aitimes-kr",
+          "url": "https://www.aitimes.kr/rss/allArticle.xml",
+          "name": "인공지능신문",
+          "google": "site:aitimes.kr",
+          "take": 2,
+          "default": false,
+          "when": "2d"
+        },
+        {
+          "id": "zdnet-ai",
+          "name": "지디넷코리아 AI",
+          "google": "site:zdnet.co.kr AI",
+          "take": 2,
+          "default": false,
+          "when": "2d"
+        },
+        {
+          "id": "etnews-ai",
+          "name": "전자신문 AI",
+          "google": "site:etnews.com 인공지능 OR AI",
+          "take": 2,
+          "default": false,
+          "when": "2d"
+        },
+        {
+          "id": "digitaltoday-ai",
+          "name": "디지털투데이 AI",
+          "google": "site:digitaltoday.co.kr AI",
+          "take": 2,
+          "default": false,
+          "when": "2d"
+        }
+      ]
+    },
+    {
       "id": "world",
       "title": "국제 정세와 경제",
       "limit": 8,
@@ -428,7 +478,8 @@
           "google": "site:cnbc.com",
           "take": 2,
           "default": false,
-          "lang": "en"
+          "lang": "en",
+          "country": "미국"
         },
         {
           "id": "nikkei-asia",
@@ -438,7 +489,8 @@
           "default": false,
           "lang": "en"
         }
-      ]
+      ],
+      "region": true
     },
     {
       "id": "global-agri",
@@ -470,7 +522,8 @@
           "google": "site:dtnpf.com",
           "take": 2,
           "default": false,
-          "when": "3d"
+          "when": "3d",
+          "country": "미국"
         },
         {
           "id": "agriculture-com",
@@ -478,7 +531,8 @@
           "google": "site:agriculture.com",
           "take": 2,
           "default": false,
-          "when": "3d"
+          "when": "3d",
+          "country": "미국"
         },
         {
           "id": "worldgrain",
@@ -487,6 +541,97 @@
           "take": 2,
           "default": false,
           "when": "3d"
+        }
+      ],
+      "region": true
+    },
+    {
+      "id": "ai-global",
+      "title": "해외 AI 뉴스",
+      "lang": "en",
+      "limit": 6,
+      "hours": 48,
+      "region": true,
+      "sources": [
+        {
+          "id": "mit-tr",
+          "url": "https://www.technologyreview.com/topic/artificial-intelligence/feed",
+          "name": "MIT 테크놀로지 리뷰",
+          "google": "site:technologyreview.com AI",
+          "take": 2,
+          "default": false,
+          "when": "2d"
+        },
+        {
+          "id": "verge-ai",
+          "url": "https://www.theverge.com/rss/ai-artificial-intelligence/index.xml",
+          "name": "더 버지",
+          "google": "site:theverge.com AI",
+          "take": 2,
+          "default": false,
+          "when": "2d"
+        },
+        {
+          "id": "techcrunch-ai",
+          "url": "https://techcrunch.com/category/artificial-intelligence/feed/",
+          "name": "테크크런치",
+          "google": "site:techcrunch.com AI",
+          "take": 2,
+          "default": false,
+          "when": "2d"
+        },
+        {
+          "id": "venturebeat-ai",
+          "url": "https://venturebeat.com/category/ai/feed/",
+          "name": "벤처비트",
+          "google": "site:venturebeat.com AI",
+          "take": 2,
+          "default": false,
+          "when": "2d"
+        },
+        {
+          "id": "wired-ai",
+          "url": "https://www.wired.com/feed/tag/ai/latest/rss",
+          "name": "와이어드",
+          "google": "site:wired.com AI",
+          "take": 2,
+          "default": false,
+          "when": "2d"
+        },
+        {
+          "id": "ars-ai",
+          "url": "https://arstechnica.com/ai/feed/",
+          "name": "아르스 테크니카",
+          "google": "site:arstechnica.com AI",
+          "take": 2,
+          "default": false,
+          "when": "2d"
+        },
+        {
+          "id": "the-decoder",
+          "url": "https://the-decoder.com/feed/",
+          "name": "더 디코더",
+          "google": "site:the-decoder.com",
+          "take": 2,
+          "default": false,
+          "when": "2d"
+        },
+        {
+          "id": "ieee-ai",
+          "url": "https://spectrum.ieee.org/feeds/topic/artificial-intelligence.rss",
+          "name": "IEEE 스펙트럼",
+          "google": "site:spectrum.ieee.org AI",
+          "take": 2,
+          "default": false,
+          "when": "2d"
+        },
+        {
+          "id": "reuters-ai",
+          "name": "로이터 AI",
+          "google": "site:reuters.com artificial intelligence",
+          "take": 2,
+          "default": false,
+          "when": "2d"
         }
       ]
     },
@@ -527,7 +672,9 @@
           "when": "3d",
           "hours": 72
         }
-      ]
+      ],
+      "region": true,
+      "country": "중국"
     },
     {
       "id": "japan",
@@ -558,7 +705,9 @@
           "when": "3d",
           "hours": 72
         }
-      ]
+      ],
+      "region": true,
+      "country": "일본"
     },
     {
       "id": "vietnam-news",
@@ -629,7 +778,9 @@
           "take": 2,
           "default": false
         }
-      ]
+      ],
+      "region": true,
+      "country": "베트남"
     },
     {
       "id": "vietnam",
@@ -696,7 +847,9 @@
           "when": "3d"
         }
       ],
-      "must": "phân bón|nông nghiệp|nông sản|nông dân|cây trồng|vi sinh|hữu cơ|urê|NPK|DAP|kali|lúa|gạo|cà phê|sầu riêng|hồ tiêu"
+      "must": "phân bón|nông nghiệp|nông sản|nông dân|cây trồng|vi sinh|hữu cơ|urê|NPK|DAP|kali|lúa|gạo|cà phê|sầu riêng|hồ tiêu",
+      "region": true,
+      "country": "베트남"
     }
   ]
 }

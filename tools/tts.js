@@ -58,9 +58,11 @@ function wanted(b) {
   const items = b.sections.flatMap((sec) => sec.sources.flatMap((src) => src.items.map((it) => ({ sec, src, it }))));
   for (const { sec, it } of items) if (sec.perSourceLabel) add(`${it.source} 소식입니다.`, 'fixed');
   for (const { it } of items) add(brief.sentence(it.spoken), 'headline');
-  const picked = brief.select(b).flatMap((s) => s.items);
-  for (const it of picked) for (const s of (it.say || []).slice(0, 3)) add(s, 'summary'); // 전체 듣기 앞 세 문장 먼저
-  for (const it of picked) for (const s of (it.say || []).slice(3)) add(s, 'body');
+  // 전체 듣기 본문: 기본 언론사 기사부터, 그다음 언론사를 다 골랐을 때 원고에 들 기사까지 모두 녹음한다.
+  // 본문 일부만 녹음돼 있으면 앱이 그 기사를 폰 음성으로 읽어 목소리가 바뀐다 (2026-10-13 주인 요청: 같은 목소리로)
+  const all = b.sections.flatMap((s) => s.sources.map((x) => x.id));
+  const picked = [...new Set([...brief.select(b), ...brief.select(b, all)].flatMap((s) => s.items))];
+  for (const it of picked) for (const s of it.say || []) add(s, 'body');
   const seen = new Set();
   return out.filter(([t]) => (seen.has(t) ? false : seen.add(t)));
 }
@@ -87,7 +89,7 @@ async function synthesize(text, key, voice) {
 function edgeBatch(jobs, voice, rate = '+0%') {
   const tmp = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'edge-')), 'jobs.json');
   fs.writeFileSync(tmp, JSON.stringify(jobs));
-  const r = spawnSync('python3', [path.join(__dirname, 'edge_tts_batch.py'), tmp, voice, rate], { encoding: 'utf8', maxBuffer: 16 << 20, timeout: 6 * 60e3 });
+  const r = spawnSync('python3', [path.join(__dirname, 'edge_tts_batch.py'), tmp, voice, rate], { encoding: 'utf8', maxBuffer: 16 << 20, timeout: 12 * 60e3 });
   if (r.error?.code === 'ETIMEDOUT') return {}; // 시간이 다 되면 그때까지 끝난 파일만 쓴다
   if (r.status !== 0) throw new Error((r.stderr || r.error?.message || `종료 코드 ${r.status}`).trim().split('\n').pop());
   return JSON.parse(r.stdout);
@@ -99,7 +101,7 @@ async function record(b, opts) {
   const engine = opts.engine || (key ? 'google' : 'off');
   if (engine === 'off' || (engine === 'google' && !key)) return null;
   const voice = opts.voice || (engine === 'edge' ? EDGE_VOICE : VOICE);
-  const budget = opts.budget || (engine === 'edge' ? 80000 : 25000); // edge는 돈이 들지 않지만 배포 시간을 넘기지 않게
+  const budget = opts.budget || (engine === 'edge' ? 250000 : 25000); // edge는 돈이 들지 않지만 배포 시간을 넘기지 않게
   const dir = path.join(out, 'audio');
   fs.mkdirSync(dir, { recursive: true });
   if (cache) fs.mkdirSync(cache, { recursive: true });
@@ -137,6 +139,7 @@ async function record(b, opts) {
         else { fs.rmSync(job.file, { force: true }); errors.push(res[job.id] || '시간 초과'); }
       }
       if (errors.length) log.push(`음성 녹음 실패 ${errors.length}줄 (예: ${errors[0]})`);
+      for (const f of fs.readdirSync(dir)) if (f.endsWith('.part')) fs.rmSync(path.join(dir, f), { force: true }); // 받다 만 파일은 올리지 않는다
     } catch (err) {
       log.push(`음성 녹음(edge)을 못 함: ${err.message}`);
     }
