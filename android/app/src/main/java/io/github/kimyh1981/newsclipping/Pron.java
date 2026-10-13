@@ -150,6 +150,8 @@ final class Pron {
     private static final Pattern RANGE = Pattern.compile("(?<![\\d.,])(\\d{1,2})\\s*(?:~|-|에서\\s?)(\\d{1,2})(\\s?)(" + COUNTER + "|대(?=[가를의는도만와씩로\\s,.]|$))");
     private static final Pattern TIME = Pattern.compile("(?<![\\d:])([01]?\\d|2[0-4]):([0-5]\\d)(?![\\d:])");
     private static final Pattern MONEY = Pattern.compile("([$€£¥₩])\\s?((?:\\d{1,3}(?:,\\d{3})+|\\d+)(?:\\.\\d+)?)(\\s?[조억만천])?");
+    private static final Pattern EVENT = Pattern.compile("(?<![\\d.])(\\d{1,2})\\s?·\\s?(\\d{1,2})(?![\\d.])");
+    private static final Pattern BIG_UNIT = Pattern.compile("(\\d[만억조천])\\s?(" + UNIT + ")(?![A-Za-z])");
     private static final Pattern FRACTION = Pattern.compile("(?<![\\d/.])(\\d{1,3})/(\\d{1,3})(?![\\d/])");
 
     private static String sino4(int n) {
@@ -194,11 +196,27 @@ final class Pron {
             char c = s.charAt(i);
             b.append(c >= '０' && c <= '９' || "％～：＋－．".indexOf(c) >= 0 ? (char) (c - 0xfee0) : c);
         }
-        return b.toString().replace("㎞", "km").replace("㎏", "kg").replace("㎜", "mm").replace("㎝", "cm").replace("㏊", "ha").replace("㎾", "kW").replace("㎿", "MW").replaceAll("[ㆍ・•∙]", "·");
+        return b.toString().replaceAll("[∼〜]", "~").replace("㎞", "km").replace("㎏", "kg").replace("㎜", "mm").replace("㎝", "cm").replace("㏊", "ha").replace("㎾", "kW").replace("㎿", "MW").replaceAll("[ㆍ・•∙]", "·");
     }
 
     static String numbers(String s) {
-        s = plain(s).replaceAll("코로나\\s?-?19", "코로나 일구").replaceAll("영하\\s?-(?=\\d)", "영하 ").replaceAll("시속\\s?(\\d[\\d,.]*)\\s?km/h", "$1km/h");
+        s = plain(s).replaceAll("코로나\\s?-?19", "코로나 일구").replaceAll("영하\\s?-(?=\\d)", "영하 ").replaceAll("(\\d)\\s?a당", "$1아르당").replaceAll("시속\\s?(\\d[\\d,.]*)\\s?km/h", "$1km/h");
+        // 5·18, 6·25, 10·15 대책처럼 날짜로 이름 붙인 일은 오일팔, 육이오, 십일오로
+        Matcher e = EVENT.matcher(s);
+        StringBuffer eb = new StringBuffer();
+        while (e.find()) {
+            StringBuilder r = new StringBuilder(sino(e.group(1)));
+            for (char c : e.group(2).toCharArray()) r.append(DIG[c - '0']);
+            e.appendReplacement(eb, r.toString());
+        }
+        e.appendTail(eb);
+        s = eb.toString();
+        // 480만 t, 132만ha처럼 만·억 뒤의 단위
+        e = BIG_UNIT.matcher(s);
+        eb = new StringBuffer();
+        while (e.find()) e.appendReplacement(eb, Matcher.quoteReplacement(e.group(1) + " " + UNITS.get(e.group(2))));
+        e.appendTail(eb);
+        s = eb.toString();
         s = s.replaceAll("(\\d{4})\\s?[.\\-/]\\s?(\\d{1,2})\\s?[.\\-/]\\s?(\\d{1,2})(?!\\d)\\.?", "$1년 $2월 $3일");
         Matcher m = TIME.matcher(s);
         StringBuffer sb = new StringBuffer();

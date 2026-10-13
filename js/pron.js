@@ -172,12 +172,16 @@
 
   // 전각 숫자·기호와 한 글자 단위(㎞·㎏)를 보통 글자로
   function plain(s) {
-    return s.replace(/[０-９％～：＋－．]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0xfee0))
+    return s.replace(/[０-９％～：＋－．]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0xfee0)).replace(/[∼〜]/g, '~')
       .replace(/㎞/g, 'km').replace(/㎏/g, 'kg').replace(/㎜/g, 'mm').replace(/㎝/g, 'cm').replace(/㏊/g, 'ha').replace(/㎾/g, 'kW').replace(/㎿/g, 'MW').replace(/[ㆍ・•∙]/g, '·');
   }
 
   function numbers(s) {
-    s = plain(s).replace(/코로나\s?-?19/g, '코로나 일구').replace(/영하\s?-(?=\d)/g, '영하 ').replace(/시속\s?(\d[\d,.]*)\s?km\/h/g, '$1km/h');
+    s = plain(s).replace(/코로나\s?-?19/g, '코로나 일구').replace(/영하\s?-(?=\d)/g, '영하 ').replace(/(\d)\s?a당/g, '$1아르당').replace(/시속\s?(\d[\d,.]*)\s?km\/h/g, '$1km/h');
+    // 5·18, 6·25, 10·15 대책처럼 날짜로 이름 붙인 일은 오일팔, 육이오, 십일오로
+    s = s.replace(/(?<![\d.])(\d{1,2})\s?·\s?(\d{1,2})(?![\d.])/g, (m, a, b) => sino(a) + b.split('').map((c) => DIG[c]).join(''));
+    // 480만 t, 132만ha처럼 만·억 뒤의 단위
+    s = s.replace(new RegExp(`(\\d[만억조천])\\s?(${UNIT})(?![A-Za-z])`, 'g'), (m, n, u) => `${n} ${UNITS[u]}`);
     s = s.replace(/(\d{4})\s?[.\-/]\s?(\d{1,2})\s?[.\-/]\s?(\d{1,2})(?!\d)\.?/g, '$1년 $2월 $3일');
     s = s.replace(/(?<![\d:])([01]?\d|2[0-4]):([0-5]\d)(?![\d:])/g, (m, h, mm) => `${+h}시${+mm ? ` ${+mm}분` : ''}`);
     s = s.replace(/([$€£¥₩])\s?((?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?)(\s?[조억만천])?/g, (m, c, n, u) => `${n}${u || ''}${MONEY[c]}`);
