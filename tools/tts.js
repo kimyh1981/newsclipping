@@ -17,7 +17,7 @@ const brief = require('../js/brief.js');
 
 const pron = require('../js/pron.js');
 const VOICE = 'ko-KR-Chirp3-HD-Aoede';
-const EDGE_VOICE = 'ko-KR-SunHiNeural';
+const EDGE_VOICE = 'ko-KR-InJoonNeural'; // 차분한 남성 뉴스 톤 (주인이 고름, 2026-10-14)
 const ENDPOINT = 'https://texttospeech.googleapis.com/v1/text:synthesize';
 
 // 녹음 뒤 다듬기(ffmpeg): 차 스피커에서 'ㅅ' 소리가 날카롭지 않게 고음을 낮추고 목소리 몸통을 조금 올린 뒤 스테레오로.
