@@ -19,7 +19,7 @@ jobs:
           node-version: 22
       - run: npm ci
       - run: npm test
-      - run: python3 -m pip install --user edge-tts==7.2.8
+      - run: python3 -m pip install --user edge-tts==7.3.1
       - name: Live collection
         timeout-minutes: 8
         env:
