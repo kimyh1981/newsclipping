@@ -32,6 +32,7 @@ final class Pron {
         {"증여세", "증여쎄", ""}, {"주민세", "주민쎄", ""}, {"신분증", "신분쯩", ""}, {"후유증", "후유쯩", ""}, {"우울증", "우울쯩", ""}, {"면허증", "면허쯩", ""},
         {"합병증", "합뼝쯩", ""}, {"감염증", "감염쯩", ""}, {"휘발유", "휘발류", ""}, {"식용유", "식용뉴", ""}, {"국민연금", "국민년금", ""}, {"색연필", "생년필", ""},
         {"한여름", "한녀름", ""}, {"담요", "담뇨", ""}, {"영업용", "영업뇽", ""}, {"일일이", "일리리", ""},
+        {"산업용", "산업뇽", ""}, {"가정용", "가정뇽", ""}, {"상업용", "상업뇽", ""}, {"몇 월", "며둴", ""}, {"맛없", "마덥", ""}, {"겉옷", "거돋", ""}, {"헛웃음", "허두슴", ""}, {"값어치", "가버치", ""},
     };
     /** '세 대가 부딪쳤다'의 대가는 값 가(價)가 아니다: 고유어 수 바로 뒤의 '대'로 시작하는 말은 두지 않는다 */
     private static final String AFTER_COUNT = "(?<!(?:한|두|세|네|섯|곱|덟|홉|열|무|물|른|흔|쉰|순|든))";
@@ -61,9 +62,72 @@ final class Pron {
         return to < 0 ? ch : String.valueOf((char) (c + (to - cho) * 588));
     }
 
+    /** js/pron.js의 LATIN과 같은 표: 낱말처럼 읽는 로마자 약어와 상표·영어 낱말 {쓴 글, 소리} */
+    private static final String[][] LATIN = {
+        {"COVID-19", "코비드 일구"}, {"OPEC+", "오펙 플러스"}, {"K-POP", "케이팝"}, {"K-pop", "케이팝"}, {"Wi-Fi", "와이파이"}, {"WiFi", "와이파이"},
+        {"ChatGPT", "챗지피티"}, {"OpenAI", "오픈에이아이"}, {"LiDAR", "라이다"}, {"REITs", "리츠"}, {"Nasdaq", "나스닥"}, {"NASA", "나사"},
+        {"NATO", "나토"}, {"FIFA", "피파"}, {"UEFA", "유에파"}, {"UNESCO", "유네스코"}, {"UNICEF", "유니세프"}, {"OPEC", "오펙"},
+        {"APEC", "에이펙"}, {"ASEAN", "아세안"}, {"NAFTA", "나프타"}, {"BRICS", "브릭스"}, {"QUAD", "쿼드"}, {"AUKUS", "오커스"},
+        {"IPEF", "아이펙"}, {"RCEP", "알셉"}, {"THAAD", "사드"}, {"COP", "콥"}, {"CITES", "사이테스"}, {"NEOM", "네옴"},
+        {"NIMBY", "님비"}, {"PIMFY", "핌피"}, {"AIDS", "에이즈"}, {"SARS", "사스"}, {"MERS", "메르스"}, {"COVID", "코비드"},
+        {"NASDAQ", "나스닥"}, {"KOSPI", "코스피"}, {"KOSDAQ", "코스닥"}, {"KOTRA", "코트라"}, {"KOICA", "코이카"}, {"KORAIL", "코레일"},
+        {"KEPCO", "켑코"}, {"KOGAS", "코가스"}, {"POSCO", "포스코"}, {"KAIST", "카이스트"}, {"POSTECH", "포스텍"}, {"UNIST", "유니스트"},
+        {"DGIST", "디지스트"}, {"GIST", "지스트"}, {"KIST", "키스트"}, {"KAI", "카이"}, {"HYBE", "하이브"}, {"NAVER", "네이버"},
+        {"KAKAO", "카카오"}, {"OLED", "올레드"}, {"AMOLED", "아몰레드"}, {"DRAM", "디램"}, {"SRAM", "에스램"}, {"NAND", "낸드"},
+        {"RAM", "램"}, {"ROM", "롬"}, {"LAN", "랜"}, {"PIN", "핀"}, {"ARM", "암"}, {"SPAC", "스팩"},
+        {"REIT", "리츠"}, {"ADAS", "에이다스"}, {"SWIFT", "스위프트"}, {"NEET", "니트"}, {"YOLO", "욜로"}, {"FOMO", "포모"},
+        {"VS", "대"}, {"POP", "팝"}, {"NEWS", "뉴스"}, {"SHOW", "쇼"}, {"LIVE", "라이브"}, {"BEST", "베스트"},
+        {"NEW", "뉴"}, {"TOP", "톱"}, {"PLUS", "플러스"}, {"PRO", "프로"}, {"MAX", "맥스"}, {"ULTRA", "울트라"},
+        {"FOLD", "폴드"}, {"FLIP", "플립"}, {"MINI", "미니"}, {"AIR", "에어"}, {"PAY", "페이"}, {"NO", "노"},
+        {"ON", "온"}, {"OFF", "오프"}, {"KING", "킹"}, {"STAR", "스타"}, {"BANK", "뱅크"}, {"ONE", "원"},
+        {"GO", "고"}, {"UP", "업"}, {"YES", "예스"}, {"HOT", "핫"}, {"BIG", "빅"}, {"EDGE", "엣지"},
+        {"2D", "투디"}, {"3D", "쓰리디"}, {"4D", "포디"}, {"3G", "쓰리지"}, {"4G", "포지"}, {"5G", "파이브지"},
+        {"6G", "식스지"}, {"4K", "포케이"}, {"8K", "에잇케이"}, {"G2", "지투"}, {"G7", "지세븐"}, {"G8", "지에잇"},
+        {"G20", "지이십"},
+    };
+    /** 알파벳 이름 (C 씨, R 알, Z 제트) */
+    private static final String[] ABC = {"에이", "비", "씨", "디", "이", "에프", "지", "에이치", "아이", "제이", "케이", "엘", "엠", "엔", "오", "피", "큐", "알", "에스", "티", "유", "브이", "더블유", "엑스", "와이", "제트"};
+    private static final Pattern[] LATIN_RES = new Pattern[LATIN.length];
+    static {
+        for (int i = 0; i < LATIN.length; i++) LATIN_RES[i] = Pattern.compile("(?<![A-Za-z0-9])" + Pattern.quote(LATIN[i][0]) + "(?![A-Za-z0-9])");
+    }
+    private static final Pattern AMP = Pattern.compile("(?<![A-Za-z0-9])([A-Z]{1,3})\\s?&\\s?([A-Z]{1,3})(?![A-Za-z])");
+    private static final Pattern CAPS = Pattern.compile("(?<![A-Za-z0-9])[A-Z]{2,5}(?![A-Za-z0-9])(?!-\\d)");
+    /** 네 글자 이상인데 낱말처럼 읽히는 것(AGRI, COAT)은 낱자로 끊지 않는다 */
+    private static final Pattern WORDLIKE = Pattern.compile("^[^AEIOU]?[AEIOU][^AEIOU]{1,2}[AEIOU]|[^AEIOU][AEIOU]{2}[^AEIOU]");
+    private static final Pattern CAP_HANGUL = Pattern.compile("(?<![A-Za-z0-9])[A-Z](?=-?[가-힣])");
+
+    private static String spell(String w) {
+        StringBuilder b = new StringBuilder();
+        for (int i = 0; i < w.length(); i++) b.append(ABC[w.charAt(i) - 'A']);
+        return b.toString();
+    }
+
+    static String latin(String s) {
+        for (int i = 0; i < LATIN.length; i++) s = LATIN_RES[i].matcher(s).replaceAll(Matcher.quoteReplacement(LATIN[i][1]));
+        Matcher m = AMP.matcher(s);
+        StringBuffer sb = new StringBuffer();
+        while (m.find()) m.appendReplacement(sb, Matcher.quoteReplacement(spell(m.group(1)) + "앤" + spell(m.group(2))));
+        m.appendTail(sb);
+        m = CAPS.matcher(sb.toString());
+        sb = new StringBuffer();
+        while (m.find()) m.appendReplacement(sb, Matcher.quoteReplacement(m.group().length() > 3 && WORDLIKE.matcher(m.group()).find() ? m.group() : spell(m.group())));
+        m.appendTail(sb);
+        s = sb.toString();
+        return spellAll(CAP_HANGUL, s);
+    }
+
+    private static String spellAll(Pattern p, String s) {
+        Matcher m = p.matcher(s);
+        StringBuffer sb = new StringBuffer();
+        while (m.find()) m.appendReplacement(sb, Matcher.quoteReplacement(spell(m.group())));
+        m.appendTail(sb);
+        return sb.toString();
+    }
+
     static String say(String text) {
         if (text == null || text.isEmpty()) return text;
-        String s = symbols(numbers(text));
+        String s = symbols(latin(numbers(text)));
         for (int i = 0; i < WORDS.length; i++) s = WORD_RES[i].matcher(s).replaceAll("$1" + Matcher.quoteReplacement(WORDS[i][1]));
         s = adnominal(s);
         s = stations(s);

@@ -4,7 +4,7 @@ const b = require(require('path').resolve(process.argv[2] || 'out/briefing.json'
 const seen = new Set();
 for (const s of b.sections) for (const x of s.sources) for (const i of x.items) {
   for (const t of [i.spoken || i.title, ...(i.say || [])]) {
-    if (!t || seen.has(t) || !/[\d%$€¥£~:+\-/·()▲■●↑↓&]/.test(t)) continue;
+    if (!t || seen.has(t) || !/[\d%$€¥£~:+\-/·()▲■●↑↓&]|[A-Z]/.test(t)) continue;
     seen.add(t);
     console.log(`${t}\n  → ${Pron.say(t)}`);
   }
