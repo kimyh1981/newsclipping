@@ -288,7 +288,13 @@ public class NewsService extends Service {
             main.post(this::finish); // 주말·공휴일: 자동으로는 읽지 않는다
             return;
         } else {
-            script = brief.lines(new Prefs(this).sources(), Brief.koreanDate(System.currentTimeMillis()));
+            // 직접 넣은 언론사·섹션 순서·농업 키워드: 폰이 그 자리에서 가져와 원고에 넣는다 (녹음 없이 폰 음성)
+            Prefs prefs = new Prefs(this);
+            long now = System.currentTimeMillis();
+            Extras.addCustom(brief, prefs.custom(), now);
+            List<Brief.Picked> picked = brief.select(prefs.sources(), prefs.order());
+            Extras.addKeywords(brief, picked, prefs.keywords(), now);
+            script = brief.linesOf(picked, Brief.koreanDate(now));
         }
         if (!manual) new Prefs(this).markPlayed();
         if (brief != null) fetchClips(brief, script);
@@ -302,11 +308,11 @@ public class NewsService extends Service {
         // 설정에서 폰 음성을 직접 골랐으면 처음부터 끝까지 그 음성으로 읽는다 (주인 요청 2026-10-13: 본문도 설정한 같은 음성으로)
         if (!new Prefs(this).voice().isEmpty()) { Log.i(TAG, "고른 폰 음성으로 모두 읽음"); return; }
         Set<String> texts = new LinkedHashSet<>();
-        for (Brief.Line l : script) { // 원고 줄을 먼저, 전체 듣기 문장은 그 뒤에
-            if (!l.text.isEmpty()) texts.add(l.text);
+        for (Brief.Line l : script) { // 원고 줄을 먼저, 전체 듣기 문장은 그 뒤에. 폰이 직접 가져온 기사 줄은 녹음이 없으니 뺀다
+            if (!l.text.isEmpty() && !l.local) texts.add(l.text);
         }
         for (Brief.Line l : script) {
-            if (l.item != null) texts.addAll(l.item.fullSentences());
+            if (l.item != null && !l.local) texts.addAll(l.item.fullSentences());
         }
         // 원고 줄과 본문이 다 녹음돼 있을 때만 녹음 음성으로 읽는다. 하나라도 빠지면 모두 폰 음성: 읽다가 목소리가 바뀌지 않게
         int missing = 0;

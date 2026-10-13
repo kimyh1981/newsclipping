@@ -3,12 +3,14 @@ package io.github.kimyh1981.newsclipping;
 import android.content.Context;
 import android.content.SharedPreferences;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.Locale;
 import java.util.Set;
 
-/** 설정: 차 블루투스, 재생 시간대, 평일만, 고른 언론사, 목소리·빠르기, 오늘 이미 읽었는지. */
+/** 설정: 차 블루투스, 재생 시간대, 평일만, 고른 언론사·섹션 순서·직접 넣은 언론사·농업 키워드, 목소리·빠르기, 오늘 이미 읽었는지. */
 final class Prefs {
     static final int DEFAULT_START = 5 * 60; // 6시 전에 차에 타는 날도 읽게 (2026-10-13, 원고는 4시 40분에 만든다)
     static final int DEFAULT_END = 8 * 60;
@@ -38,6 +40,24 @@ final class Prefs {
     Set<String> sources() { return p.contains("sources") ? new HashSet<>(p.getStringSet("sources", new HashSet<>())) : null; }
     void setSources(Set<String> ids) { p.edit().putStringSet("sources", new HashSet<>(ids)).apply(); }
     void resetSources() { p.edit().remove("sources").apply(); }
+
+    /** 섹션 재생 순서(섹션 id). 비어 있으면 서버 순서 */
+    List<String> order() { return split(p.getString("order", "")); }
+    void setOrder(List<String> ids) { p.edit().putString("order", String.join(",", ids)).apply(); }
+
+    /** 주소를 직접 넣은 언론사 (Extras.Custom 목록 JSON) */
+    List<Extras.Custom> custom() { return Extras.parseCustom(p.getString("custom", "")); }
+    void setCustom(List<Extras.Custom> list) { p.edit().putString("custom", Extras.customJson(list)).apply(); }
+
+    /** 농업 키워드: 농업 헤드라인에 그 낱말 기사가 없으면 한 건 더 찾아 읽는다 */
+    List<String> keywords() { return split(p.getString("keywords", "")); }
+    void setKeywords(List<String> words) { p.edit().putString("keywords", String.join(",", words)).apply(); }
+
+    private static List<String> split(String s) {
+        List<String> out = new ArrayList<>();
+        for (String x : s.split(",")) if (!x.trim().isEmpty()) out.add(x.trim());
+        return out;
+    }
 
     /** 고른 음성 이름. 비어 있으면 자동(가장 자연스러운 음성) */
     String voice() { return p.getString("voice", ""); }

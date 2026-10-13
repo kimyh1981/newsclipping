@@ -20,11 +20,16 @@ final class Brief {
         final String title, spoken, source, group, summary, body;
         /** 서버가 소리 내어 읽기 좋게 다듬어 문장마다 나눈 '전체 듣기' 글 (문장마다 녹음·자막). 옛 briefing.json이면 비어 있다 */
         final List<String> say;
+        /** 폰이 직접 가져온 기사(직접 넣은 언론사, 농업 키워드): 서버 녹음이 없어 폰 음성으로 읽는다 */
+        final boolean local;
         Item(String title, String spoken, String source, String group, String summary, String body) {
             this(title, spoken, source, group, summary, body, Collections.<String>emptyList());
         }
         Item(String title, String spoken, String source, String group, String summary, String body, List<String> say) {
-            this.title = title; this.spoken = spoken; this.source = source; this.group = group; this.summary = summary; this.body = body; this.say = say;
+            this(title, spoken, source, group, summary, body, say, false);
+        }
+        Item(String title, String spoken, String source, String group, String summary, String body, List<String> say, boolean local) {
+            this.title = title; this.spoken = spoken; this.source = source; this.group = group; this.summary = summary; this.body = body; this.say = say; this.local = local;
         }
 
         /** '전체 듣기'로 읽을 글: 본문이 없으면 요약 */
@@ -42,7 +47,10 @@ final class Brief {
     static final class Line {
         final String text;
         final Item item;
-        Line(String text, Item item) { this.text = text; this.item = item; }
+        /** 폰이 직접 가져온 기사의 줄(헤드라인과 그 언론사 소개): 서버 녹음을 찾지 않는다 */
+        final boolean local;
+        Line(String text, Item item) { this(text, item, item != null && item.local); }
+        Line(String text, Item item, boolean local) { this.text = text; this.item = item; this.local = local; }
     }
 
     static final class Source {
@@ -67,10 +75,10 @@ final class Brief {
 
     /** 고른 언론사로 추린 섹션 */
     static final class Picked {
-        final String title;
+        final String id, title;
         final boolean perSourceLabel;
         final List<Item> items = new ArrayList<>();
-        Picked(String title, boolean perSourceLabel) { this.title = title; this.perSourceLabel = perSourceLabel; }
+        Picked(String id, String title, boolean perSourceLabel) { this.id = id; this.title = title; this.perSourceLabel = perSourceLabel; }
     }
 
     // 아나운서처럼: 요일에 맞춘 인사, 섹션마다 다른 연결 말, 언론사 소개, 맺음말 (js/brief.js와 같은 문장)
@@ -162,11 +170,14 @@ final class Brief {
     /** enabled가 null이면 기본 언론사. 같은 사건(group)은 처음 나온 곳에서 한 번만, 언론사마다 take건, 섹션마다 limit건까지.
      *  언론사를 돌아가며 한 건씩 고르므로 고른 언론사는 기사가 있으면 모두 한 건 이상 나오고,
      *  고른 언론사가 limit보다 많으면 섹션은 고른 언론사 수만큼 늘어난다 (원고는 언론사 순서대로). js/brief.js와 같은 규칙 */
-    List<Picked> select(Set<String> enabled) {
+    List<Picked> select(Set<String> enabled) { return select(enabled, null); }
+
+    /** order: 사람이 정한 섹션 순서(섹션 id). 거기 없는 섹션은 원래 순서대로 그 뒤에 */
+    List<Picked> select(Set<String> enabled, List<String> order) {
         Set<String> on = enabled == null ? defaults() : enabled;
         Set<String> groups = new HashSet<>();
         List<Picked> out = new ArrayList<>();
-        for (Section sec : sections) {
+        for (Section sec : ordered(order)) {
             List<Source> srcs = new ArrayList<>();
             for (Source src : sec.sources) if (on.contains(src.id)) srcs.add(src);
             if (srcs.isEmpty()) continue;
@@ -190,21 +201,44 @@ final class Brief {
                     }
                 }
             }
-            Picked p = new Picked(sec.title, sec.perSourceLabel);
+            Picked p = new Picked(sec.id, sec.title, sec.perSourceLabel);
             for (List<Item> l : per) p.items.addAll(l);
             out.add(p);
         }
         return out;
     }
 
+    /** 섹션을 사람이 정한 순서로. order가 비었으면 서버 순서 그대로 */
+    List<Section> ordered(List<String> order) {
+        if (order == null || order.isEmpty()) return sections;
+        List<Section> out = new ArrayList<>();
+        for (String id : order) for (Section s : sections) if (s.id.equals(id) && !out.contains(s)) out.add(s);
+        for (Section s : sections) if (!out.contains(s)) out.add(s);
+        return out;
+    }
+
+    /** 폰이 직접 가져온 언론사를 그 섹션 끝에 붙인다 (없는 섹션이면 버린다) */
+    boolean addSource(String sectionId, Source src) {
+        for (Section s : sections) {
+            if (!s.id.equals(sectionId)) continue;
+            for (Source x : s.sources) if (x.id.equals(src.id)) return false;
+            s.sources.add(src);
+            return true;
+        }
+        return false;
+    }
+
     /** 원고를 줄 단위로: 앱은 줄마다 읽고, 기사 줄에서 '자세히'를 받으면 그 기사 요약을 읽는다 */
     List<Line> lines(Set<String> enabled) { return lines(enabled, null); }
 
-    /** today: 오늘 서울 날짜. 원고 날짜와 다르면(서버가 오늘 원고를 아직 못 만듦) 인사·맺음말은 오늘 날짜로, 어제 뉴스라고 알린다 */
-    List<Line> lines(Set<String> enabled, String today) {
+    List<Line> lines(Set<String> enabled, String today) { return linesOf(select(enabled), today); }
+
+    /** picked: select로 고른 섹션(폰이 붙인 키워드 기사가 들어 있을 수 있다).
+     *  today: 오늘 서울 날짜. 원고 날짜와 다르면(서버가 오늘 원고를 아직 못 만듦) 인사·맺음말은 오늘 날짜로, 어제 뉴스라고 알린다 */
+    List<Line> linesOf(List<Picked> picked, String today) {
         boolean stale = today != null && !today.equals(dateLabel);
         String date = stale ? today : dateLabel;
-        List<Picked> secs = select(enabled);
+        List<Picked> secs = picked;
         boolean any = false;
         for (Picked p : secs) any |= !p.items.isEmpty();
         List<Line> lines = new ArrayList<>();
@@ -221,7 +255,7 @@ final class Brief {
             if (sec.items.isEmpty()) { lines.add(new Line("오늘은 새로 들어온 소식이 없습니다.", null)); continue; }
             String last = null;
             for (Item it : sec.items) {
-                if (sec.perSourceLabel && !it.source.equals(last)) lines.add(new Line(it.source + " 소식입니다.", null));
+                if (sec.perSourceLabel && !it.source.equals(last)) lines.add(new Line(it.source + " 소식입니다.", null, it.local));
                 last = it.source;
                 lines.add(new Line(sentence(it.spoken), it));
             }
@@ -242,9 +276,12 @@ final class Brief {
     }
 
     /** 체크 목록에 쓰는 언론사 표: [섹션 제목, 언론사 이름, id, 번역 여부] */
-    List<String[]> catalog() {
+    List<String[]> catalog() { return catalog(null); }
+
+    /** order: 사람이 정한 섹션 순서 */
+    List<String[]> catalog(List<String> order) {
         List<String[]> rows = new ArrayList<>();
-        for (Section s : sections) for (Source src : s.sources) rows.add(new String[] {s.title, src.name, src.id, "ko".equals(src.lang) ? "" : "번역"});
+        for (Section s : ordered(order)) for (Source src : s.sources) rows.add(new String[] {s.title, src.name, src.id, "ko".equals(src.lang) ? "" : "번역"});
         return Collections.unmodifiableList(rows);
     }
 

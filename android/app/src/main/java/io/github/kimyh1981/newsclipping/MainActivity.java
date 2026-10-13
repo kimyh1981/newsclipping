@@ -51,7 +51,7 @@ import java.util.Set;
 public class MainActivity extends Activity {
     private static final String SITE = "https://kimyh1981.github.io/newsclipping/";
     private Prefs prefs;
-    private TextView footer, permVal, batteryVal, overlayVal, carVal, timeVal, sourcesVal, voiceVal, rateVal;
+    private TextView footer, permVal, batteryVal, overlayVal, carVal, timeVal, sourcesVal, orderVal, customVal, keywordsVal, voiceVal, rateVal;
     private Switch enabledSw, weekdaysSw, captionsSw;
     private ImageView playBtn;
     private TextToSpeech preview; // 목소리·빠르기를 고를 때 미리 들려준다
@@ -126,7 +126,10 @@ public class MainActivity extends Activity {
 
         LinearLayout today = section(col, "오늘 뉴스", null);
         row(today, "오늘 기사 목록 (웹)", v -> startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(SITE + "?app"))), true).setText("");
-        sourcesVal = row(today, "들을 언론사", v -> pickSources(), true);
+        sourcesVal = row(today, "들을 언론사", v -> withBrief(this::showSources), true);
+        orderVal = row(today, "섹션 순서", v -> withBrief(this::showOrder), true);
+        customVal = row(today, "언론사 직접 넣기 (주소)", v -> withBrief(this::showCustom), true);
+        keywordsVal = row(today, "농업 키워드", v -> showKeywords(), true);
         row(today, "자막 화면 (터치하면 전체 듣기)", v -> startActivity(new Intent(this, CaptionActivity.class)), false).setText("");
 
         LinearLayout setup = section(col, "처음 한 번만", "두 가지를 허용해야 차에 탔을 때 앱을 열지 않아도 자동으로 읽습니다.");
@@ -189,6 +192,9 @@ public class MainActivity extends Activity {
         timeVal.setText(Rules.hhmm(prefs.start()) + " – " + Rules.hhmm(prefs.end()));
         Set<String> chosen = prefs.sources();
         sourcesVal.setText(chosen == null ? "기본" : chosen.size() + "곳");
+        orderVal.setText(prefs.order().isEmpty() ? "기본" : "직접 정함");
+        customVal.setText(prefs.custom().isEmpty() ? "없음" : prefs.custom().size() + "곳");
+        keywordsVal.setText(prefs.keywords().isEmpty() ? "없음" : String.join(", ", prefs.keywords()));
         voiceVal.setText(prefs.voice().isEmpty() ? "자동" : "직접 고름");
         rateVal.setText(Rules.rateLabel(prefs.rate()));
         enabledSw.setChecked(prefs.enabled());
@@ -417,7 +423,8 @@ public class MainActivity extends Activity {
     }
 
     /** 언론사 체크 목록: 오늘 브리핑에 든 언론사 전체를 섹션별로 보여 주고, 고른 것만 읽는다 */
-    private void pickSources() {
+    /** 오늘 브리핑(섹션·언론사 목록)을 받아 next를 화면에서 실행한다. 직접 넣은 언론사도 목록에 넣는다 */
+    private void withBrief(java.util.function.Consumer<Brief> next) {
         if (loadingSources) return;
         loadingSources = true;
         sourcesVal.setText("불러오는 중…");
@@ -425,6 +432,7 @@ public class MainActivity extends Activity {
             Brief b;
             try {
                 b = Brief.parse(NewsService.fetch(BuildConfig.NEWS_URL));
+                for (Extras.Custom c : prefs.custom()) b.addSource(c.section, new Brief.Source(c.id, c.name, "ko", true, Extras.TAKE, new ArrayList<>()));
             } catch (Exception e) {
                 b = null;
             }
@@ -436,13 +444,13 @@ public class MainActivity extends Activity {
                     new AlertDialog.Builder(this).setMessage("언론사 목록을 불러오지 못했습니다. 인터넷 연결을 확인해 주세요.").setPositiveButton("확인", null).show();
                     return;
                 }
-                showSources(brief);
+                next.accept(brief);
             });
         }, "news-sources").start();
     }
 
     private void showSources(Brief b) {
-        List<String[]> rows = b.catalog();
+        List<String[]> rows = b.catalog(prefs.order());
         Set<String> chosen = prefs.sources() == null ? b.defaults() : prefs.sources();
         String[] labels = new String[rows.size()];
         boolean[] checked = new boolean[rows.size()];
@@ -461,6 +469,170 @@ public class MainActivity extends Activity {
                     refresh();
                 })
                 .setNeutralButton("기본값으로", (d, w) -> { prefs.resetSources(); refresh(); })
+                .setNegativeButton("취소", null)
+                .show();
+    }
+
+    /** 섹션 재생 순서: ▲▼로 옮기고 저장한다 */
+    private void showOrder(Brief b) {
+        List<Brief.Section> secs = new ArrayList<>(b.ordered(prefs.order()));
+        LinearLayout list = new LinearLayout(this);
+        list.setOrientation(LinearLayout.VERTICAL);
+        list.setPadding(dp(12), dp(8), dp(12), 0);
+        Runnable[] draw = new Runnable[1];
+        draw[0] = () -> {
+            list.removeAllViews();
+            for (int i = 0; i < secs.size(); i++) {
+                final int at = i;
+                LinearLayout r = new LinearLayout(this);
+                r.setOrientation(LinearLayout.HORIZONTAL);
+                r.setGravity(Gravity.CENTER_VERTICAL);
+                r.setMinimumHeight(dp(44));
+                r.addView(text((i + 1) + ". " + secs.get(i).title, 16, label), new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+                TextView up = text("▲", 20, i == 0 ? separator : tint);
+                TextView down = text("▼", 20, i == secs.size() - 1 ? separator : tint);
+                up.setPadding(dp(14), dp(6), dp(14), dp(6));
+                down.setPadding(dp(14), dp(6), dp(14), dp(6));
+                up.setOnClickListener(v -> { if (at > 0) { secs.add(at - 1, secs.remove(at)); draw[0].run(); } });
+                down.setOnClickListener(v -> { if (at < secs.size() - 1) { secs.add(at + 1, secs.remove(at)); draw[0].run(); } });
+                r.addView(up);
+                r.addView(down);
+                list.addView(r);
+            }
+        };
+        draw[0].run();
+        ScrollView sv = new ScrollView(this);
+        sv.addView(list);
+        new AlertDialog.Builder(this)
+                .setTitle("섹션 순서 (위에서부터 읽습니다)")
+                .setView(sv)
+                .setPositiveButton("저장", (d, w) -> {
+                    List<String> ids = new ArrayList<>();
+                    for (Brief.Section x : secs) ids.add(x.id);
+                    prefs.setOrder(ids);
+                    refresh();
+                })
+                .setNeutralButton("기본 순서", (d, w) -> { prefs.setOrder(new ArrayList<>()); refresh(); })
+                .setNegativeButton("취소", null)
+                .show();
+    }
+
+    /** 주소를 직접 넣은 언론사 목록: 누르면 지우고, '추가'로 새로 넣는다 */
+    private void showCustom(Brief b) {
+        List<Extras.Custom> list = prefs.custom();
+        String[] labels = new String[list.size()];
+        for (int i = 0; i < list.size(); i++) labels[i] = list.get(i).name + " · " + sectionTitle(b, list.get(i).section);
+        AlertDialog.Builder d = new AlertDialog.Builder(this)
+                .setTitle(list.isEmpty() ? "직접 넣은 언론사가 없습니다" : "직접 넣은 언론사 (누르면 지웁니다)")
+                .setPositiveButton("추가", (x, w) -> addCustom(b))
+                .setNegativeButton("닫기", null);
+        if (!list.isEmpty()) d.setItems(labels, (x, i) -> new AlertDialog.Builder(this)
+                .setMessage(list.get(i).name + "을(를) 지울까요?")
+                .setPositiveButton("지우기", (y, w) -> {
+                    Extras.Custom gone = list.remove(i);
+                    prefs.setCustom(list);
+                    Set<String> on = prefs.sources();
+                    if (on != null && on.remove(gone.id)) prefs.setSources(on);
+                    refresh();
+                })
+                .setNegativeButton("취소", null).show());
+        else d.setMessage("언론사 홈페이지나 RSS 주소를 넣으면 고른 섹션에 들어가고, 들을 언론사 목록에 체크됩니다. 폰이 아침마다 직접 가져와 폰 음성으로 읽습니다.");
+        d.show();
+    }
+
+    private static String sectionTitle(Brief b, String id) {
+        for (Brief.Section s : b.sections) if (s.id.equals(id)) return s.title;
+        return id;
+    }
+
+    private void addCustom(Brief b) {
+        LinearLayout form = new LinearLayout(this);
+        form.setOrientation(LinearLayout.VERTICAL);
+        form.setPadding(dp(20), dp(8), dp(20), 0);
+        android.widget.EditText url = new android.widget.EditText(this);
+        url.setHint("주소 (예: www.nongmin.com 또는 RSS 주소)");
+        url.setSingleLine(true);
+        url.setInputType(android.text.InputType.TYPE_TEXT_VARIATION_URI | android.text.InputType.TYPE_CLASS_TEXT);
+        android.widget.EditText name = new android.widget.EditText(this);
+        name.setHint("이름 (비우면 자동)");
+        name.setSingleLine(true);
+        form.addView(url);
+        form.addView(name);
+        TextView pick = text("넣을 섹션", 14, secondary);
+        pick.setPadding(0, dp(12), 0, dp(4));
+        form.addView(pick);
+        android.widget.RadioGroup group = new android.widget.RadioGroup(this);
+        List<Brief.Section> secs = b.ordered(prefs.order());
+        for (int i = 0; i < secs.size(); i++) {
+            android.widget.RadioButton rb = new android.widget.RadioButton(this);
+            rb.setText(secs.get(i).title);
+            rb.setId(1000 + i);
+            group.addView(rb);
+            if (Extras.FARM.equals(secs.get(i).id)) group.check(rb.getId());
+        }
+        if (group.getCheckedRadioButtonId() == -1 && !secs.isEmpty()) group.check(1000);
+        form.addView(group);
+        ScrollView sv = new ScrollView(this);
+        sv.addView(form);
+        new AlertDialog.Builder(this)
+                .setTitle("언론사 직접 넣기")
+                .setView(sv)
+                .setPositiveButton("확인", (d, w) -> {
+                    String u = Extras.normalize(url.getText().toString());
+                    int idx = group.getCheckedRadioButtonId() - 1000;
+                    if (u.isEmpty() || idx < 0 || idx >= secs.size()) return;
+                    checkCustom(u, name.getText().toString().trim(), secs.get(idx));
+                })
+                .setNegativeButton("취소", null)
+                .show();
+    }
+
+    /** 주소에서 기사를 실제로 찾아 보고 저장한다 */
+    private void checkCustom(String url, String name, Brief.Section sec) {
+        customVal.setText("확인 중…");
+        new Thread(() -> {
+            Extras.Found f = Extras.find(url, "");
+            runOnUiThread(() -> {
+                if (f == null) {
+                    refresh();
+                    new AlertDialog.Builder(this).setMessage("이 주소에서 기사를 찾지 못했습니다. 주소를 확인하거나 RSS 주소를 넣어 주세요.").setPositiveButton("확인", null).show();
+                    return;
+                }
+                String n = !name.isEmpty() ? name : !f.name.isEmpty() && !f.viaGoogle ? f.name : Extras.host(url);
+                List<Extras.Custom> list = prefs.custom();
+                String id = Extras.customId(url);
+                for (int i = list.size() - 1; i >= 0; i--) if (list.get(i).id.equals(id)) list.remove(i);
+                list.add(new Extras.Custom(id, n, url, f.feed, sec.id));
+                prefs.setCustom(list);
+                Set<String> on = prefs.sources();
+                if (on != null) { on.add(id); prefs.setSources(on); } // 기본값을 쓰면 새 언론사는 저절로 켜진다
+                refresh();
+                new AlertDialog.Builder(this)
+                        .setMessage(n + "을(를) '" + sec.title + "'에 넣었습니다. " + (f.viaGoogle ? "RSS가 없어 구글 뉴스에서 이 사이트 기사를 찾아 읽습니다. " : "")
+                                + "지금 기사 " + f.entries.size() + "건이 보입니다. 다음 재생부터 언론사마다 " + Extras.TAKE + "건씩 폰 음성으로 읽습니다.")
+                        .setPositiveButton("확인", null).show();
+            });
+        }, "news-custom-check").start();
+    }
+
+    /** 농업 키워드: 쉼표로 여러 개 */
+    private void showKeywords() {
+        android.widget.EditText words = new android.widget.EditText(this);
+        words.setText(String.join(", ", prefs.keywords()));
+        words.setHint("예: 비료, 미생물, 바이오플랜");
+        LinearLayout box = new LinearLayout(this);
+        box.setPadding(dp(20), dp(8), dp(20), 0);
+        box.addView(words, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
+        new AlertDialog.Builder(this)
+                .setTitle("농업 키워드")
+                .setMessage("농업 신문 헤드라인에 키워드 기사가 없으면, 그 키워드의 오늘 기사를 한 건씩 더 찾아 읽습니다. 쉼표로 여러 개 넣을 수 있습니다.")
+                .setView(box)
+                .setPositiveButton("저장", (d, w) -> {
+                    List<String> out = new ArrayList<>();
+                    for (String k : words.getText().toString().split("[,，]")) if (!k.trim().isEmpty() && !out.contains(k.trim())) out.add(k.trim());
+                    prefs.setKeywords(out);
+                    refresh();
+                })
                 .setNegativeButton("취소", null)
                 .show();
     }

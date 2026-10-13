@@ -27,6 +27,8 @@
   })();
   const appLink = (title) => `intent://play${title ? `?t=${encodeURIComponent(title)}` : ''}#Intent;scheme=newsclipping;package=io.github.kimyh1981.newsclipping;end`;
   try { enabled = JSON.parse(store.get('news.sources')); } catch { enabled = null; }
+  let order = []; // 섹션 재생 순서(섹션 id), 비어 있으면 서버 순서
+  try { order = JSON.parse(store.get('news.order')) || []; } catch { order = []; }
 
   const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
@@ -61,14 +63,14 @@
     const age = (Date.now() - Date.parse(b.generatedAt)) / 3600e3;
     $('meta').textContent = `${b.dateLabel} · ${kstTime(b.generatedAt)} 수집` + (b !== today ? ' · 지난 기사' : age > 20 ? ' · 어제 소식일 수 있어요' : '') +
       (b.autoPlay && !b.autoPlay.play ? ` · 오늘은 ${b.autoPlay.reason}이라 차에서 자동 재생은 쉬어요` : '');
-    const sections = Brief.select(b, enabled);
+    const sections = Brief.select(b, enabled, order);
     $('list').innerHTML = sections.map((s, si) => `<section><h2>${esc(s.title)}</h2>` + (s.items.length
       ? `<ol>${s.items.map((it, ii) => `<li id="i${si}-${ii}"><a href="${esc(it.link)}" target="_blank" rel="noopener">${esc(it.title)}</a><small>${esc(it.source)}${it.original ? ` · 원문: ${esc(it.original)}` : ''}</small><div class="acts"><button class="go" type="button" data-t="${esc(it.title)}" aria-label="이 기사부터 듣기">▶ 여기부터</button>${it.summary ? `<details><summary>자세히</summary><p class="sum">${esc(it.summary)}</p></details>` : ''}</div></li>`).join('')}</ol>`
       : '<p class="empty">새 소식 없음</p>') + '</section>').join('') || '<p class="empty">고른 언론사가 없어요. 아래에서 언론사를 골라 주세요.</p>';
 
     // 원고 줄을 화면의 섹션·기사와 짝지어, 읽는 중인 기사를 표시하고 섹션 단위로 건너뛴다
     let sec = -1;
-    queue = Brief.script(b, enabled).split('\n').map((t) => t.trim()).filter(Boolean).map((text) => {
+    queue = Brief.script(b, enabled, order).split('\n').map((t) => t.trim()).filter(Boolean).map((text) => {
       const hs = sections.findIndex((s, i) => i > sec && text.endsWith(`${s.title}입니다.`));
       if (hs >= 0) sec = hs;
       const s = sections[sec];
@@ -94,9 +96,10 @@
   // 언론사 체크 목록: 섹션마다 언론사를 보여 주고, 고른 것을 이 기기에 저장한다
   function renderPicker(b) {
     const on = new Set(enabled || Brief.defaults(b));
-    $('sources').innerHTML = b.sections.map((s) => `<fieldset><legend>${esc(s.title)}</legend>` + s.sources.map((x) =>
+    const secs = Brief.ordered(b, order);
+    $('sources').innerHTML = secs.map((s, i) => `<fieldset><legend>${esc(s.title)} <button type="button" class="mv" data-sec="${esc(s.id)}" data-d="-1" aria-label="${esc(s.title)} 앞으로"${i ? '' : ' disabled'}>▲</button><button type="button" class="mv" data-sec="${esc(s.id)}" data-d="1" aria-label="${esc(s.title)} 뒤로"${i < secs.length - 1 ? '' : ' disabled'}>▼</button></legend>` + s.sources.map((x) =>
       `<label><input type="checkbox" value="${esc(x.id)}"${on.has(x.id) ? ' checked' : ''}> ${esc(x.name)}${x.lang !== 'ko' ? ' <small>번역</small>' : ''}<small>${x.items.length ? '' : ' · 오늘 기사 없음'}</small></label>`).join('') + '</fieldset>').join('');
-    $('iosCode').textContent = Brief.iosCode(b, enabled);
+    $('iosCode').textContent = Brief.iosCode(b, enabled, order);
     $('pickNote').textContent = enabled ? `${enabled.length}곳을 골랐어요.` : '기본 언론사를 듣고 있어요.';
   }
 
@@ -110,7 +113,20 @@
   }
 
   $('sources').addEventListener('change', () => choose([...document.querySelectorAll('#sources input:checked')].map((x) => x.value)));
-  $('resetSources').onclick = () => choose(null);
+  // 섹션 ▲▼: 읽는 순서를 바꾸고 이 기기에 저장한다
+  $('sources').addEventListener('click', (e) => {
+    const btn = e.target.closest('button.mv');
+    if (!btn) return;
+    const ids = Brief.ordered(data, order).map((s) => s.id);
+    const i = ids.indexOf(btn.dataset.sec);
+    const j = i + Number(btn.dataset.d);
+    if (i < 0 || j < 0 || j >= ids.length) return;
+    [ids[i], ids[j]] = [ids[j], ids[i]];
+    order = ids;
+    store.set('news.order', JSON.stringify(ids));
+    choose(enabled);
+  });
+  $('resetSources').onclick = () => { order = []; store.set('news.order', '[]'); choose(null); };
   $('copyCode').onclick = () => {
     const code = $('iosCode').textContent;
     const done = () => { $('copyCode').textContent = '복사됨'; setTimeout(() => { $('copyCode').textContent = '복사'; }, 1500); };
