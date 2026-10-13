@@ -68,11 +68,18 @@
   // 같은 사건(group)은 처음 나온 곳에서 한 번만, 언론사마다 take건, 섹션마다 limit건까지.
   // 언론사를 돌아가며 한 건씩 고르므로 고른 언론사는 기사가 있으면 모두 한 건 이상 나오고,
   // 고른 언론사가 limit보다 많으면 섹션은 고른 언론사 수만큼 늘어난다 (원고는 언론사 순서대로)
-  function select(b, enabled) {
+  // order: 사람이 정한 섹션 순서(섹션 id). 거기 없는 섹션은 원래 순서대로 그 뒤에 (Brief.ordered와 같은 규칙)
+  function ordered(b, order) {
+    if (!order || !order.length) return b.sections;
+    const first = order.map((id) => b.sections.find((s) => s.id === id)).filter((s, i, a) => s && a.indexOf(s) === i);
+    return [...first, ...b.sections.filter((s) => !first.includes(s))];
+  }
+
+  function select(b, enabled, order) {
     const on = new Set(enabled || defaults(b));
     const groups = new Set();
     const out = [];
-    for (const sec of b.sections) {
+    for (const sec of ordered(b, order)) {
       const srcs = sec.sources.filter((s) => on.has(s.id));
       if (!srcs.length) continue;
       const cap = Math.max(sec.limit, srcs.length);
@@ -99,9 +106,9 @@
     return out;
   }
 
-  function script(b, enabled) {
+  function script(b, enabled, order) {
     const now = Date.parse(b.generatedAt);
-    const sections = select(b, enabled);
+    const sections = select(b, enabled, order);
     if (!sections.some((s) => s.items.length)) return `좋은 아침입니다. ${koreanDate(now)}입니다. 오늘은 뉴스를 가져오지 못했습니다. 안전 운전하세요.\n`;
     return buildScript(sections, now);
   }
@@ -131,11 +138,11 @@
   }
 
   // 단축어에 붙여 넣을 코드: 시작 인사, 고른 언론사(화면 순서), 맺음말
-  function iosCode(b, enabled) {
+  function iosCode(b, enabled, order) {
     const on = new Set(enabled || defaults(b));
-    const ids = b.sections.flatMap((sec) => sec.sources.filter((x) => on.has(x.id)).map((x) => x.id));
+    const ids = ordered(b, order).flatMap((sec) => sec.sources.filter((x) => on.has(x.id)).map((x) => x.id));
     return ['open', ...ids, 'close'].join(' ');
   }
 
-  return { koreanDate, sentence, buildScript, defaults, select, script, piece, iosCode, opening, intro, closing, EMPTY, STALE };
+  return { koreanDate, sentence, buildScript, defaults, ordered, select, script, piece, iosCode, opening, intro, closing, EMPTY, STALE };
 });

@@ -42,6 +42,8 @@
   .picker summary { font-weight: 700; cursor: pointer; min-height: 32px; }
   fieldset { border: 0; border-top: 1px solid var(--line); margin: 8px 0 0; padding: 8px 0 0; }
   legend { font-weight: 600; font-size: .95rem; padding: 0; }
+  legend .mv { margin-left: 6px; min-width: 32px; min-height: 28px; padding: 0 6px; font-size: .8rem; }
+  legend .mv:disabled { opacity: .3; }
   fieldset label { display: inline-flex; align-items: center; gap: 6px; margin: 4px 14px 4px 0; min-height: 32px; }
   fieldset input { width: 20px; height: 20px; }
   label small { color: var(--sub); }
@@ -64,7 +66,7 @@
 
   <details class="picker" id="picker">
     <summary>들을 언론사 고르기</summary>
-    <p class="meta"><span id="pickNote"></span> 고른 언론사는 이 기기에만 저장돼요. 갤럭시 앱은 앱의 '들을 언론사'에서 따로 고릅니다. 외국 언론은 제목을 우리말로 번역해 읽어요.</p>
+    <p class="meta"><span id="pickNote"></span> 고른 언론사와 섹션 순서(▲▼)는 이 기기에만 저장돼요. 갤럭시 앱은 앱의 '들을 언론사'·'섹션 순서'에서 따로 고르고, 언론사 주소 직접 넣기와 농업 키워드는 앱에서만 됩니다. 외국 언론은 제목을 우리말로 번역해 읽어요.</p>
     <div id="sources"></div>
     <button id="resetSources" type="button">기본값으로</button>
     <p class="meta">아이폰 단축어용 코드: 단축어의 '텍스트' 칸에 붙여 넣으면 여기서 고른 언론사만 읽어요.</p>

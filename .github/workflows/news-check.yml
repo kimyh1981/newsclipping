@@ -3,7 +3,7 @@ name: News check
 
 on:
   pull_request:
-    paths: ['tools/**', 'feeds.json', 'tests/**', '.github/workflows/news-check.yml']
+    paths: ['tools/**', 'feeds.json', 'tests/**', '.github/workflows/news-check.yml', 'android/app/src/main/java/**/Extras.java', 'android/app/src/test/java/**/ExtrasLive.java']
   workflow_dispatch:
 
 permissions:
@@ -40,3 +40,10 @@ jobs:
           ls -l out/audio 2>/dev/null | head -8 || echo '녹음 없음'
           echo '----- 수집 기록 -----'
           node -e "require('./out/briefing.json').log.forEach((l)=>console.log(l))"
+      - name: Phone extras (언론사 직접 넣기, 농업 키워드)
+        timeout-minutes: 3
+        run: |
+          curl -sSfo /tmp/json.jar https://repo1.maven.org/maven2/org/json/json/20240303/json-20240303.jar
+          J=android/app/src/main/java/io/github/kimyh1981/newsclipping
+          javac -encoding UTF-8 -nowarn -d /tmp/ex -cp /tmp/json.jar $J/Brief.java $J/Extras.java android/app/src/test/java/io/github/kimyh1981/newsclipping/ExtrasLive.java
+          java -cp /tmp/ex:/tmp/json.jar io.github.kimyh1981.newsclipping.ExtrasLive www.nongmin.com https://www.amnews.co.kr https://www.agrinet.co.kr/rss/allArticle.xml www.newsfarm.co.kr 키워드:비료 키워드:바이오플랜 키워드:미생물
