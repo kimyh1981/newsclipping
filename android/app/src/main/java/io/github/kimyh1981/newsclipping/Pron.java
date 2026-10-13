@@ -33,10 +33,12 @@ final class Pron {
         {"합병증", "합뼝쯩", ""}, {"감염증", "감염쯩", ""}, {"휘발유", "휘발류", ""}, {"식용유", "식용뉴", ""}, {"국민연금", "국민년금", ""}, {"색연필", "생년필", ""},
         {"한여름", "한녀름", ""}, {"담요", "담뇨", ""}, {"영업용", "영업뇽", ""}, {"일일이", "일리리", ""},
     };
+    /** '세 대가 부딪쳤다'의 대가는 값 가(價)가 아니다: 고유어 수 바로 뒤의 '대'로 시작하는 말은 두지 않는다 */
+    private static final String AFTER_COUNT = "(?<!(?:한|두|세|네|섯|곱|덟|홉|열|무|물|른|흔|쉰|순|든))";
     private static final Pattern[] WORD_RES = new Pattern[WORDS.length];
     static {
         for (int i = 0; i < WORDS.length; i++) {
-            WORD_RES[i] = Pattern.compile("(^|[^가-힣])" + Pattern.quote(WORDS[i][0]) + (WORDS[i][2].isEmpty() ? "" : "(?!" + WORDS[i][2] + ")"));
+            WORD_RES[i] = Pattern.compile((WORDS[i][0].charAt(0) == '대' ? AFTER_COUNT : "") + "(^|[^가-힣])" + Pattern.quote(WORDS[i][0]) + (WORDS[i][2].isEmpty() ? "" : "(?!" + WORDS[i][2] + ")"));
         }
     }
     private static final Pattern ADNOMINAL = Pattern.compile("([가-힣]) (수|것|줄|바)(?=[^가-힣]|$|[가도는밖조만을이은으에])");
@@ -130,13 +132,25 @@ final class Pron {
     private static final java.util.Map<String, String> UNITS = new java.util.HashMap<>();
     static {
         String[][] u = {{"%p", "퍼센트포인트"}, {"%포인트", "퍼센트포인트"}, {"%", "퍼센트"}, {"퍼센트포인트", "퍼센트포인트"}, {"퍼센트", "퍼센트"},
-            {"kWh", "킬로와트시"}, {"km", "킬로미터"}, {"kg", "킬로그램"}, {"cm", "센티미터"}, {"mm", "밀리미터"}, {"㎡", "제곱미터"}, {"m²", "제곱미터"},
-            {"MW", "메가와트"}, {"GW", "기가와트"}, {"GB", "기가바이트"}, {"TB", "테라바이트"}, {"ha", "헥타르"}, {"℃", "도"}, {"°C", "도"}};
+            {"km/h", "킬로미터"}, {"kWh", "킬로와트시"}, {"MWh", "메가와트시"}, {"GWh", "기가와트시"}, {"TWh", "테라와트시"}, {"kW", "킬로와트"}, {"MW", "메가와트"}, {"GW", "기가와트"},
+            {"km²", "제곱킬로미터"}, {"km2", "제곱킬로미터"}, {"㎢", "제곱킬로미터"}, {"km", "킬로미터"}, {"kg", "킬로그램"}, {"mg", "밀리그램"}, {"μg", "마이크로그램"}, {"㎍", "마이크로그램"},
+            {"cm", "센티미터"}, {"mm", "밀리미터"}, {"ml", "밀리리터"}, {"mL", "밀리리터"}, {"㎡", "제곱미터"}, {"m²", "제곱미터"}, {"m2", "제곱미터"}, {"m", "미터"}, {"g", "그램"}, {"t", "톤"},
+            {"ℓ", "리터"}, {"L", "리터"}, {"ha", "헥타르"}, {"ppm", "피피엠"}, {"bp", "베이시스포인트"}, {"GB", "기가바이트"}, {"TB", "테라바이트"}, {"MB", "메가바이트"}, {"℃", "도"}, {"°C", "도"}, {"°", "도"}};
         for (String[] x : u) UNITS.put(x[0], x[1]);
     }
-    private static final Pattern NUM = Pattern.compile("(?<![\\w.,-])(-)?(\\d{1,3}(?:,\\d{3})+|\\d+)(?:\\.(\\d+))?(?:\\s*(%p|%포인트|%|퍼센트포인트|퍼센트|kWh|km|kg|cm|mm|㎡|m²|MW|GW|GB|TB|ha|℃|°C)(?![A-Za-z])|(?!\\.?\\d)(?![A-Za-z]))");
-    private static final Pattern NATIVE = Pattern.compile("^\\s?(?:번째|시간|군데|차례|켤레|송이|그루|마리|가지|사람|개(?!월|국|사|년|소|항|교|층|조)|명|살|곳|달(?!러)|권(?!리|한|역|고|자|위)|잔|벌(?!금|써|어)|채|척|통(?!화|신|계|합|과|령))");
-    private static final Pattern CLOCK = Pattern.compile("^시(?!간|장|즌|청|민|군|의회)");
+    private static final String UNIT = "%p|%포인트|%|퍼센트포인트|퍼센트|km/h|kWh|MWh|GWh|TWh|kW|MW|GW|km²|km2|㎢|km|kg|mg|μg|㎍|cm|mm|ml|mL|㎡|m²|m2|m|g|t|ℓ|L|ha|ppm|bp|GB|TB|MB|℃|°C|°";
+    private static final Pattern NUM = Pattern.compile("(?<![\\w.-])(?:(?<![^\\s(])(-))?(\\d{1,3}(?:,\\d{3})+|\\d+)(?:\\.(\\d+))?(?:\\s*(" + UNIT + ")(?![A-Za-z])|(?!\\.?\\d)(?![A-Za-z]))");
+    private static final String COUNTER = "번째|시간|군데|차례|켤레|송이|그루|마리|가지|사람|그릇|자루|봉지|포기|마디|끼(?!리)|개(?!월|국|사|년|소|항|교|층|조)|명|살|곳|달(?!러)"
+        + "|권(?!리|한|역|고|자|위)|잔(?!액|고|여)|벌(?!금|써|어)|채(?!권)|척|통(?!화|신|계|합|과|령)|장(?!관|기|애|면)|배(?!럴)"
+        + "|번(?!째|지|호|길)(?!\\s?(?:출구|국도|지방도|도로|버스|타자|홀|게이트|트랙|채널|레인|환자|확진자|후보))";
+    private static final Pattern NATIVE = Pattern.compile("^\\s?(?:" + COUNTER + ")");
+    private static final Pattern DAE = Pattern.compile("^\\s?대(?=[가를의는도만와씩로]|\\s(?:이상|이하|가량|정도|씩|분)|[,.?!]|$)");
+    private static final Pattern CLOCK = Pattern.compile("^\\s?시(?!간|장|즌|청|민|군|의회|의원|도|정|각|점|대|공|설|리즈)");
+    private static final String[] ROUGH = {"", "한두", "두세", "서너", "네다섯", "대여섯", "예닐곱", "일고여덟"};
+    private static final Pattern RANGE = Pattern.compile("(?<![\\d.,])(\\d{1,2})\\s*(?:~|-|에서\\s?)(\\d{1,2})(\\s?)(" + COUNTER + "|대(?=[가를의는도만와씩로\\s,.]|$))");
+    private static final Pattern TIME = Pattern.compile("(?<![\\d:])([01]?\\d|2[0-4]):([0-5]\\d)(?![\\d:])");
+    private static final Pattern MONEY = Pattern.compile("([$€£¥₩])\\s?((?:\\d{1,3}(?:,\\d{3})+|\\d+)(?:\\.\\d+)?)(\\s?[조억만천])?");
+    private static final Pattern FRACTION = Pattern.compile("(?<![\\d/.])(\\d{1,3})/(\\d{1,3})(?![\\d/])");
 
     private static String sino4(int n) {
         String d = String.format(java.util.Locale.ROOT, "%04d", n);
@@ -173,35 +187,78 @@ final class Pron {
         return N10[n / 10] + N1[n % 10];
     }
 
+    /** 전각 숫자·기호와 한 글자 단위(㎞·㎏)를 보통 글자로 */
+    private static String plain(String s) {
+        StringBuilder b = new StringBuilder(s.length());
+        for (int i = 0; i < s.length(); i++) {
+            char c = s.charAt(i);
+            b.append(c >= '０' && c <= '９' || "％～：＋－．".indexOf(c) >= 0 ? (char) (c - 0xfee0) : c);
+        }
+        return b.toString().replace("㎞", "km").replace("㎏", "kg").replace("㎜", "mm").replace("㎝", "cm").replace("㏊", "ha").replace("㎾", "kW").replace("㎿", "MW").replaceAll("[ㆍ・•∙]", "·");
+    }
+
     static String numbers(String s) {
+        s = plain(s).replaceAll("코로나\\s?-?19", "코로나 일구").replaceAll("영하\\s?-(?=\\d)", "영하 ").replaceAll("시속\\s?(\\d[\\d,.]*)\\s?km/h", "$1km/h");
         s = s.replaceAll("(\\d{4})\\s?[.\\-/]\\s?(\\d{1,2})\\s?[.\\-/]\\s?(\\d{1,2})(?!\\d)\\.?", "$1년 $2월 $3일");
-        s = s.replaceAll("\\$\\s?(\\d[\\d,]*(?:\\.\\d+)?)(\\s?[조억만천])?", "$1$2달러");
-        s = s.replaceAll("(\\d)\\s*~\\s*(?=\\d)", "$1에서 ").replaceAll("(\\d)-(?=\\d)", "$1에서 ").replaceAll("(\\d)\\s?:\\s?(?=\\d)", "$1 대 ");
-        Matcher m = NUM.matcher(s);
+        Matcher m = TIME.matcher(s);
         StringBuffer sb = new StringBuffer();
+        while (m.find()) {
+            int mm = Integer.parseInt(m.group(2));
+            m.appendReplacement(sb, Integer.parseInt(m.group(1)) + "시" + (mm > 0 ? " " + mm + "분" : ""));
+        }
+        m.appendTail(sb);
+        s = sb.toString();
+        m = MONEY.matcher(s);
+        sb = new StringBuffer();
+        while (m.find()) {
+            String c = m.group(1);
+            String word = c.equals("$") ? "달러" : c.equals("€") ? "유로" : c.equals("£") ? "파운드" : c.equals("¥") ? "엔" : "원";
+            m.appendReplacement(sb, Matcher.quoteReplacement(m.group(2) + (m.group(3) == null ? "" : m.group(3)) + word));
+        }
+        m.appendTail(sb);
+        s = sb.toString();
+        s = s.replaceAll("(?<![^\\s(])\\+(?=\\d)", "플러스 ").replaceAll("±\\s?(?=\\d)", "플러스마이너스 ");
+        s = s.replaceAll("([1-4])/4\\s?분기", "$1분기");
+        s = FRACTION.matcher(s).replaceAll("$2분의 $1");
+        m = RANGE.matcher(s);
+        sb = new StringBuffer();
+        while (m.find()) {
+            int a = Integer.parseInt(m.group(1)), b = Integer.parseInt(m.group(2));
+            String sp = m.group(3), c = m.group(4);
+            String r = b == a + 1 && a >= 1 && a < ROUGH.length ? ROUGH[a] + sp + c : m.group(1) + sp + c + "에서 " + m.group(2) + sp + c;
+            m.appendReplacement(sb, Matcher.quoteReplacement(r));
+        }
+        m.appendTail(sb);
+        s = sb.toString();
+        s = s.replaceAll("(\\d)\\s*~\\s*(?=\\d)", "$1에서 ").replaceAll("(\\d)-(?=\\d)", "$1에서 ").replaceAll("(\\d)\\s?:\\s?(?=\\d)", "$1 대 ");
+        m = NUM.matcher(s);
+        sb = new StringBuffer();
         while (m.find()) {
             String minus = m.group(1), num = m.group(2), frac = m.group(3), unit = m.group(4);
             String digits = num.replace(",", "");
             String rest = s.substring(m.end());
-            boolean plain = minus == null && frac == null && unit == null;
+            String before = s.substring(Math.max(0, m.start() - 2), m.start());
+            boolean bare = minus == null && frac == null && unit == null && !num.contains(",") && !before.matches("(?s).*제\\s?");
             int n = digits.length() <= 9 ? Integer.parseInt(digits) : Integer.MAX_VALUE;
-            String out;
-            if (plain && !num.contains(",") && n >= 1 && n <= 99 && NATIVE.matcher(rest).find() && !(n > 20 && rest.matches("(?s)^\\s?시간.*"))) {
-                out = n == 1 && rest.matches("(?s)^\\s?번째.*") ? "첫 " : nativeNum(n) + " ";
-            } else if (plain && n >= 1 && n <= 12 && CLOCK.matcher(rest).find()) {
-                out = nativeNum(n) + " ";
-            } else if (plain && rest.startsWith("월") && (n == 6 || n == 10)) {
-                out = n == 6 ? "유" : "시";
-            } else if (plain && n == 1 && rest.matches("(?s)^[십백천만].*")) {
-                out = "";
-            } else {
+            String out = null;
+            if (bare && n >= 1 && n <= 99) {
+                if (rest.matches("(?s)^\\s?번째.*")) out = n == 1 ? "첫 " : nativeNum(n) + " ";
+                else if (rest.matches("(?s)^\\s?달(?!러).*") && (n == 3 || n == 4)) out = n == 3 ? "석 " : "넉 ";
+                else if (NATIVE.matcher(rest).find() && !(n > 20 && rest.matches("(?s)^\\s?시간.*")) && !(n > 10 && rest.matches("(?s)^\\s?배.*"))) out = nativeNum(n) + " ";
+                else if (n % 10 != 0 && DAE.matcher(rest).find()) out = nativeNum(n) + " ";
+                else if (n <= 12 && CLOCK.matcher(rest).find()) out = nativeNum(n) + " ";
+            }
+            if (out == null && bare && rest.startsWith("월") && (n == 6 || n == 10)) out = n == 6 ? "유" : "시";
+            if (out == null && bare && n == 1 && rest.matches("(?s)^[십백천만].*")) out = "";
+            if (out == null) {
                 out = sino(digits);
                 if (frac != null) {
                     StringBuilder f = new StringBuilder();
                     for (int i = 0; i < frac.length(); i++) f.append(DIG[frac.charAt(i) - '0']);
-                    out += " 점 " + f;
+                    out += "쩜" + f;
                 }
-                if (minus != null) out = "마이너스 " + out;
+                if (minus != null) out = (unit != null && unit.matches(".*[℃°].*") ? "영하 " : "마이너스 ") + out;
+                if ("km/h".equals(unit)) out = "시속 " + out;
                 if (unit != null) out += " " + UNITS.get(unit);
             }
             m.appendReplacement(sb, Matcher.quoteReplacement(out));
@@ -211,8 +268,9 @@ final class Pron {
     }
 
     static String symbols(String s) {
-        s = s.replaceAll("[“”\"‘’'`「」『』《》〈〉<>\\[\\]【】]", "").replaceAll("[()]", ", ").replaceAll("…|\\.{2,}", ", ");
-        s = s.replaceAll("[ \\t]*[|/·][ \\t]*", ", ").replace("&", " 앤 ").replace("%", " 퍼센트").replaceAll("[#*=^_~+]", " ").replaceAll("(?<=\\S)[ \\t]*-[ \\t]*(?=\\S)", " ");
+        s = s.replaceAll("[“”\"‘’'`「」『』《》〈〉<>\\[\\]【】※]", "").replaceAll("[()]", ", ").replaceAll("…|\\.{2,}", ", ");
+        s = s.replaceAll("[ \\t]*↑", " 상승").replaceAll("[ \\t]*↓", " 하락").replaceAll("[▲▼△▽▶▷►◀◁◆◇■□●○◎★☆→←↔⇒⇨▸▪]", ", ").replaceAll("\\b[vV][sS]\\b\\.?", " 대 ");
+        s = s.replaceAll("[ \\t]*[|/·][ \\t]*", ", ").replace("&", " 앤 ").replace("%", " 퍼센트").replaceAll("[#*=^_~+@]", " ").replaceAll("(?<=\\S)[ \\t]*-[ \\t]*(?=\\S)", " ");
         s = s.replaceAll("[ \\t]*,(?:[ \\t]*,)*[ \\t]*", ", ").replaceAll(",[ \\t]*([.?!])", "$1").replaceAll("[ \\t]{2,}", " ").replaceAll("(?m)^[ \\t,]+|[ \\t,]+$", "");
         return s;
     }

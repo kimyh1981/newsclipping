@@ -159,3 +159,7 @@ test('전체 듣기 문장: 기자 머리말·괄호 덧붙임·한자·따옴�
   ]);
   assert.deepEqual(rss.speechSentences(''), []);
 });
+
+test('소수점·날짜의 점에서는 문장을 나누지 않는다', () => {
+  assert.deepStrictEqual(rss.speechSentences('물가가 3.5% 올랐다. 금리는 0.25%p 내렸다. 2026.10.13 발표.'), ['물가가 3.5% 올랐다.', '금리는 0.25%p 내렸다.', '2026.10.13 발표.']);
+});

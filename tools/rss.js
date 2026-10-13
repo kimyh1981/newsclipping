@@ -121,8 +121,9 @@ function speechSentences(text) {
   s = s.replace(/…|\.{3,}/g, ', ').replace(/(\d)\s*~\s*(?=\d)/g, '$1에서 ').replace(/~/g, ', ');
   s = s.replace(/(^|[^가-힣·])[가-힣](?:\s*·\s*[가-힣])+(?![가-힣])/g, (m) => m.replace(/\s*·\s*/g, '')).replace(/\s*·\s*/g, ', ');
   s = s.replace(/\s*,(?:\s*,)*\s*(?!\d)/g, ', ').replace(/\s+/g, ' ');
+  s = s.replace(/(\d)\.(?=\d)/g, '$1\u2024'); // 3.5%·2026.10.13 의 점에서 문장을 자르지 않는다
   const out = (s.match(/[^.?!。]+(?:[.?!。]+|$)/g) || [])
-    .map((x) => x.replace(/^[\s,]+|[\s,]+$/g, '').replace(/,\s*([.?!])$/, '$1'))
+    .map((x) => x.replace(/\u2024/g, '.').replace(/^[\s,]+|[\s,]+$/g, '').replace(/,\s*([.?!])$/, '$1'))
     .filter((x) => /[가-힣a-zA-Z0-9]{2}/.test(x))
     .map((x) => (/[.?!]$/.test(x) ? x : `${x}.`));
   return out;

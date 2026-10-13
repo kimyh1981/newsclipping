@@ -74,7 +74,7 @@ function cleanParas(text) {
     .trim()).filter((p) => p.length >= 40 && !/무단\s*전재|재배포\s*금지|저작권자|Copyright|ⓒ|©/i.test(p));
 }
 
-const sentencesOf = (paras) => paras.join(' ').match(/[^.?!。]+[.?!。]+["'”’)]*\s*/g) || [];
+const sentencesOf = (paras) => (paras.join(' ').replace(/(\d)\.(?=\d)/g, '$1\u2024').match(/[^.?!。]+[.?!。]+["'”’)]*\s*/g) || []).map((x) => x.replace(/\u2024/g, '.'));
 
 // '전체 듣기'용 본문: 앞에서부터 문장 단위로 max자까지 (사이트가 공개라 기사 전문을 그대로 옮기지는 않는다)
 function body(text, max = 1200) {
