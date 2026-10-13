@@ -10,7 +10,7 @@ import java.util.Set;
 
 /** 설정: 차 블루투스, 재생 시간대, 평일만, 고른 언론사, 목소리·빠르기, 오늘 이미 읽었는지. */
 final class Prefs {
-    static final int DEFAULT_START = 6 * 60;
+    static final int DEFAULT_START = 5 * 60; // 6시 전에 차에 타는 날도 읽게 (2026-10-13, 원고는 4시 40분에 만든다)
     static final int DEFAULT_END = 8 * 60;
 
     private final SharedPreferences p;

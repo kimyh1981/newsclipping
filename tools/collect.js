@@ -13,6 +13,7 @@ const holidays = require('./holidays.js');
 const { summarize } = require('./summarize.js');
 const tts = require('./tts.js');
 const naver = require('./naver.js');
+const region = require('./region.js');
 
 const SPARE = 2; // 언론사마다 take보다 2건 더 모은다: 다른 언론사와 겹치는 기사를 빼고도 take건을 채우도록
 const UA = 'Mozilla/5.0 (compatible; news-briefing/1.0; +https://github.com/kimyh1981/Personal-Project)';
@@ -278,7 +279,7 @@ async function collect(config, now = Date.now(), key = '', opts = {}) {
         const isPromo = (it) => promo.some((p) => p.test(it.title));
         repeated += picked.slice(0, take + SPARE).filter(isOld).length;
         const items = picked.filter((it) => !isOld(it) && !isPromo(it)).slice(0, take + SPARE);
-        return { id: source.id, name: source.name, lang, default: source.default !== false, take, items };
+        return { id: source.id, name: source.name, lang, default: source.default !== false, take, items, country: source.country || sec.country || '' };
       })),
     };
   }));
@@ -290,6 +291,18 @@ async function collect(config, now = Date.now(), key = '', opts = {}) {
   for (const batch of [foreign.filter((s) => s.default), foreign.filter((s) => !s.default)]) {
     await Promise.all(batch.map((src) => tr(async () => { src.items = await translateItems(src.name, src.lang, src.items, log); })));
   }
+  // 해외 뉴스는 어느 나라 이야기인지 첫머리에 붙여 읽는다 (주인 요청 2026-10-13): "미국, 연준이 금리를 동결했다"
+  sections.forEach((sec, i) => {
+    if (!config.sections[i].region) return;
+    for (const src of sec.sources) {
+      for (const it of src.items) {
+        it.region = region.regionOf(it.spoken, src.country); // 읽을 제목(美→미국 같은 한자 약칭을 푼 것)에서 찾는다
+        it.spoken = region.withRegion(it.spoken, it.region);
+      }
+      delete src.country;
+    }
+  });
+  for (const sec of sections) for (const src of sec.sources) delete src.country;
   if (old.size) log.push(`전날과 겹친 기사 ${repeated}건을 빼고 다음 기사로 채움`);
   if (foreign.length) log.push(`번역기: ${Object.entries(used).map(([k, n]) => `${k} ${n}번`).join(', ') || '없음'}${blocked.size ? ` (429로 막힘: ${[...blocked].join(', ')})` : ''}`);
   group(sections);

@@ -299,6 +299,8 @@ public class NewsService extends Service {
      *  아직 못 받은 줄은 폰 음성으로 읽는다 */
     private void fetchClips(Brief brief, List<Brief.Line> script) {
         if (brief.audioIds.isEmpty()) return;
+        // 설정에서 폰 음성을 직접 골랐으면 처음부터 끝까지 그 음성으로 읽는다 (주인 요청 2026-10-13: 본문도 설정한 같은 음성으로)
+        if (!new Prefs(this).voice().isEmpty()) { Log.i(TAG, "고른 폰 음성으로 모두 읽음"); return; }
         Set<String> texts = new LinkedHashSet<>();
         for (Brief.Line l : script) { // 원고 줄을 먼저, 전체 듣기 문장은 그 뒤에
             if (!l.text.isEmpty()) texts.add(l.text);
@@ -306,6 +308,10 @@ public class NewsService extends Service {
         for (Brief.Line l : script) {
             if (l.item != null) texts.addAll(l.item.fullSentences());
         }
+        // 원고 줄과 본문이 다 녹음돼 있을 때만 녹음 음성으로 읽는다. 하나라도 빠지면 모두 폰 음성: 읽다가 목소리가 바뀌지 않게
+        int missing = 0;
+        for (String t : texts) if (!t.isEmpty() && !brief.audioIds.contains(Brief.audioId(t))) missing++;
+        if (missing > 0) { Log.i(TAG, "녹음 안 된 줄 " + missing + "개: 오늘은 폰 음성으로 모두 읽음"); return; }
         File dir = new File(getCacheDir(), "audio2"); // 2: 서버가 스테레오로 다시 녹음한 파일 (예전 폴더는 아래에서 지운다)
         deleteTree(new File(getCacheDir(), "audio"));
         dir.mkdirs();

@@ -283,7 +283,7 @@
   function carTime(b) {
     const kst = new Date(Date.now() + 9 * 3600e3);
     const h = kst.getUTCHours();
-    return (!b.autoPlay || b.autoPlay.play) && h >= 6 && h < 8;
+    return (!b.autoPlay || b.autoPlay.play) && h >= 5 && h < 8;
   }
 
   // 지난 7일 원고: 서버가 archive/에 남겨 둔 날짜를 골라 그날 기사 목록을 본다 (첫 줄이 오늘)

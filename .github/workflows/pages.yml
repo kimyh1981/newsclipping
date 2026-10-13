@@ -19,19 +19,11 @@ permissions:
   pages: write
   id-token: write
 
-# 새 실행이 오면 앞선 실행은 그만둔다: 2026-10-10 밤 배포 하나가 'waiting'에 멈춘 채 순서를 막아
-# 그 뒤 새벽 원고가 모두 대기·취소됐다. 원고는 늘 가장 새로 만든 것이 맞으므로 앞선 것을 기다릴 까닭이 없다
-concurrency:
-  group: pages
-  cancel-in-progress: true
-
 jobs:
-  deploy:
+  # 원고 만들기(수집·녹음)는 서로 끊지 않는다: 첫 녹음이 십여 분 걸려 다음 예약이 오면 끊기고, 녹음 캐시도 남지 않았다
+  build:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -58,7 +50,7 @@ jobs:
           restore-keys: tts-
       # 신문사·농업·비료·국제/경제 헤드라인 → briefing.json(화면), briefing.txt(앱이 읽는 원고, 주말·공휴일엔 빈 파일)
       - name: News briefing
-        timeout-minutes: 14 # 수집 몇 분 + 음성 녹음 (첫 녹음은 몇 분 걸리고, 같은 날 다시 하면 캐시로 금방)
+        timeout-minutes: 22 # 수집 몇 분 + 음성 녹음 (모든 본문 첫 녹음은 십 분 남짓, 같은 날 다시 하면 캐시로 금방)
         continue-on-error: true
         env:
           DATA_GO_KR_KEY: ${{ secrets.DATA_GO_KR_KEY }}
@@ -75,5 +67,19 @@ jobs:
       - uses: actions/upload-pages-artifact@v3
         with:
           path: _site
+
+  # 올리기만 한 줄로 세우고, 새 것이 오면 앞선 것은 그만둔다: 2026-10-10 밤 배포 하나가 'waiting'에 멈춘 채 순서를 막아
+  # 그 뒤 새벽 원고가 모두 대기·취소됐다
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    concurrency:
+      group: pages
+      cancel-in-progress: true
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
       - id: deployment
         uses: actions/deploy-pages@v4
