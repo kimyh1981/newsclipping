@@ -75,7 +75,7 @@ final class Pron {
         {"DGIST", "디지스트"}, {"GIST", "지스트"}, {"KIST", "키스트"}, {"KAI", "카이"}, {"HYBE", "하이브"}, {"NAVER", "네이버"},
         {"KAKAO", "카카오"}, {"OLED", "올레드"}, {"AMOLED", "아몰레드"}, {"DRAM", "디램"}, {"SRAM", "에스램"}, {"NAND", "낸드"},
         {"RAM", "램"}, {"ROM", "롬"}, {"LAN", "랜"}, {"PIN", "핀"}, {"ARM", "암"}, {"SPAC", "스팩"},
-        {"REIT", "리츠"}, {"ADAS", "에이다스"}, {"SWIFT", "스위프트"}, {"NEET", "니트"}, {"YOLO", "욜로"}, {"FOMO", "포모"},
+        {"REIT", "리츠"}, {"ADAS", "에이다스"}, {"SWIFT", "스위프트"}, {"NEET", "니트"}, {"EZ", "이지"}, {"YOLO", "욜로"}, {"FOMO", "포모"},
         {"VS", "대"}, {"POP", "팝"}, {"NEWS", "뉴스"}, {"SHOW", "쇼"}, {"LIVE", "라이브"}, {"BEST", "베스트"},
         {"NEW", "뉴"}, {"TOP", "톱"}, {"PLUS", "플러스"}, {"PRO", "프로"}, {"MAX", "맥스"}, {"ULTRA", "울트라"},
         {"FOLD", "폴드"}, {"FLIP", "플립"}, {"MINI", "미니"}, {"AIR", "에어"}, {"PAY", "페이"}, {"NO", "노"},
@@ -350,7 +350,7 @@ final class Pron {
     }
 
     static String symbols(String s) {
-        s = s.replaceAll("[“”\"‘’'`「」『』《》〈〉<>\\[\\]【】※]", "").replaceAll("[()]", ", ").replaceAll("…|\\.{2,}", ", ");
+        s = s.replaceAll("[“”\"‘’'`「」『』《》〈〉<>\\[\\]【】※\\u1100-\\u11ff]", "").replaceAll("[()]", ", ").replaceAll("…|\\.{2,}", ", ");
         s = s.replaceAll("[ \\t]*↑", " 상승").replaceAll("[ \\t]*↓", " 하락").replaceAll("[▲▼△▽▶▷►◀◁◆◇■□●○◎★☆→←↔⇒⇨▸▪]", ", ").replaceAll("\\b[vV][sS]\\b\\.?", " 대 ");
         s = s.replaceAll("[ \\t]*[|/·][ \\t]*", ", ").replace("&", " 앤 ").replace("%", " 퍼센트").replaceAll("[#*=^_~+@]", " ").replaceAll("(?<=\\S)[ \\t]*-[ \\t]*(?=\\S)", " ");
         s = s.replaceAll("[ \\t]*,(?:[ \\t]*,)*[ \\t]*", ", ").replaceAll(",[ \\t]*([.?!])", "$1").replaceAll("[ \\t]{2,}", " ").replaceAll("(?m)^[ \\t,]+|[ \\t,]+$", "");
