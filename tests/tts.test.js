@@ -67,14 +67,14 @@ test('키가 틀리면(403) 바로 멈추고 기록만 남긴다', async () => {
 test('edge(무료): 키 없이 한꺼번에 녹음하고, 실패한 줄은 빼며, 파이썬이 없으면 기록만 남긴다', async () => {
   const out = tmp();
   const batch = (jobs, voice) => {
-    assert.equal(voice, 'ko-KR-SunHiNeural');
+    assert.equal(voice, 'ko-KR-InJoonNeural');
     const res = {};
     jobs.forEach((j, i) => { if (i === 1) res[j.id] = 'WSServerHandshakeError: 403'; else { fs.writeFileSync(j.file, 'mp3'); res[j.id] = null; } });
     return res;
   };
   const log = [];
   const a = await record(B, { out, engine: 'edge', log, run, batch });
-  assert.equal(a.voice, 'ko-KR-SunHiNeural');
+  assert.equal(a.voice, 'ko-KR-InJoonNeural');
   assert.equal(a.ids.length, wanted(B).length - 1);
   assert.match(log.join('\n'), /음성 녹음 실패 1줄 \(예: WSServerHandshakeError: 403\)/);
   assert.equal(fs.readdirSync(path.join(out, 'audio')).length, a.ids.length);

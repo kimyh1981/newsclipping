@@ -53,8 +53,8 @@ APK는 `android/app/release.keystore`로 서명합니다. 같은 키로 서명�
 배포 작업이 매일 새벽 원고 줄(인사·연결 말·언론사 소개·헤드라인, 기본 언론사의 요약·본문)을 신경망 음성으로 녹음해 `audio/`에 올리고,
 갤럭시 앱은 녹음된 줄을 그 파일로, 나머지는 폰 음성으로 읽습니다. 녹음이 안 되는 날에도 앱은 폰 음성으로 그대로 읽습니다.
 
-- 기본: **MS 엣지 신경망 음성**(무료, 키·카드 없음, 선희 `ko-KR-SunHiNeural`). 엣지 브라우저 '소리 내어 읽기'를 공개 도구 [edge-tts](https://pypi.org/project/edge-tts/)로 쓰는 비공식 방식이라 언제든 막힐 수 있습니다. 막히면 수집 기록에 '음성 녹음 실패'가 남고 앱은 폰 음성으로 읽습니다.
-- 목소리 바꾸기: 저장소 Settings → Variables의 `TTS_VOICE` (예: 남성 `ko-KR-InJoonNeural`, `ko-KR-HyunsuMultilingualNeural`)
+- 기본: **MS 엣지 신경망 음성**(무료, 키·카드 없음, 인준 `ko-KR-InJoonNeural`). 엣지 브라우저 '소리 내어 읽기'를 공개 도구 [edge-tts](https://pypi.org/project/edge-tts/)로 쓰는 비공식 방식이라 언제든 막힐 수 있습니다. 막히면 수집 기록에 '음성 녹음 실패'가 남고 앱은 폰 음성으로 읽습니다.
+- 목소리 바꾸기: 저장소 Settings → Variables의 `TTS_VOICE` (예: 남성 현수 `ko-KR-HyunsuMultilingualNeural`, 여성 선희 `ko-KR-SunHiNeural`)
 - 녹음 끄기: Variables의 `TTS_ENGINE=off`
 - 구글 클라우드 음성(Chirp 3 HD, 카드 등록 필요): 비밀값 `GOOGLE_TTS_KEY`에 Cloud Text-to-Speech API 키를 넣으면 그쪽으로 녹음합니다. 하루 25,000자로 막아 둡니다.
 
