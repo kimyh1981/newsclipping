@@ -13,7 +13,7 @@ public final class ExtrasLive {
         for (String a : args) {
             if (a.startsWith("키워드:")) {
                 String k = a.substring(4);
-                List<Brief.Item> got = Extras.items(Extras.entries(Extras.get(Extras.google(k))), "", true, now, 3, new HashSet<>());
+                List<Brief.Item> got = Extras.keywordItems(k, now, 3, new HashSet<>());
                 System.out.println("키워드 " + k + ": " + got.size() + "건");
                 for (Brief.Item it : got) System.out.println("  " + it.source + " | " + it.spoken);
                 continue;

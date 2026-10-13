@@ -55,6 +55,17 @@ public class ExtrasTest {
         assertEquals("", items.get(0).summary); // 제목 되풀이뿐인 설명은 버린다
     }
 
+    @Test public void cleansDoubleEscapedTextAndBylines() {
+        assertEquals("a b & c", Extras.clean("a&amp;nbsp;b &amp;amp; c"));
+        String rss = "<rss><channel><item><title>농지 조사</title><description>[한국농어민신문 김기자 기자] 정부가 농지를 본다.</description></item></channel></rss>";
+        assertEquals("정부가 농지를 본다.", Extras.items(Extras.entries(rss), "x", false, NOW, 1, new HashSet<>()).get(0).summary);
+    }
+
+    @Test public void keywordArticlesMustMentionTheKeyword() {
+        List<Extras.Entry> e = Arrays.asList(new Extras.Entry("SK텔레콤 감축사업", "", "", "", 0), new Extras.Entry("바이오플랜 미생물 비료", "", "", "", 0));
+        assertEquals(1, Extras.withKeyword(e, "바이오플랜").size());
+    }
+
     @Test public void findsRssLinkInPage() {
         String html = "<html><head><title>농축유통신문 | 홈</title><link rel=\"alternate\" type=\"application/rss+xml\" href=\"/rss/allArticle.xml\"></head></html>";
         assertEquals("https://www.amnews.co.kr/rss/allArticle.xml", Extras.discover(html, "https://www.amnews.co.kr/"));

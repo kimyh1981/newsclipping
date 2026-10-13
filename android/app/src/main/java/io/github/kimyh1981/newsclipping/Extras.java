@@ -105,6 +105,7 @@ final class Extras {
     static String clean(String s) {
         if (s == null) return "";
         s = CDATA.matcher(s).replaceAll("$1");
+        s = s.replace("&amp;", "&"); // 두 번 감싼 &amp;nbsp; 도 풀리게 먼저
         s = s.replace("&lt;", "<").replace("&gt;", ">").replace("&quot;", "\"").replace("&apos;", "'").replace("&#39;", "'").replace("&nbsp;", " ");
         Matcher m = NUM_ENTITY.matcher(s);
         StringBuffer sb = new StringBuffer();
@@ -114,8 +115,7 @@ final class Extras {
             m.appendReplacement(sb, Matcher.quoteReplacement(new String(Character.toChars(cp))));
         }
         m.appendTail(sb);
-        s = sb.toString().replace("&amp;", "&");
-        s = s.replaceAll("<[^>]*>", " ");
+        s = sb.toString().replace("&amp;", "&").replaceAll("<[^>]*>", " ");
         return s.replaceAll("\\s+", " ").trim();
     }
 
@@ -212,7 +212,8 @@ final class Extras {
             String spoken = spoken(e.title, e.source.isEmpty() ? source : e.source);
             String key = spoken.replaceAll("\\s+", "");
             if (spoken.isEmpty() || !seenTitles.add(key)) continue;
-            String summary = e.summary.replaceAll("\\s+", "").startsWith(key) ? "" : e.summary; // 구글 뉴스 설명은 제목 되풀이
+            String summary = e.summary.replaceAll("^\\s*\\[[^\\]]*기자\\]\\s*", ""); // [농민신문 홍길동 기자]
+            if (summary.replaceAll("\\s+", "").contains(key)) summary = ""; // 구글 뉴스 설명은 제목 되풀이
             if (summary.length() > 300) summary = summary.substring(0, 300).replaceAll("\\s\\S*$", "") + "…";
             out.add(new Brief.Item(spoken, spoken, source, "x-" + key, summary, "", Collections.<String>emptyList(), true));
         }
@@ -224,6 +225,22 @@ final class Extras {
         Set<String> out = new HashSet<>();
         for (Brief.Section s : b.sections) for (Brief.Source src : s.sources) for (Brief.Item it : src.items) out.add(it.spoken.replaceAll("\\s+", ""));
         return out;
+    }
+
+    static final String FARM_WORDS = "농업 OR 농가 OR 농민 OR 농촌 OR 농산물 OR 작물 OR 비료 OR 축산";
+
+    static List<Entry> withKeyword(List<Entry> entries, String keyword) {
+        String k = keyword.toLowerCase(Locale.ROOT);
+        List<Entry> out = new ArrayList<>();
+        for (Entry e : entries) if ((e.title + " " + e.summary).toLowerCase(Locale.ROOT).contains(k)) out.add(e);
+        return out;
+    }
+
+    /** 키워드 기사: 농업 기사에서 먼저, 없으면 키워드만으로. 제목이나 설명에 키워드가 있는 기사만 */
+    static List<Brief.Item> keywordItems(String k, long now, int max, Set<String> seen) throws Exception {
+        List<Brief.Item> got = items(withKeyword(entries(get(google("\"" + k + "\" (" + FARM_WORDS + ")"))), k), "", true, now, max, seen);
+        if (got.isEmpty()) got = items(withKeyword(entries(get(google("\"" + k + "\""))), k), "", true, now, max, seen);
+        return got;
     }
 
     static boolean mentions(Brief.Picked sec, String keyword) {
@@ -367,7 +384,7 @@ final class Extras {
         for (String k : keywords) {
             if (mentions(farm, k)) continue;
             try {
-                List<Brief.Item> got = items(entries(get(google(k))), "", true, now, 1, seen);
+                List<Brief.Item> got = keywordItems(k, now, 1, seen);
                 for (Brief.Item it : got) {
                     farm.items.add(new Brief.Item(it.title, it.spoken, k + " 관련", it.group, it.summary, "", Collections.<String>emptyList(), true));
                 }
