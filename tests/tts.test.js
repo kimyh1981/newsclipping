@@ -66,15 +66,19 @@ test('키가 틀리면(403) 바로 멈추고 기록만 남긴다', async () => {
 
 test('edge(무료): 키 없이 한꺼번에 녹음하고, 실패한 줄은 빼며, 파이썬이 없으면 기록만 남긴다', async () => {
   const out = tmp();
+  const calls = [];
   const batch = (jobs, voice) => {
-    assert.equal(voice, 'ko-KR-InJoonNeural');
+    calls.push({ voice, jobs });
     const res = {};
-    jobs.forEach((j, i) => { if (i === 1) res[j.id] = 'WSServerHandshakeError: 403'; else { fs.writeFileSync(j.file, 'mp3'); res[j.id] = null; } });
+    jobs.forEach((j, i) => { if (i === 1 || voice === 'ko-KR-InJoonNeural') res[j.id] = 'WSServerHandshakeError: 403'; else { fs.writeFileSync(j.file, 'mp3'); res[j.id] = null; } });
     return res;
   };
   const log = [];
   const a = await record(B, { out, engine: 'edge', log, run, batch });
-  assert.equal(a.voice, 'ko-KR-InJoonNeural');
+  assert.equal(calls[0].voice, 'ko-KR-HyunsuMultilingualNeural');
+  assert.equal(calls[1].voice, 'ko-KR-InJoonNeural'); // 다국어 음성으로 못 한 줄은 인준 음성으로 다시
+  assert.equal(calls[1].jobs.length, 1);
+  assert.equal(a.voice, 'ko-KR-HyunsuMultilingualNeural');
   assert.equal(a.ids.length, wanted(B).length - 1);
   assert.match(log.join('\n'), /음성 녹음 실패 1줄 \(예: WSServerHandshakeError: 403\)/);
   assert.equal(fs.readdirSync(path.join(out, 'audio')).length, a.ids.length);
@@ -82,6 +86,28 @@ test('edge(무료): 키 없이 한꺼번에 녹음하고, 실패한 줄은 빼�
   assert.equal(await record(B, { out: tmp(), engine: 'edge', log: log2, run, batch: () => { throw new Error('No module named edge_tts'); } }), null);
   assert.match(log2.join('\n'), /음성 녹음\(edge\)을 못 함: No module named edge_tts/);
   assert.equal(await record(B, { out: tmp(), engine: 'off', key: 'k', log: [], run }), null);
+});
+
+test('다국어 음성: 영문은 그대로 두어 미국식으로 읽게 하고, 막힌 줄은 인준 음성과 우리말 규칙으로 다시 녹음한다', async () => {
+  const b = { ...B, sections: [{ id: 's', title: '경제', sources: [{ id: 'x', items: [{ title: 't', spoken: 'NATO와 AI에 $5억 투자' }] }] }] };
+  const calls = [];
+  const batch = (jobs, voice) => {
+    calls.push({ voice, jobs });
+    const res = {};
+    for (const j of jobs) {
+      if (voice === 'ko-KR-HyunsuMultilingualNeural' && j.text.includes('NATO')) res[j.id] = 'NoAudioReceived';
+      else { fs.writeFileSync(j.file, 'mp3'); res[j.id] = null; }
+    }
+    return res;
+  };
+  const log = [];
+  const cache = tmp();
+  const a = await record(b, { out: tmp(), engine: 'edge', cache, log, run, batch });
+  assert.ok(calls[0].jobs.some((j) => j.text.includes('NATO와 AI에 오억달러 투자')));
+  assert.ok(calls[1].jobs.some((j) => j.text.includes('나토와 에이아이에 오억달러 투자')));
+  assert.ok(a.ids.includes(audioId(brief.sentence('NATO와 AI에 $5억 투자'))));
+  assert.match(log.join('\n'), /인준 음성으로 녹음/);
+  assert.ok(!fs.readdirSync(cache).some((f) => f.includes(audioId(brief.sentence('NATO와 AI에 $5억 투자')))));
 });
 
 test('녹음 다듬기: 한쪽 채널(모노) 녹음을 양쪽 스피커로 나오게 스테레오로 바꾼다 (ffmpeg가 없으면 그대로)', (t) => {

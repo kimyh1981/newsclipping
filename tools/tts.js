@@ -17,7 +17,11 @@ const brief = require('../js/brief.js');
 
 const pron = require('../js/pron.js');
 const VOICE = 'ko-KR-Chirp3-HD-Aoede';
-const EDGE_VOICE = 'ko-KR-InJoonNeural'; // 차분한 남성 뉴스 톤 (주인이 고름, 2026-10-14)
+// 다국어 신경망 음성: 우리말은 자연스럽게, 기사 속 영어는 미국식 영어 발음으로, 다른 나라 말은 그 나라 말로 읽는다
+// (주인 요청 2026-10-14: 유튜브 AI 음성처럼 자연스럽게, 영어는 미국식으로). 이 음성이 막히면 인준 음성으로 다시 녹음한다
+const EDGE_VOICE = 'ko-KR-HyunsuMultilingualNeural';
+const EDGE_FALLBACK = 'ko-KR-InJoonNeural'; // 차분한 남성 뉴스 톤 (주인이 고름, 2026-10-14)
+const multilingual = (v) => /Multilingual/.test(v);
 const EN_VOICE = 'en-US-AndrewNeural'; // 농업영어의 영어 줄 (edge만, 배우는 사람에게 맞게 조금 천천히)
 const EN_RATE = '-10%';
 const ENDPOINT = 'https://texttospeech.googleapis.com/v1/text:synthesize';
@@ -137,7 +141,7 @@ async function record(b, opts) {
     spent += text.length;
     todo.push(en
       ? { id, text, file: path.join(dir, `${id}.mp3`), cached, voice: EN_VOICE, rate: EN_RATE }
-      : { id, text: pron.say(text), file: path.join(dir, `${id}.mp3`), cached }); // 이름은 쓴 글로, 녹음은 들리는 대로
+      : { id, text: pron.say(text, { english: multilingual(voice) }), orig: text, file: path.join(dir, `${id}.mp3`), cached }); // 이름은 쓴 글로, 녹음은 들리는 대로
   }
   let unshaped = 0;
   const done = (job) => {
@@ -150,11 +154,22 @@ async function record(b, opts) {
     try {
       const res = batch(todo.map(({ id, text, file, voice: v, rate }) => ({ id, text, file, ...(v ? { voice: v, rate } : {}) })), voice);
       const errors = [];
+      const failed = [];
+      const ok = (job) => fs.existsSync(job.file) && fs.statSync(job.file).size > 0;
       for (const job of todo) {
-        const ok = fs.existsSync(job.file) && fs.statSync(job.file).size > 0;
-        if (ok && !res[job.id]) done(job);
-        else { fs.rmSync(job.file, { force: true }); errors.push(res[job.id] || '시간 초과'); }
+        if (ok(job) && !res[job.id]) done(job);
+        else { fs.rmSync(job.file, { force: true }); failed.push(job); }
       }
+      // 다국어 음성으로 못 한 줄은 인준 음성(우리말 읽기 규칙)으로 다시: 다음 날 다국어 음성으로 다시 해 보도록 캐시에는 넣지 않는다
+      const retry = multilingual(voice) ? failed.filter((j) => !j.voice) : [];
+      const res2 = retry.length ? batch(retry.map(({ id, orig, file }) => ({ id, text: pron.say(orig), file })), EDGE_FALLBACK) : {};
+      let fellBack = 0;
+      for (const job of failed) {
+        if (retry.includes(job) && ok(job) && !res2[job.id]) { done({ ...job, cached: null }); fellBack++; continue; }
+        fs.rmSync(job.file, { force: true });
+        errors.push(res2[job.id] || res[job.id] || '시간 초과');
+      }
+      if (fellBack) log.push(`다국어 음성으로 못 한 ${fellBack}줄은 인준 음성으로 녹음`);
       if (errors.length) log.push(`음성 녹음 실패 ${errors.length}줄 (예: ${errors[0]})`);
       for (const f of fs.readdirSync(dir)) if (f.endsWith('.part')) fs.rmSync(path.join(dir, f), { force: true }); // 받다 만 파일은 올리지 않는다
     } catch (err) {
@@ -183,4 +198,4 @@ async function record(b, opts) {
   return ids.length ? { voice, base: 'audio/', ids: ids.sort() } : null;
 }
 
-module.exports = { record, wanted, audioId, synthesize, edgeBatch, shape, VOICE, EDGE_VOICE, EN_VOICE };
+module.exports = { record, wanted, audioId, synthesize, edgeBatch, shape, VOICE, EDGE_VOICE, EDGE_FALLBACK, EN_VOICE };
