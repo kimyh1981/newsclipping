@@ -289,7 +289,7 @@ public class MainActivity extends Activity {
         String what = c == null ? "" : c.lesson > 0 ? c.source + " " + c.title : c.source;
         nowPlaying.setText(playing ? "읽는 중" + (what.isEmpty() ? "" : " · " + what)
                 : NewsService.state() == NewsService.PAUSED ? "멈춤" + (what.isEmpty() ? "" : " · " + what) + " · 재생을 누르면 이어 듣습니다"
-                : "평일 아침 차에 타면 고른 언론사의 헤드라인을 읽어 드립니다.");
+                : "재생을 누르면 오늘 뉴스를 읽습니다.");
     }
 
     private void refresh() {
