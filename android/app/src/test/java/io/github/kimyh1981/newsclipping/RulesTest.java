@@ -77,6 +77,13 @@ public class RulesTest {
         assertEquals(5, Rules.skipLesson(new int[] {0, -1, 1, 1, -1, 0}, 2)); // 영어가 없으면 맺음말
     }
 
+    @Test public void typedCountIsClamped() {
+        assertEquals(12, Rules.clampCount(" 12 ", 5));
+        assertEquals(1, Rules.clampCount("0", 5));
+        assertEquals(50, Rules.clampCount("99", 5));
+        assertEquals(5, Rules.clampCount("", 5));
+    }
+
     @Test public void logoGridShrinksToFit() {
         // 넓은 칸에 몇 개면 가장 큰 크기
         assertArrayEquals(new int[] {90, 3}, Rules.logoGrid(3, 400, 400, 10, 90, 30));

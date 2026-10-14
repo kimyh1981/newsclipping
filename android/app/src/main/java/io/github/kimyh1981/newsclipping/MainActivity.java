@@ -1048,8 +1048,6 @@ public class MainActivity extends Activity {
      */
     private void showAbroad(Brief b) {
         List<String> picked = new ArrayList<>(prefs.abroadCountries());
-        int[] counts = {5, 7, 10, 15};
-        int[] count = {prefs.fertCount()};
         LinearLayout box = new LinearLayout(this);
         box.setOrientation(LinearLayout.VERTICAL);
         LinearLayout g = group(box, null);
@@ -1064,13 +1062,23 @@ public class MainActivity extends Activity {
         divider(g);
         TextView[] countryVal = new TextView[1];
         countryVal[0] = lessonRow(g, "나라", picked.size() + "개국 ›", label, true, () -> pickCountries(picked, () -> countryVal[0].setText(picked.size() + "개국 ›")));
-        TextView[] countVal = new TextView[1];
-        countVal[0] = lessonRow(g, "해외 비료 시장 뉴스 기사 수", count[0] + "건 ›", label, false, () -> {
-            int at = 0;
-            for (int i = 0; i < counts.length; i++) if (counts[i] == count[0]) at = i;
-            count[0] = counts[(at + 1) % counts.length];
-            countVal[0].setText(count[0] + "건 ›");
-        });
+        // 기사 수는 숫자로 직접 넣는다 (1~50건)
+        LinearLayout countRow = new LinearLayout(this);
+        countRow.setGravity(Gravity.CENTER_VERTICAL);
+        countRow.setMinimumHeight(dp(48));
+        countRow.setPadding(dp(16), dp(4), dp(14), dp(4));
+        countRow.addView(text("해외 비료 시장 뉴스 기사 수", 16, label), new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+        android.widget.EditText countIn = new android.widget.EditText(this);
+        countIn.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);
+        countIn.setFilters(new android.text.InputFilter[] {new android.text.InputFilter.LengthFilter(2)});
+        countIn.setText(String.valueOf(prefs.fertCount()));
+        countIn.setSelectAllOnFocus(true);
+        countIn.setGravity(Gravity.END | Gravity.CENTER_VERTICAL);
+        countIn.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
+        countIn.setTextColor(label);
+        countRow.addView(countIn, new LinearLayout.LayoutParams(dp(56), LinearLayout.LayoutParams.WRAP_CONTENT));
+        countRow.addView(text("건", 15, secondary));
+        g.addView(countRow);
         new Sheet(this)
                 .setTitle("해외농업 키워드")
                 .setMessage("영어나 우리말로 넣으면 고른 나라의 말로 옮겨 그 나라 뉴스에서 찾고, 우리말로 옮겨 나라 이름부터 읽습니다. "
@@ -1081,7 +1089,7 @@ public class MainActivity extends Activity {
                     for (String k : words.getText().toString().split("[,，]")) if (!k.trim().isEmpty() && !out.contains(k.trim())) out.add(k.trim());
                     prefs.setAbroadKeywords(out);
                     prefs.setAbroadCountries(picked);
-                    prefs.setFertCount(count[0]);
+                    prefs.setFertCount(Rules.clampCount(countIn.getText().toString(), prefs.fertCount()));
                     // 해외 농업·비료 시장 뉴스의 나라별 검색도 고른 나라에 맞춘다
                     Set<String> before = prefs.sources() == null ? b.defaults() : prefs.sources();
                     Set<String> ids = new HashSet<>(before);
