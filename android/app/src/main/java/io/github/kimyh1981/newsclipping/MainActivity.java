@@ -49,6 +49,7 @@ import java.util.Set;
  */
 public class MainActivity extends Activity {
     private static final String SITE = "https://kimyh1981.github.io/newsclipping/";
+    private static final String APK = "https://github.com/kimyh1981/newsclipping/releases/latest/download/newsclipping.apk";
     private Prefs prefs;
     private TextView footer, permVal, batteryVal, overlayVal, carVal, timeVal, sourcesVal, orderVal, customVal, keywordsVal, fertVal, lessonVal, voiceVal, rateVal;
     private Switch enabledSw, weekdaysSw, captionsSw;
@@ -69,6 +70,8 @@ public class MainActivity extends Activity {
     private String briefJson;
     private boolean loadingLogos;
     private boolean updating;
+    /** '이 출처 허용'을 켜러 설정에 갔다 오면 업데이트를 이어서 한다 */
+    private boolean resumeInstall;
     private long updateChecked;
 
     // 아이폰 설정 앱의 색 (밝은 화면 / 어두운 화면)
@@ -245,6 +248,56 @@ public class MainActivity extends Activity {
         refresh();
         checkUpdate();
         loadLogos();
+        if (resumeInstall && Updater.canInstall(this)) {
+            resumeInstall = false;
+            installUpdate();
+        }
+        showInstallError();
+    }
+
+    /** 설치가 막혔으면 이유에 맞는 해결 방법을 띄운다 (한 번만) */
+    private void showInstallError() {
+        int status = prefs.installErrorStatus();
+        if (status == -999) return;
+        prefs.clearInstallError();
+        int help = Updater.helpFor(status);
+        if (help == Updater.HELP_NONE) return;
+        updateChecked = 0; // 업데이트 띠를 다시 띄운다
+        checkUpdate();
+        if (help == Updater.HELP_SECURITY) {
+            new Sheet(this)
+                    .setTitle("휴대폰 보안 설정이 설치를 막았습니다")
+                    .setMessage("1. 아래 '보안 설정 열기'를 누릅니다.\n"
+                            + "2. 갤럭시는 '자동 차단'을 끕니다 (설정 › 보안 및 개인정보 보호 › 자동 차단).\n"
+                            + "3. 'Play 프로텍트' 경고가 뜨면 '세부정보 더보기' › '무시하고 설치'를 누릅니다.\n"
+                            + "4. 앱으로 돌아와 초록색 업데이트 띠를 다시 누릅니다.")
+                    .setPositiveButton("보안 설정 열기", (d, w) -> openSettings(Settings.ACTION_SECURITY_SETTINGS))
+                    .setNegativeButton("닫기", null)
+                    .show();
+        } else if (help == Updater.HELP_REINSTALL) {
+            new Sheet(this)
+                    .setTitle("덮어서 설치할 수 없습니다")
+                    .setMessage("지금 앱과 새 앱의 서명이 달라 업데이트가 안 됩니다. 뉴스클리핑을 지운 뒤 아래 링크로 다시 설치해 주세요. 설정은 처음부터 다시 해야 합니다.")
+                    .setPositiveButton("다운로드 링크 열기", (d, w) -> startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(APK))))
+                    .setNegativeButton("닫기", null)
+                    .show();
+        } else {
+            String why = prefs.installErrorMessage();
+            new Sheet(this)
+                    .setTitle("업데이트를 설치하지 못했습니다")
+                    .setMessage("휴대폰 저장 공간이 넉넉한지 확인하고 초록색 업데이트 띠를 다시 눌러 주세요. 그래도 안 되면 아래 링크로 받아 설치해 주세요." + (why.isEmpty() ? "" : "\n\n(" + why + ")"))
+                    .setPositiveButton("다운로드 링크 열기", (d, w) -> startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(APK))))
+                    .setNegativeButton("닫기", null)
+                    .show();
+        }
+    }
+
+    private void openSettings(String action) {
+        try {
+            startActivity(new Intent(action));
+        } catch (Exception e) {
+            startActivity(new Intent(Settings.ACTION_SETTINGS));
+        }
     }
 
     /** 고른 언론사 로고: 받아 둔 주소로 바로 보여 주고, 오늘 뉴스 목록을 받아 새로 고친다 */
@@ -302,10 +355,15 @@ public class MainActivity extends Activity {
         if (!Updater.canInstall(this)) {
             new Sheet(this)
                     .setTitle("설치 허용이 한 번 필요합니다")
-                    .setMessage("방금 열린 화면에서 '이 출처 허용'을 켜고 돌아와서 업데이트를 다시 눌러 주세요. 처음 한 번만 하면 됩니다.")
-                    .setPositiveButton("확인", null)
+                    .setMessage("휴대폰 보안 설정 때문에 앱이 스스로 업데이트하려면 허용이 한 번 필요합니다.\n\n"
+                            + "1. 아래 '설정 열기'를 누릅니다.\n"
+                            + "2. 열린 화면에서 '이 출처 허용'(또는 '출처를 알 수 없는 앱 설치')을 켭니다.\n"
+                            + "3. 뒤로 가기를 누르면 업데이트가 저절로 이어집니다.\n\n"
+                            + "켜는 칸이 회색으로 막혀 있으면 갤럭시의 '자동 차단'이 켜진 것입니다. 설정 › 보안 및 개인정보 보호 › 자동 차단을 먼저 끄세요.")
+                    .setPositiveButton("설정 열기", (d, w) -> { resumeInstall = true; Updater.openAllowSettings(this); })
+                    .setNeutralButton("보안 설정 열기", (d, w) -> openSettings(Settings.ACTION_SECURITY_SETTINGS))
+                    .setNegativeButton("나중에", null)
                     .show();
-            updateChecked = 0;
             return;
         }
         updating = true;

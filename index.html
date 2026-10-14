@@ -54,6 +54,11 @@
   .car .play { width: 100%; max-width: 420px; min-height: 96px; font-size: 1.5rem; }
   .car .row { display: flex; gap: 10px; }
   .days select { font: inherit; padding: 4px 8px; border-radius: 8px; border: 1px solid var(--line); background: transparent; color: inherit; }
+  dialog { border: 1px solid var(--line); border-radius: 16px; background: var(--card); color: var(--ink); max-width: min(520px, calc(100vw - 32px)); padding: 16px 18px; }
+  dialog::backdrop { background: rgba(0, 0, 0, .45); }
+  dialog ol { color: var(--ink); padding-left: 1.3em; }
+  dialog .row { display: flex; gap: 10px; margin: 14px 0 0; }
+  dialog .row .cta { flex: 1; }
   code { background: var(--line); border-radius: 4px; padding: 0 4px; word-break: break-all; }
 </style>
 </head>
@@ -77,7 +82,18 @@
     <h2>차에 타면 자동으로 듣기</h2>
     <p class="meta">평일 아침 5~8시, 차 블루투스가 연결되면 오늘의 헤드라인을 읽어 줍니다. 주말·공휴일은 쉽니다.</p>
     <h3>갤럭시 (안드로이드)</h3>
-    <a class="cta" href="https://github.com/kimyh1981/newsclipping/releases/latest/download/newsclipping.apk">뉴스클리핑 앱 받기 (APK)</a>
+    <a class="cta" id="apkLink" href="https://github.com/kimyh1981/newsclipping/releases/latest/download/newsclipping.apk">뉴스클리핑 앱 받기 (APK)</a>
+    <dialog id="apkHelp">
+      <h2>설치가 막히면 이렇게 하세요</h2>
+      <ol>
+        <li>아래 <b>앱 받기</b>를 누르고, 다 받으면 알림이나 <b>내 파일 › 다운로드</b>에서 newsclipping.apk를 엽니다.</li>
+        <li>'이 출처의 알 수 없는 앱을 설치할 수 없습니다'가 뜨면 <b>설정</b>을 눌러 이 브라우저의 <b>이 출처 허용</b>을 켜고 뒤로 갑니다.</li>
+        <li>허용 칸이 회색으로 막혀 있거나 '자동 차단이 설치를 막았습니다'가 뜨면 <b>설정 › 보안 및 개인정보 보호 › 자동 차단</b>을 끕니다 (갤럭시).</li>
+        <li><b>Play 프로텍트</b> 경고가 뜨면 <b>세부정보 더보기 › 무시하고 설치</b>를 누릅니다. 플레이스토어 앱이 아니어서 나오는 안내입니다.</li>
+        <li>한 번 설치하면 다음부터는 앱 안의 초록색 업데이트 띠로 업데이트합니다.</li>
+      </ol>
+      <p class="row"><a class="cta" id="apkGo" href="https://github.com/kimyh1981/newsclipping/releases/latest/download/newsclipping.apk">앱 받기</a> <button id="apkClose" type="button">닫기</button></p>
+    </dialog>
     <ol>
       <li>받은 파일을 열고 <b>설치</b>를 누릅니다. '출처를 알 수 없는 앱' 경고가 나오면 이 브라우저에 <b>허용</b>을 한 번 켭니다 (플레이스토어 앱이 아니어서 나오는 안내입니다).</li>
       <li>앱을 열고 화면 순서대로 <b>권한 허용 → 배터리 제한 없음 → 차 블루투스 선택</b>을 누릅니다.</li>

@@ -95,11 +95,34 @@ final class Updater {
         c.getSystemService(NotificationManager.class).notify(NOTIFY_ID, n);
     }
 
-    /** 이 앱이 APK를 설치해도 되는지 ('출처를 알 수 없는 앱' 허용). 안 되면 그 설정 화면을 연다 */
-    static boolean canInstall(Activity a) {
-        if (a.getPackageManager().canRequestPackageInstalls()) return true;
+    /** 이 앱이 APK를 설치해도 되는지 ('출처를 알 수 없는 앱' 허용) */
+    static boolean canInstall(Context c) {
+        return c.getPackageManager().canRequestPackageInstalls();
+    }
+
+    /** '이 출처 허용' 설정 화면 */
+    static void openAllowSettings(Activity a) {
         a.startActivity(new Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:" + a.getPackageName())));
-        return false;
+    }
+
+    /** 설치가 막혔을 때 사람에게 보여 줄 안내 종류 */
+    static final int HELP_NONE = 0, HELP_SECURITY = 1, HELP_REINSTALL = 2, HELP_OTHER = 3;
+
+    /** 설치 결과(PackageInstaller.STATUS_…) → 안내 종류 */
+    static int helpFor(int status) {
+        switch (status) {
+            case PackageInstaller.STATUS_SUCCESS:
+            case PackageInstaller.STATUS_PENDING_USER_ACTION:
+                return HELP_NONE;
+            case PackageInstaller.STATUS_FAILURE_BLOCKED:
+            case PackageInstaller.STATUS_FAILURE_ABORTED: // Play 프로텍트·자동 차단 화면에서 멈춘 경우도 여기로 온다
+                return HELP_SECURITY;
+            case PackageInstaller.STATUS_FAILURE_CONFLICT:
+            case PackageInstaller.STATUS_FAILURE_INCOMPATIBLE:
+                return HELP_REINSTALL;
+            default:
+                return HELP_OTHER;
+        }
     }
 
     interface Progress { void at(int percent); }
@@ -148,7 +171,13 @@ final class Updater {
                 Intent confirm = intent.getParcelableExtra(Intent.EXTRA_INTENT);
                 if (confirm != null) c.startActivity(confirm.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
             } else if (status != PackageInstaller.STATUS_SUCCESS) {
-                Log.w(TAG, "업데이트 설치 실패: " + intent.getStringExtra(PackageInstaller.EXTRA_STATUS_MESSAGE));
+                String msg = intent.getStringExtra(PackageInstaller.EXTRA_STATUS_MESSAGE);
+                Log.w(TAG, "업데이트 설치 실패 " + status + ": " + msg);
+                // 앱 화면으로 돌아오면 방법을 팝업으로 알려 준다 (뒤에서 화면을 바로 띄우는 것은 막힐 수 있어 저장해 둔다)
+                new Prefs(c).setInstallError(status, msg == null ? "" : msg);
+                try {
+                    c.startActivity(new Intent(c, MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP));
+                } catch (Exception ignored) { }
             }
         }
     }

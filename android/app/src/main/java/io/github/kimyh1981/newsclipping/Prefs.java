@@ -133,6 +133,12 @@ final class Prefs {
     boolean captions() { return p.getBoolean("captions", true); }
     /** 새 버전 알림을 띄운 빌드 번호 (같은 버전은 한 번만 알린다) */
     int updateNotified() { return p.getInt("updateNotified", 0); }
+
+    /** 마지막 업데이트 설치 실패 (상태 번호, 시스템 설명). 없으면 상태 -999 */
+    int installErrorStatus() { return p.getInt("installErrorStatus", -999); }
+    String installErrorMessage() { return p.getString("installErrorMessage", ""); }
+    void setInstallError(int status, String message) { p.edit().putInt("installErrorStatus", status).putString("installErrorMessage", message).apply(); }
+    void clearInstallError() { p.edit().remove("installErrorStatus").remove("installErrorMessage").apply(); }
     void setUpdateNotified(int code) { p.edit().putInt("updateNotified", code).apply(); }
     void setCaptions(boolean v) { p.edit().putBoolean("captions", v).apply(); }
 
