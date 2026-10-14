@@ -51,7 +51,7 @@ import java.util.Set;
 public class MainActivity extends Activity {
     private static final String SITE = "https://kimyh1981.github.io/newsclipping/";
     private Prefs prefs;
-    private TextView footer, permVal, batteryVal, overlayVal, carVal, timeVal, sourcesVal, orderVal, customVal, keywordsVal, voiceVal, rateVal;
+    private TextView footer, permVal, batteryVal, overlayVal, carVal, timeVal, sourcesVal, orderVal, customVal, keywordsVal, lessonVal, voiceVal, rateVal;
     private Switch enabledSw, weekdaysSw, captionsSw;
     private ImageView playBtn;
     private TextToSpeech preview; // 목소리·빠르기를 고를 때 미리 들려준다
@@ -130,6 +130,7 @@ public class MainActivity extends Activity {
         orderVal = row(today, "섹션 순서", v -> withBrief(this::showOrder), true);
         customVal = row(today, "언론사 직접 넣기 (주소)", v -> withBrief(this::showCustom), true);
         keywordsVal = row(today, "농업 키워드", v -> showKeywords(), true);
+        lessonVal = row(today, "제품 공부 진도", v -> withBrief(this::showLessons), true);
         row(today, "자막 화면 (터치하면 전체 듣기)", v -> startActivity(new Intent(this, CaptionActivity.class)), false).setText("");
 
         LinearLayout setup = section(col, "처음 한 번만", "두 가지를 허용해야 차에 탔을 때 앱을 열지 않아도 자동으로 읽습니다.");
@@ -195,6 +196,7 @@ public class MainActivity extends Activity {
         orderVal.setText(prefs.order().isEmpty() ? "기본" : "직접 정함");
         customVal.setText(prefs.custom().isEmpty() ? "없음" : prefs.custom().size() + "곳");
         keywordsVal.setText(prefs.keywords().isEmpty() ? "없음" : String.join(", ", prefs.keywords()));
+        lessonVal.setText(!prefs.lessonOn() ? "끔" : (prefs.lessonRound() > 1 ? prefs.lessonRound() + "바퀴 · " : "") + prefs.lessonDone().size() + "회 완료");
         voiceVal.setText(prefs.voice().isEmpty() ? "자동" : "직접 고름");
         rateVal.setText(Rules.rateLabel(prefs.rate()));
         enabledSw.setChecked(prefs.enabled());
@@ -613,6 +615,80 @@ public class MainActivity extends Activity {
                         .setPositiveButton("확인", null).show();
             });
         }, "news-custom-check").start();
+    }
+
+    /** 제품 공부 진도: 오늘 회, 남은 회(예정 날짜), 완료한 회(누르면 다시 듣기·다시 듣기 표시) */
+    private void showLessons(Brief b) {
+        if (b.lessons.isEmpty()) {
+            new AlertDialog.Builder(this).setMessage("제품 공부 원고가 아직 서버에 없습니다. 내일 아침 원고부터 들어옵니다.").setPositiveButton("확인", null).show();
+            return;
+        }
+        List<Integer> all = Lessons.numbers(b.lessons);
+        java.util.Map<Integer, String> done = prefs.lessonDone();
+        List<Integer> stars = prefs.lessonStars();
+        int round = prefs.lessonRound();
+        int todayN = prefs.lessonForToday(all, false);
+        boolean nextRound = done.size() >= all.size();
+        List<Integer> order = Lessons.order(all, stars, nextRound ? round + 1 : round);
+        java.util.Map<Integer, String> left = Lessons.schedule(order, nextRound ? new java.util.HashMap<>() : done, Prefs.today());
+
+        LinearLayout list = new LinearLayout(this);
+        list.setOrientation(LinearLayout.VERTICAL);
+        list.setPadding(dp(20), dp(8), dp(20), dp(8));
+        AlertDialog[] dlg = new AlertDialog[1];
+        Switch on = new Switch(this);
+        on.setText("평일 뉴스 뒤에 제품 공부 듣기");
+        on.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
+        on.setChecked(prefs.lessonOn());
+        on.setOnCheckedChangeListener((v, c) -> { prefs.setLessonOn(c); refresh(); });
+        list.addView(on);
+
+        Brief.Lesson t = b.lesson(todayN);
+        if (t != null) {
+            list.addView(head((done.containsKey(todayN) && !nextRound ? "오늘 (들음)" : "오늘") + " · " + Lessons.label(left.containsKey(todayN) ? left.get(todayN) : Prefs.today())));
+            list.addView(lessonRow(t, todayN + "회 " + t.title, label, () -> { dlg[0].dismiss(); NewsService.playLesson(this, todayN); }));
+        }
+        list.addView(head("남은 회 · 평일 하루 한 회"));
+        for (java.util.Map.Entry<Integer, String> e : left.entrySet()) {
+            if (e.getKey() == todayN) continue;
+            Brief.Lesson l = b.lesson(e.getKey());
+            if (l == null) continue;
+            list.addView(lessonRow(l, Lessons.label(e.getValue()) + "  " + l.n + "회 " + l.title, secondary, () -> { dlg[0].dismiss(); NewsService.playLesson(this, l.n); }));
+        }
+        if (!done.isEmpty()) {
+            list.addView(head("완료 · 누르면 다시 듣기, 길게 누르면 다시 듣기 표시"));
+            for (java.util.Map.Entry<Integer, String> e : done.entrySet()) {
+                Brief.Lesson l = b.lesson(e.getKey());
+                if (l == null) continue;
+                TextView r = lessonRow(l, "✓ " + Lessons.label(e.getValue()) + "  " + l.n + "회 " + l.title + (stars.contains(l.n) ? "  ★" : ""), label, () -> { dlg[0].dismiss(); NewsService.playLesson(this, l.n); });
+                r.setOnLongClickListener(v -> {
+                    prefs.toggleStar(l.n);
+                    ((TextView) v).setText("✓ " + Lessons.label(e.getValue()) + "  " + l.n + "회 " + l.title + (prefs.lessonStars().contains(l.n) ? "  ★" : ""));
+                    return true;
+                });
+                list.addView(r);
+            }
+        }
+        ScrollView sv = new ScrollView(this);
+        sv.addView(list);
+        dlg[0] = new AlertDialog.Builder(this)
+                .setTitle("바이오플랜 제품 공부" + (round > 1 ? " · " + round + "바퀴째" : "") + " · " + done.size() + "/" + all.size())
+                .setView(sv)
+                .setPositiveButton("닫기", null)
+                .show();
+    }
+
+    private TextView head(String s) {
+        TextView h = text(s, 13, secondary);
+        h.setPadding(0, dp(16), 0, dp(4));
+        return h;
+    }
+
+    private TextView lessonRow(Brief.Lesson l, String s, int color, Runnable onTap) {
+        TextView r = text(s, 16, color);
+        r.setPadding(0, dp(10), 0, dp(10));
+        r.setOnClickListener(v -> onTap.run());
+        return r;
     }
 
     /** 농업 키워드: 쉼표로 여러 개 */

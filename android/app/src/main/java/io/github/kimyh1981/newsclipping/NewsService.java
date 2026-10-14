@@ -62,6 +62,8 @@ public class NewsService extends Service {
     static final String EXTRA_MANUAL = "manual";
     /** 이 제목의 기사부터 읽는다 (웹 기사 목록의 ▶) */
     static final String EXTRA_FROM = "from";
+    /** 제품 공부 한 회만 듣기 (진도 화면에서) */
+    static final String EXTRA_LESSON = "lesson";
     private static final String TAG = "newsclipping";
     private static final String CHANNEL = "news";
     private static final int NOTIFY_ID = 1;
@@ -119,6 +121,8 @@ public class NewsService extends Service {
     private String from;
     /** 원고를 끝까지 다 읽었다: 다음에는 처음부터 */
     private boolean completed;
+    /** 진도 화면에서 고른 제품 공부 회 (0이면 보통 브리핑) */
+    private int lessonOnly;
 
     /** 자동(차 연결) 또는 수동(앱의 '지금 듣기')으로 읽기 시작. 백그라운드 시작이 막히면 탭해서 듣는 알림을 띄운다. */
     static void start(Context c, boolean manual) {
@@ -148,6 +152,19 @@ public class NewsService extends Service {
                     .setContentIntent(pi).setAutoCancel(true).build();
             c.getSystemService(NotificationManager.class).notify(RETRY_NOTIFY_ID, n);
         }
+    }
+
+    /** 제품 공부 n회만 듣는다. 읽는 중이면 끄고 잠시 뒤 시작한다 */
+    static void playLesson(Context c, int n) {
+        Context app = c.getApplicationContext();
+        Runnable go = () -> {
+            Intent i = new Intent(app, NewsService.class).setAction(ACTION_PLAY).putExtra(EXTRA_MANUAL, true).putExtra(EXTRA_LESSON, n);
+            app.startForegroundService(i);
+        };
+        NewsService s = running;
+        if (s == null) { go.run(); return; }
+        s.main.post(s::finish);
+        s.main.postDelayed(go, 800);
     }
 
     static void stopIfRunning() {
@@ -231,6 +248,7 @@ public class NewsService extends Service {
         boolean manual = intent != null && intent.getBooleanExtra(EXTRA_MANUAL, false);
         autoStart = !manual;
         from = intent == null ? null : intent.getStringExtra(EXTRA_FROM);
+        lessonOnly = intent == null ? 0 : intent.getIntExtra(EXTRA_LESSON, 0);
         new Thread(() -> prepare(manual), "news-fetch").start();
         return START_NOT_STICKY;
     }
@@ -284,6 +302,10 @@ public class NewsService extends Service {
             if (!manual) { main.post(this::finish); return; }
             script = new ArrayList<>();
             script.add(new Brief.Line("뉴스를 가져오지 못했습니다. 인터넷 연결을 확인해 주세요.", null));
+        } else if (lessonOnly > 0) {
+            Brief.Lesson l = brief.lesson(lessonOnly);
+            script = l == null ? new ArrayList<>() : Brief.lessonLines(l);
+            if (script.isEmpty()) script.add(new Brief.Line("이 회차 원고를 찾지 못했습니다.", null));
         } else if (!brief.playToday && !manual) {
             main.post(this::finish); // 주말·공휴일: 자동으로는 읽지 않는다
             return;
@@ -295,8 +317,12 @@ public class NewsService extends Service {
             List<Brief.Picked> picked = brief.select(prefs.sources(), prefs.order());
             Extras.addKeywords(brief, picked, prefs.keywords(), now);
             script = brief.linesOf(picked, Brief.koreanDate(now));
+            // 평일이면 뉴스 뒤에 제품 공부 한 회 (주말·공휴일은 진도를 넘기지 않는다)
+            if (brief.playToday && prefs.lessonOn() && !brief.lessons.isEmpty()) {
+                script = Brief.withLesson(script, brief.lesson(prefs.lessonForToday(Lessons.numbers(brief.lessons), true)));
+            }
         }
-        if (!manual) new Prefs(this).markPlayed();
+        if (!manual && lessonOnly == 0) new Prefs(this).markPlayed();
         if (brief != null) fetchClips(brief, script);
         main.post(() -> speak(script));
     }
@@ -315,8 +341,11 @@ public class NewsService extends Service {
             if (l.item != null && !l.local) texts.addAll(l.item.fullSentences());
         }
         // 원고 줄과 본문이 다 녹음돼 있을 때만 녹음 음성으로 읽는다. 하나라도 빠지면 모두 폰 음성: 읽다가 목소리가 바뀌지 않게
+        // 제품 공부 줄은 따로 센다: 녹음이 덜 됐어도 뉴스는 녹음 음성으로 읽고, 제품 공부만 폰 음성으로 읽는다
+        Set<String> lessonTexts = new HashSet<>();
+        for (Brief.Line l : script) if (l.lesson > 0) lessonTexts.add(l.text);
         int missing = 0;
-        for (String t : texts) if (!t.isEmpty() && !brief.audioIds.contains(Brief.audioId(t))) missing++;
+        for (String t : texts) if (!t.isEmpty() && !lessonTexts.contains(t) && !brief.audioIds.contains(Brief.audioId(t))) missing++;
         if (missing > 0) { Log.i(TAG, "녹음 안 된 줄 " + missing + "개: 오늘은 폰 음성으로 모두 읽음"); return; }
         File dir = new File(getCacheDir(), "audio2"); // 2: 서버가 스테레오로 다시 녹음한 파일 (예전 폴더는 아래에서 지운다)
         deleteTree(new File(getCacheDir(), "audio"));
@@ -452,6 +481,7 @@ public class NewsService extends Service {
             current = i;
             showLine(i);
         }
+        if (s.id.startsWith("Q")) new Prefs(this).markLessonDone(Integer.parseInt(s.id.substring(1, s.id.indexOf('.'))));
         if (s.silence > 0) { main.postDelayed(afterSilence, s.silence); return; }
         showCaption(s);
         File f = clips.get(s.text);
@@ -463,7 +493,9 @@ public class NewsService extends Service {
         boolean full = s.id.startsWith("S");
         int i = Integer.parseInt(s.id.substring(1, s.id.indexOf('.')));
         Brief.Item it = i < lines.size() ? lines.get(i).item : null;
-        caption = it == null ? new Caption("뉴스클리핑", "", s.text, false) : new Caption(it.source, it.title, s.text, full);
+        int lesson = i < lines.size() ? lines.get(i).lesson : 0;
+        caption = lesson > 0 ? new Caption("바이오플랜 제품 공부", lesson + "회", s.text, false)
+                : it == null ? new Caption("뉴스클리핑", "", s.text, false) : new Caption(it.source, it.title, s.text, full);
         Runnable c = onCaption;
         if (c != null) c.run();
     }
@@ -519,6 +551,8 @@ public class NewsService extends Service {
                 List<String> parts = Rules.chunks(line.text, max);
                 for (int k = 0; k < parts.size(); k++) out.add(new Step("L" + i + "." + k, parts.get(k), 0));
                 if (line.item != null) out.add(new Step("P" + i + ".h", "", 450)); // 헤드라인 뒤에 숨 한 번: 기사끼리 붙어 들리지 않게
+                // 제품 공부 회의 마지막 줄까지 읽으면 완료 (중간에 끄면 완료가 아니다)
+                if (line.lesson > 0 && (i + 1 >= lines.size() || lines.get(i + 1).lesson != line.lesson)) out.add(new Step("Q" + line.lesson + ".", "", 300));
             }
         }
         return out;

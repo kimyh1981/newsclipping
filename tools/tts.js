@@ -63,6 +63,11 @@ function wanted(b) {
   const all = b.sections.flatMap((s) => s.sources.map((x) => x.id));
   const picked = [...new Set([...brief.select(b), ...brief.select(b, all)].flatMap((s) => s.items))];
   for (const it of picked) for (const s of it.say || []) add(s, 'body');
+  // 제품 공부: 회차마다 기기가 고르므로 모든 회를 녹음해 둔다 (한 번 녹음하면 캐시로 계속 쓴다)
+  for (const ep of (b.lessons && b.lessons.product && b.lessons.product.episodes) || []) {
+    add(brief.lessonIntro(ep.n, ep.title), 'lesson');
+    for (const line of ep.lines) add(line, 'lesson');
+  }
   const seen = new Set();
   return out.filter(([t]) => (seen.has(t) ? false : seen.add(t)));
 }
