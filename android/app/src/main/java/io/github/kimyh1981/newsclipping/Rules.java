@@ -122,4 +122,13 @@ public final class Rules {
         }
         return new int[] {min, Math.max(1, Math.min(n, (w + gap) / (min + gap)))};
     }
+
+    /** 직접 넣은 기사 수: 1~50건. 비었거나 숫자가 아니면 그전 값 */
+    static int clampCount(String typed, int before) {
+        try {
+            return Math.max(1, Math.min(50, Integer.parseInt(typed.trim())));
+        } catch (NumberFormatException e) {
+            return before;
+        }
+    }
 }
