@@ -43,6 +43,10 @@ final class Prefs {
 
     /** 섹션 재생 순서(섹션 id). 비어 있으면 서버 순서 */
     List<String> order() { return split(p.getString("order", "")); }
+
+    /** 홈 화면 로고로 지난번에 보인 언론사 누리집 주소들 (앱을 열자마자 보여 주려고) */
+    List<String> logoSites() { return split(p.getString("logoSites", "")); }
+    void setLogoSites(List<String> sites) { p.edit().putString("logoSites", String.join(",", sites)).apply(); }
     void setOrder(List<String> ids) { p.edit().putString("order", String.join(",", ids)).apply(); }
 
     /** 주소를 직접 넣은 언론사 (Extras.Custom 목록 JSON) */

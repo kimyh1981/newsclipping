@@ -79,9 +79,12 @@ final class Brief {
         final boolean byDefault;
         final int take;
         final List<Item> items;
+        /** 언론사 누리집 주소 (홈 화면 로고용, 모를 때 빈칸) */
+        String site = "";
         Source(String id, String name, String lang, boolean byDefault, int take, List<Item> items) {
             this.id = id; this.name = name; this.lang = lang; this.byDefault = byDefault; this.take = take; this.items = items;
         }
+        Source site(String s) { site = s == null ? "" : s; return this; }
     }
 
     static final class Section {
@@ -177,7 +180,7 @@ final class Brief {
                     items.add(new Item(it.optString("title", it.getString("spoken")), it.getString("spoken"), it.optString("source", src.getString("name")),
                             it.optString("group", "i" + i + "-" + j + "-" + k), it.optString("summary", ""), it.optString("body", ""), strings(it.optJSONArray("say"))));
                 }
-                sources.add(new Source(src.getString("id"), src.getString("name"), src.optString("lang", "ko"), src.optBoolean("default", true), src.optInt("take", 3), items));
+                sources.add(new Source(src.getString("id"), src.getString("name"), src.optString("lang", "ko"), src.optBoolean("default", true), src.optInt("take", 3), items).site(src.optString("site", "")));
             }
             sections.add(new Section(s.getString("id"), s.getString("title"), s.optBoolean("perSourceLabel", false), s.optInt("limit", 99), sources));
         }
@@ -365,6 +368,14 @@ final class Brief {
 
     /** 체크 목록에 쓰는 언론사 표: [섹션 제목, 언론사 이름, id, 번역 여부] */
     List<String[]> catalog() { return catalog(null); }
+
+    /** 홈 화면 로고: 고른 언론사(enabled가 null이면 기본)의 누리집 주소, 섹션 순서대로 한 번씩. 주소를 모르는 곳(검색 모음)은 뺀다 */
+    List<String> sites(Set<String> enabled, List<String> order) {
+        Set<String> on = enabled == null ? defaults() : enabled;
+        Set<String> out = new LinkedHashSet<>();
+        for (Section s : ordered(order)) for (Source src : s.sources) if (on.contains(src.id) && !src.site.isEmpty()) out.add(src.site);
+        return new ArrayList<>(out);
+    }
 
     /** order: 사람이 정한 섹션 순서 */
     List<String[]> catalog(List<String> order) {

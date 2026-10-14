@@ -48,17 +48,19 @@ public class CaptionActivity extends Activity {
         top.setGravity(Gravity.CENTER_VERTICAL);
         head = text(20, 0xFF8E8E93);
         top.addView(head, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
-        Button settings = new Button(this);
-        settings.setText("🏠 홈");
-        settings.setTextSize(TypedValue.COMPLEX_UNIT_SP, 17);
-        settings.setTextColor(0xFFFFFFFF);
-        settings.setAllCaps(false);
-        settings.setBackgroundColor(0xFF2C2C2E);
-        settings.setOnClickListener(v -> {
+        android.widget.ImageButton home = new android.widget.ImageButton(this);
+        home.setScaleType(android.widget.ImageView.ScaleType.CENTER);
+        home.setImageDrawable(new HomeIcon(0xFFFFFFFF, dp(26)));
+        home.setContentDescription("홈");
+        android.graphics.drawable.GradientDrawable round = new android.graphics.drawable.GradientDrawable();
+        round.setColor(0xFF2C2C2E);
+        round.setCornerRadius(dp(14));
+        home.setBackground(round);
+        home.setOnClickListener(v -> {
             startActivity(new Intent(this, MainActivity.class).putExtra("tab", 0).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
             finish();
         });
-        top.addView(settings, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, dp(48)));
+        top.addView(home, new LinearLayout.LayoutParams(dp(52), dp(52)));
         col.addView(top);
         body = text(36, 0xFFFFFFFF);
         body.setTypeface(Typeface.DEFAULT_BOLD);
@@ -174,5 +176,38 @@ public class CaptionActivity extends Activity {
 
     private int dp(int v) {
         return Math.round(v * getResources().getDisplayMetrics().density);
+    }
+
+    /** 홈 버튼 그림: 집 모양 실루엣 (문은 비워 둔다) */
+    private static final class HomeIcon extends android.graphics.drawable.Drawable {
+        private final android.graphics.Paint paint = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG);
+        private final int size;
+        HomeIcon(int color, int size) {
+            this.size = size;
+            paint.setColor(color);
+            paint.setStyle(android.graphics.Paint.Style.FILL);
+            setBounds(0, 0, size, size);
+        }
+        @Override public void draw(android.graphics.Canvas c) {
+            android.graphics.Rect b = getBounds();
+            float s = size, x = b.left, y = b.top;
+            android.graphics.Path p = new android.graphics.Path();
+            p.setFillType(android.graphics.Path.FillType.EVEN_ODD);
+            p.moveTo(x + s * 0.5f, y + s * 0.08f);
+            p.lineTo(x + s * 0.96f, y + s * 0.5f);
+            p.lineTo(x + s * 0.82f, y + s * 0.5f);
+            p.lineTo(x + s * 0.82f, y + s * 0.92f);
+            p.lineTo(x + s * 0.18f, y + s * 0.92f);
+            p.lineTo(x + s * 0.18f, y + s * 0.5f);
+            p.lineTo(x + s * 0.04f, y + s * 0.5f);
+            p.close();
+            p.addRect(x + s * 0.41f, y + s * 0.64f, x + s * 0.59f, y + s * 0.92f, android.graphics.Path.Direction.CW);
+            c.drawPath(p, paint);
+        }
+        @Override public int getIntrinsicWidth() { return size; }
+        @Override public int getIntrinsicHeight() { return size; }
+        @Override public void setAlpha(int a) { paint.setAlpha(a); }
+        @Override public void setColorFilter(android.graphics.ColorFilter f) { paint.setColorFilter(f); }
+        @Override public int getOpacity() { return android.graphics.PixelFormat.TRANSLUCENT; }
     }
 }

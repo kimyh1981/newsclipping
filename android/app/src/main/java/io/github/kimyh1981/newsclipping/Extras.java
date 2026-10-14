@@ -44,6 +44,16 @@ final class Extras {
         }
     }
 
+    /** 'https://www.nongmin.com/rss' → 'nongmin.com' (로고를 찾을 누리집 주소) */
+    static String siteOf(String url) {
+        try {
+            String host = new java.net.URI(url.contains("://") ? url.trim() : "https://" + url.trim()).getHost();
+            return host == null ? "" : host.replaceFirst("^(www|rss|feeds?|m)\\.", "");
+        } catch (Exception e) {
+            return "";
+        }
+    }
+
     static List<Custom> parseCustom(String json) {
         List<Custom> out = new ArrayList<>();
         if (json == null || json.isEmpty()) return out;
@@ -355,7 +365,7 @@ final class Extras {
                 Found f = find(c.url, c.feed);
                 List<Brief.Item> items = f == null ? Collections.<Brief.Item>emptyList() : items(f.entries, c.name, false, now, 6, seen);
                 synchronized (found) {
-                    found.add(new Brief.Source(c.id, c.name, "ko", true, TAKE, items));
+                    found.add(new Brief.Source(c.id, c.name, "ko", true, TAKE, items).site(siteOf(c.url)));
                     sectionOf.add(c.section);
                 }
             }, "news-custom");
@@ -370,7 +380,7 @@ final class Extras {
             for (int i = 0; i < found.size(); i++) b.addSource(sectionOf.get(i), found.get(i));
         }
         // 늦어서 못 붙인 곳도 체크 목록에는 보이게 (오늘 기사 없음)
-        for (Custom c : list) b.addSource(c.section, new Brief.Source(c.id, c.name, "ko", true, TAKE, Collections.<Brief.Item>emptyList()));
+        for (Custom c : list) b.addSource(c.section, new Brief.Source(c.id, c.name, "ko", true, TAKE, Collections.<Brief.Item>emptyList()).site(siteOf(c.url)));
     }
 
     /** 농업 헤드라인에 키워드 기사가 없으면 그 키워드 기사를 한 건씩 더 붙인다 (구글 뉴스, 최근 하루) */
