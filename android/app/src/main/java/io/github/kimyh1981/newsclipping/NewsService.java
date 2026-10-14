@@ -324,13 +324,18 @@ public class NewsService extends Service {
             Prefs prefs = new Prefs(this);
             long now = System.currentTimeMillis();
             Extras.addCustom(brief, prefs.custom(), now);
-            // 해외 농업·비료 시장 뉴스: 고른 기사 수, 우리말 키워드 기사
+            // 해외 농업·비료 시장 뉴스 기사 수
             brief.setLimit(Extras.FERT_WORLD, prefs.fertCount());
-            java.util.Set<String> on = prefs.sources();
-            List<String> kw = Extras.addFertKeywords(brief, prefs.fertKeywords(), now);
-            if (on != null && !kw.isEmpty()) on.addAll(kw);
-            List<Brief.Picked> picked = brief.select(on, prefs.order());
+            // 국내농업 키워드: 국내 농업 언론사에서 키워드 기사를 먼저 고른다
+            brief.prefer((sec, src) -> Extras.FARM.equals(sec.id), prefs.keywords());
+            // 해외농업 키워드: 고른 나라의 언론사와 해외 농업·비료 섹션에서 키워드 기사를 먼저 고른다
+            List<String> abroad = prefs.abroadKeywords(), countries = prefs.abroadCountries();
+            List<String> forms = new ArrayList<>();
+            for (String k : abroad) forms.addAll(Abroad.forms(k));
+            brief.prefer((sec, src) -> Abroad.FOREIGN_FARM.contains(sec.id) || (!src.country.isEmpty() && countries.contains(src.country)), forms);
+            List<Brief.Picked> picked = brief.select(prefs.sources(), prefs.order());
             Extras.addKeywords(brief, picked, prefs.keywords(), now);
+            Abroad.addCountryNews(brief, picked, countries, abroad, now);
             script = brief.linesOf(picked, Brief.koreanDate(now));
             // 평일이면 뉴스 뒤에 제품 공부 한 회 (주말·공휴일은 진도를 넘기지 않는다)
             if (brief.playToday && (prefs.lessonOn() || prefs.englishOn()) && !brief.lessons.isEmpty()) {

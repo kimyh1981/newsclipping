@@ -138,8 +138,47 @@ public class ExtrasTest {
                 new Extras.Entry("옛", "", "", "", 1000), new Extras.Entry("모름", "", "", "", 0), new Extras.Entry("새", "", "", "", 5000)));
         assertEquals("새", e.get(0).title);
         assertEquals("모름", e.get(2).title);
-        assertEquals(Extras.keywordSourceId("요소수"), Extras.keywordSourceId("요소수"));
-        assertTrue(Extras.keywordSourceId("요소수").startsWith("kw-"));
         assertTrue(Extras.google("요소수", "2d").contains("when%3A2d"));
+    }
+
+    @Test public void keywordArticlesComeFirst() throws Exception {
+        Brief b = Brief.parse(read("briefing.json"));
+        Brief.Section sec = b.ordered(null).get(0);
+        Brief.Source src = sec.sources.get(0);
+        Brief.Item last = src.items.get(src.items.size() - 1);
+        String word = last.spoken.split("\\s+")[0];
+        b.prefer((s, x) -> s == sec && x == src, Collections.singletonList(word));
+        assertTrue(Brief.mentions(src.items.get(0), Collections.singletonList(word)));
+        assertTrue(src.items.contains(last));
+        b.prefer((s, x) -> true, Collections.<String>emptyList()); // 키워드가 없으면 그대로
+    }
+
+    @Test public void abroadCountriesAndLines() throws Exception {
+        assertEquals(100, Countries.ALL.size());
+        java.util.Set<String> names = new HashSet<>();
+        for (Countries.Country c : Countries.ALL) {
+            assertTrue(c.ko, names.add(c.ko));
+            assertTrue(c.ko, Arrays.asList(Countries.CONTINENTS).contains(c.continent));
+            assertEquals(c.ko, c.gl.isEmpty(), c.hl.isEmpty());
+        }
+        int total = 0;
+        for (List<Countries.Country> l : Countries.byContinent().values()) total += l.size();
+        assertEquals(100, total);
+        String us = Countries.searchUrl(Countries.byName("미국"), "biostimulant", "1d");
+        assertTrue(us, us.endsWith("&hl=en-US&gl=US&ceid=US:en"));
+        String dk = Countries.searchUrl(Countries.byName("덴마크"), "biostimulant", "1d");
+        assertTrue(dk, dk.contains("Denmark") && dk.contains("gl=US"));
+        assertEquals("en", Countries.byName("덴마크").searchLang());
+        assertEquals("미국은 오늘자 '비료' 검색된 기사가 없습니다", Abroad.noArticle("미국", "비료"));
+        assertEquals("중국은 오늘자 '비료' 검색된 기사가 없습니다", Abroad.noArticle("중국", "비료"));
+        assertEquals("인도는 오늘자 '비료' 검색된 기사가 없습니다", Abroad.noArticle("인도", "비료"));
+        assertEquals("미생물 비료", Abroad.parseTranslation("[[[\"미생물 \",\"microbial \",null,null,1],[\"비료\",\"fertilizer\",null,null,1]],null,\"en\"]"));
+        // 나라를 고르지 않았거나 키워드가 없으면 아무것도 하지 않는다 (인터넷도 안 쓴다)
+        Brief b = Brief.parse(read("briefing.json"));
+        List<Brief.Picked> picked = b.select(null);
+        int n = picked.size();
+        Abroad.addCountryNews(b, picked, Collections.<String>emptyList(), Collections.singletonList("비료"), 0);
+        Abroad.addCountryNews(b, picked, Collections.singletonList("미국"), Collections.<String>emptyList(), 0);
+        assertEquals(n, picked.size());
     }
 }

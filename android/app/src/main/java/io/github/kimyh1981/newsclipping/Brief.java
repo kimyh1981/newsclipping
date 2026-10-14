@@ -81,10 +81,13 @@ final class Brief {
         final List<Item> items;
         /** 언론사 누리집 주소 (홈 화면 로고용, 모를 때 빈칸) */
         String site = "";
+        /** 외국 언론사의 나라 (미국, 중국 …). 모르거나 국내면 빈칸 */
+        String country = "";
         Source(String id, String name, String lang, boolean byDefault, int take, List<Item> items) {
             this.id = id; this.name = name; this.lang = lang; this.byDefault = byDefault; this.take = take; this.items = items;
         }
         Source site(String s) { site = s == null ? "" : s; return this; }
+        Source country(String c) { country = c == null ? "" : c; return this; }
     }
 
     static final class Section {
@@ -180,7 +183,7 @@ final class Brief {
                     items.add(new Item(it.optString("title", it.getString("spoken")), it.getString("spoken"), it.optString("source", src.getString("name")),
                             it.optString("group", "i" + i + "-" + j + "-" + k), it.optString("summary", ""), it.optString("body", ""), strings(it.optJSONArray("say"))));
                 }
-                sources.add(new Source(src.getString("id"), src.getString("name"), src.optString("lang", "ko"), src.optBoolean("default", true), src.optInt("take", 3), items).site(src.optString("site", "")));
+                sources.add(new Source(src.getString("id"), src.getString("name"), src.optString("lang", "ko"), src.optBoolean("default", true), src.optInt("take", 3), items).site(src.optString("site", "")).country(src.optString("country", "")));
             }
             sections.add(new Section(s.getString("id"), s.getString("title"), s.optBoolean("perSourceLabel", false), s.optInt("limit", 99), sources));
         }
@@ -272,7 +275,6 @@ final class Brief {
         return out;
     }
 
-    /** 폰이 직접 가져온 언론사를 그 섹션 끝에 붙인다 (없는 섹션이면 버린다) */
     /** 섹션 기사 수를 바꾼다 (그 섹션이 없으면 그대로) */
     void setLimit(String sectionId, int n) {
         for (Section s : sections) if (s.id.equals(sectionId) && n > 0) s.limit = n;
@@ -284,6 +286,31 @@ final class Brief {
         return Collections.emptyList();
     }
 
+    /**
+     * 키워드가 든 기사를 그 언론사의 앞으로 (기사 고르기 전에). where가 고른 섹션·언론사만.
+     * 언론사마다 앞쪽 몇 건만 읽으므로, 키워드 기사가 뒤에 있어도 읽히게 된다
+     */
+    void prefer(java.util.function.BiPredicate<Section, Source> where, List<String> words) {
+        if (words.isEmpty()) return;
+        for (Section sec : sections) for (Source src : sec.sources) {
+            if (!where.test(sec, src)) continue;
+            List<Item> hit = new ArrayList<>(), rest = new ArrayList<>();
+            for (Item it : src.items) (mentions(it, words) ? hit : rest).add(it);
+            if (hit.isEmpty() || rest.isEmpty()) continue;
+            src.items.clear();
+            src.items.addAll(hit);
+            src.items.addAll(rest);
+        }
+    }
+
+    /** 제목·읽을 제목·요약에 낱말 가운데 하나라도 있는지 (대소문자 무시) */
+    static boolean mentions(Item it, List<String> words) {
+        String t = (it.title + " " + it.spoken + " " + it.summary).toLowerCase(java.util.Locale.ROOT);
+        for (String w : words) if (!w.trim().isEmpty() && t.contains(w.trim().toLowerCase(java.util.Locale.ROOT))) return true;
+        return false;
+    }
+
+    /** 폰이 직접 가져온 언론사를 그 섹션 끝에 붙인다 (없는 섹션이면 버린다) */
     boolean addSource(String sectionId, Source src) {
         for (Section s : sections) {
             if (!s.id.equals(sectionId)) continue;

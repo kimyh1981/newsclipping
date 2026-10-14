@@ -449,11 +449,11 @@
         },
         {
           "id": "fw-gb",
-          "name": "영국·유럽",
+          "name": "영국",
           "google": "fertiliser OR biostimulant OR biofertiliser OR \"soil health\" OR \"regenerative agriculture\" OR agriculture",
           "lang": "en",
           "edition": "GB",
-          "country": "유럽",
+          "country": "영국",
           "when": "2d",
           "take": 3,
           "mix": true,
