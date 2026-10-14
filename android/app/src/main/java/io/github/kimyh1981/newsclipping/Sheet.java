@@ -11,10 +11,14 @@ import android.graphics.drawable.Drawable;
 import android.graphics.drawable.GradientDrawable;
 import android.graphics.drawable.RippleDrawable;
 import android.util.TypedValue;
+import android.graphics.Rect;
 import android.view.Gravity;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
+import android.view.inputmethod.InputMethodManager;
+import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
@@ -60,7 +64,24 @@ final class Sheet {
     Sheet(Activity a) {
         this.a = a;
         this.k = new Look(a);
-        this.dialog = new Dialog(a);
+        // 입력칸 밖을 누르거나 팝업을 닫으면 키보드를 내린다
+        this.dialog = new Dialog(a) {
+            @Override public boolean dispatchTouchEvent(MotionEvent e) {
+                View f = getCurrentFocus();
+                if (e.getAction() == MotionEvent.ACTION_DOWN && f instanceof EditText) {
+                    int[] at = new int[2];
+                    f.getLocationOnScreen(at);
+                    Rect r = new Rect(at[0], at[1], at[0] + f.getWidth(), at[1] + f.getHeight());
+                    if (!r.contains((int) e.getRawX(), (int) e.getRawY())) hideKeyboard(f);
+                }
+                return super.dispatchTouchEvent(e);
+            }
+            @Override public void dismiss() {
+                View f = getCurrentFocus();
+                if (f != null) hideKeyboard(f);
+                super.dismiss();
+            }
+        };
         dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
     }
 
@@ -75,6 +96,11 @@ final class Sheet {
     Sheet setNegativeButton(String t, DialogInterface.OnClickListener l) { buttons.add(new Object[] {t, l, NEGATIVE}); return this; }
 
     void dismiss() { dialog.dismiss(); }
+
+    private void hideKeyboard(View f) {
+        InputMethodManager im = (InputMethodManager) a.getSystemService(Activity.INPUT_METHOD_SERVICE);
+        if (im != null) im.hideSoftInputFromWindow(f.getWindowToken(), 0);
+    }
 
     Sheet show() {
         LinearLayout box = new LinearLayout(a);
