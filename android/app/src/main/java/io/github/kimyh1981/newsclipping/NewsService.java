@@ -324,7 +324,12 @@ public class NewsService extends Service {
             Prefs prefs = new Prefs(this);
             long now = System.currentTimeMillis();
             Extras.addCustom(brief, prefs.custom(), now);
-            List<Brief.Picked> picked = brief.select(prefs.sources(), prefs.order());
+            // 국가별 비료 시장 뉴스: 고른 기사 수, 우리말 키워드 기사
+            brief.setLimit(Extras.FERT_WORLD, prefs.fertCount());
+            java.util.Set<String> on = prefs.sources();
+            List<String> kw = Extras.addFertKeywords(brief, prefs.fertKeywords(), now);
+            if (on != null && !kw.isEmpty()) on.addAll(kw);
+            List<Brief.Picked> picked = brief.select(on, prefs.order());
             Extras.addKeywords(brief, picked, prefs.keywords(), now);
             script = brief.linesOf(picked, Brief.koreanDate(now));
             // 평일이면 뉴스 뒤에 제품 공부 한 회 (주말·공휴일은 진도를 넘기지 않는다)

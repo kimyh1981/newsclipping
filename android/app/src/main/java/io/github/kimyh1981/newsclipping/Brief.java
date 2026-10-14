@@ -90,7 +90,7 @@ final class Brief {
     static final class Section {
         final String id, title;
         final boolean perSourceLabel;
-        final int limit;
+        int limit; // 국가별 비료 뉴스는 앱에서 기사 수를 고른다
         final List<Source> sources;
         Section(String id, String title, boolean perSourceLabel, int limit, List<Source> sources) {
             this.id = id; this.title = title; this.perSourceLabel = perSourceLabel; this.limit = limit; this.sources = sources;
@@ -273,6 +273,17 @@ final class Brief {
     }
 
     /** 폰이 직접 가져온 언론사를 그 섹션 끝에 붙인다 (없는 섹션이면 버린다) */
+    /** 섹션 기사 수를 바꾼다 (그 섹션이 없으면 그대로) */
+    void setLimit(String sectionId, int n) {
+        for (Section s : sections) if (s.id.equals(sectionId) && n > 0) s.limit = n;
+    }
+
+    /** 섹션의 언론사 목록 (없으면 빈 목록) */
+    List<Source> sourcesOf(String sectionId) {
+        for (Section s : sections) if (s.id.equals(sectionId)) return s.sources;
+        return Collections.emptyList();
+    }
+
     boolean addSource(String sectionId, Source src) {
         for (Section s : sections) {
             if (!s.id.equals(sectionId)) continue;

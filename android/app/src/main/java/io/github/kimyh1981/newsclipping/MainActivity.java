@@ -50,7 +50,7 @@ import java.util.Set;
 public class MainActivity extends Activity {
     private static final String SITE = "https://kimyh1981.github.io/newsclipping/";
     private Prefs prefs;
-    private TextView footer, permVal, batteryVal, overlayVal, carVal, timeVal, sourcesVal, orderVal, customVal, keywordsVal, lessonVal, voiceVal, rateVal;
+    private TextView footer, permVal, batteryVal, overlayVal, carVal, timeVal, sourcesVal, orderVal, customVal, keywordsVal, fertVal, lessonVal, voiceVal, rateVal;
     private Switch enabledSw, weekdaysSw, captionsSw;
     private ImageView playBtn;
     private TextToSpeech preview; // 목소리·빠르기를 고를 때 미리 들려준다
@@ -156,7 +156,8 @@ public class MainActivity extends Activity {
         sourcesVal = row(today, "들을 언론사", v -> withBrief(this::showSources), true);
         orderVal = row(today, "섹션 순서", v -> withBrief(this::showOrder), true);
         customVal = row(today, "언론사 직접 넣기 (주소)", v -> withBrief(this::showCustom), true);
-        keywordsVal = row(today, "농업 키워드", v -> showKeywords(), false);
+        keywordsVal = row(today, "농업 키워드", v -> showKeywords(), true);
+        fertVal = row(today, "국가별 비료 시장 뉴스", v -> withBrief(this::showFertWorld), false);
         LinearLayout study = section(newsPage, "뉴스 뒤에 듣기", "평일 아침 뉴스가 끝나면 제품 공부 한 회와 같은 회의 농업영어를 읽습니다.");
         lessonVal = row(study, "제품 공부·농업영어 진도", v -> withBrief(this::showLessons), false);
 
@@ -347,6 +348,7 @@ public class MainActivity extends Activity {
         orderVal.setText(prefs.order().isEmpty() ? "기본" : "직접 정함");
         customVal.setText(prefs.custom().isEmpty() ? "없음" : prefs.custom().size() + "곳");
         keywordsVal.setText(prefs.keywords().isEmpty() ? "없음" : String.join(", ", prefs.keywords()));
+        fertVal.setText(prefs.fertCount() + "건" + (prefs.fertKeywords().isEmpty() ? "" : " · " + String.join(", ", prefs.fertKeywords())));
         lessonVal.setText(!prefs.lessonOn() && !prefs.englishOn() ? "끔" : (prefs.lessonRound() > 1 ? prefs.lessonRound() + "바퀴 · " : "") + prefs.lessonDone().size() + "회 완료");
         voiceVal.setText(prefs.voice().isEmpty() ? "자동" : "직접 고름");
         rateVal.setText(Rules.rateLabel(prefs.rate()));
@@ -980,6 +982,66 @@ public class MainActivity extends Activity {
         g.addView(r);
         if (dividerAfter) divider(g);
         return v;
+    }
+
+    /** 국가별 비료 시장 뉴스: 나라 고르기(그 섹션의 언론사 체크), 기사 수, 우리말로 더 찾을 키워드 */
+    private void showFertWorld(Brief b) {
+        List<Brief.Source> countries = new ArrayList<>();
+        for (Brief.Source src : b.sourcesOf(Extras.FERT_WORLD)) if (!src.id.startsWith("kw-")) countries.add(src);
+        if (countries.isEmpty()) {
+            new Sheet(this).setMessage("서버에 아직 국가별 비료 뉴스가 없습니다. 오늘 뉴스 목록이 새로 만들어진 뒤 다시 열어 주세요.").setPositiveButton("확인", null).show();
+            return;
+        }
+        Set<String> chosen = prefs.sources() == null ? b.defaults() : prefs.sources();
+        String[] labels = new String[countries.size()];
+        boolean[] checked = new boolean[countries.size()];
+        for (int i = 0; i < labels.length; i++) {
+            labels[i] = countries.get(i).name;
+            checked[i] = chosen.contains(countries.get(i).id);
+        }
+        int[] counts = {5, 7, 10, 15};
+        int[] count = {prefs.fertCount()};
+        LinearLayout box = new LinearLayout(this);
+        box.setOrientation(LinearLayout.VERTICAL);
+        LinearLayout g = group(box, "기사 수와 키워드");
+        TextView[] countVal = new TextView[1];
+        countVal[0] = lessonRow(g, "기사 수", count[0] + "건 ›", label, true, () -> {
+            int at = 0;
+            for (int i = 0; i < counts.length; i++) if (counts[i] == count[0]) at = i;
+            count[0] = counts[(at + 1) % counts.length];
+            countVal[0].setText(count[0] + "건 ›");
+        });
+        android.widget.EditText words = new android.widget.EditText(this);
+        words.setText(String.join(", ", prefs.fertKeywords()));
+        words.setHint("더 찾을 키워드 (예: 요소수, 인도 요소 입찰)");
+        words.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
+        LinearLayout wrap = new LinearLayout(this);
+        wrap.setPadding(dp(12), 0, dp(12), dp(4));
+        wrap.addView(words, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
+        g.addView(wrap);
+        TextView head = text("나라", 13, secondary);
+        head.setPadding(dp(16), dp(16), dp(16), dp(6));
+        box.addView(head);
+        new Sheet(this)
+                .setTitle("국가별 비료 시장 뉴스")
+                .setMessage("고른 나라마다 그 나라 말로 비료·요소·칼륨 같은 낱말을 검색해 최신 기사부터 우리말로 옮겨 읽습니다. 키워드는 우리말 뉴스에서 더 찾습니다. 기사 수를 누르면 5·7·10·15건으로 바뀝니다.")
+                .setView(box)
+                .setMultiChoiceItems(labels, checked, (d, i, on) -> checked[i] = on)
+                .setPositiveButton("저장", (d, w) -> {
+                    Set<String> ids = new HashSet<>(chosen);
+                    for (int i = 0; i < labels.length; i++) {
+                        if (checked[i]) ids.add(countries.get(i).id);
+                        else ids.remove(countries.get(i).id);
+                    }
+                    if (!ids.equals(chosen)) prefs.setSources(ids);
+                    prefs.setFertCount(count[0]);
+                    List<String> out = new ArrayList<>();
+                    for (String k : words.getText().toString().split("[,，]")) if (!k.trim().isEmpty() && !out.contains(k.trim())) out.add(k.trim());
+                    prefs.setFertKeywords(out);
+                    refresh();
+                })
+                .setNegativeButton("취소", null)
+                .show();
     }
 
     /** 농업 키워드: 쉼표로 여러 개 */

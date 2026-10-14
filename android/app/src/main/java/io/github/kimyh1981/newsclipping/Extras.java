@@ -32,6 +32,8 @@ final class Extras {
     static final int TAKE = 2;
     static final long MAX_AGE = 36L * 3600 * 1000;
     static final String FARM = "farm";
+    /** 국가별 비료 시장 뉴스 섹션 (feeds.json) */
+    static final String FERT_WORLD = "fert-world";
 
     /** 사람이 넣은 언론사. feed는 확인해 둔 RSS 주소(없으면 매번 찾는다) */
     static final class Custom {
@@ -99,9 +101,12 @@ final class Extras {
         return "custom-" + Integer.toHexString(normalize(url).toLowerCase(Locale.ROOT).hashCode());
     }
 
-    static String google(String query) {
+    static String google(String query) { return google(query, "1d"); }
+
+    /** when: 구글 뉴스 검색 기간 (1d, 2d …) */
+    static String google(String query, String when) {
         try {
-            return "https://news.google.com/rss/search?q=" + URLEncoder.encode(query + " when:1d", "UTF-8") + "&hl=ko&gl=KR&ceid=KR:ko";
+            return "https://news.google.com/rss/search?q=" + URLEncoder.encode(query + " when:" + when, "UTF-8") + "&hl=ko&gl=KR&ceid=KR:ko";
         } catch (java.io.UnsupportedEncodingException e) {
             throw new IllegalStateException(e);
         }
@@ -259,6 +264,37 @@ final class Extras {
             if ((it.title + " " + it.spoken + " " + it.summary).toLowerCase(Locale.ROOT).contains(k)) return true;
         }
         return false;
+    }
+
+    /** 최신 기사부터 (시각을 모르는 기사는 뒤로) */
+    static List<Entry> latestFirst(List<Entry> entries) {
+        List<Entry> out = new ArrayList<>(entries);
+        Collections.sort(out, (a, b) -> Long.compare(b.time, a.time));
+        return out;
+    }
+
+    /** 키워드 출처의 id ('kw-' + 키워드). 고른 언론사 목록에 없어도 읽도록 select 전에 넣는다 */
+    static String keywordSourceId(String keyword) {
+        return "kw-" + Integer.toHexString(keyword.hashCode());
+    }
+
+    /**
+     * 국가별 비료 시장 뉴스에 사람이 넣은 키워드: 우리말 구글 뉴스에서 최근 이틀 기사를 최신순으로 찾아 그 섹션의 출처로 붙인다.
+     * 붙인 출처 id를 돌려준다 (고른 언론사에 더해야 읽는다)
+     */
+    static List<String> addFertKeywords(Brief b, List<String> keywords, long now) {
+        List<String> ids = new ArrayList<>();
+        if (keywords.isEmpty() || b.sourcesOf(FERT_WORLD).isEmpty()) return ids;
+        Set<String> seen = titles(b);
+        for (String k : keywords) {
+            try {
+                String url = google("\"" + k + "\"", "2d");
+                List<Brief.Item> got = items(latestFirst(withKeyword(entries(get(url)), k)), k + " 검색", true, now, TAKE + 1, seen);
+                String id = keywordSourceId(k);
+                if (!got.isEmpty() && b.addSource(FERT_WORLD, new Brief.Source(id, k + " 검색", "ko", true, TAKE + 1, got))) ids.add(id);
+            } catch (Exception ignored) { } // 못 찾으면 오늘은 그냥 넘어간다
+        }
+        return ids;
     }
 
     // ---- 인터넷 ----

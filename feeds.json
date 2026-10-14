@@ -370,6 +370,111 @@
       "must": "비료|요소|퇴비|농자재|농기자재|칼륨|인산|미생물|토양|바이오플랜"
     },
     {
+      "id": "fert-world",
+      "title": "국가별 비료 시장 뉴스",
+      "_설명": "나라마다 그 나라 말 비료 키워드로 구글 뉴스를 검색해 최신 기사부터 읽는다. 앱에서 나라·기사 수·추가 키워드를 고른다",
+      "limit": 5,
+      "hours": 72,
+      "latest": true,
+      "region": true,
+      "sources": [
+        {
+          "id": "fw-us",
+          "name": "미국",
+          "google": "fertilizer OR urea OR potash OR phosphate OR ammonia",
+          "lang": "en",
+          "country": "미국",
+          "when": "2d",
+          "take": 3,
+          "mix": true,
+          "must": "fertili[sz]er|urea|potash|phosphate|ammonia|nitrogen|DAP|NPK"
+        },
+        {
+          "id": "fw-in",
+          "name": "인도",
+          "google": "fertiliser OR fertilizer OR urea OR DAP",
+          "lang": "en",
+          "edition": "IN",
+          "country": "인도",
+          "when": "2d",
+          "take": 3,
+          "mix": true,
+          "must": "fertili[sz]er|urea|potash|phosphate|ammonia|nitrogen|DAP|NPK"
+        },
+        {
+          "id": "fw-cn",
+          "name": "중국",
+          "google": "化肥 OR 尿素 OR 钾肥 OR 磷肥",
+          "lang": "zh",
+          "country": "중국",
+          "when": "2d",
+          "take": 3,
+          "mix": true,
+          "must": "化肥|尿素|钾肥|磷肥|肥料"
+        },
+        {
+          "id": "fw-vn",
+          "name": "베트남",
+          "google": "\"phân bón\" OR urê OR NPK",
+          "lang": "vi",
+          "country": "베트남",
+          "when": "2d",
+          "take": 3,
+          "mix": true,
+          "must": "phân bón|urê|NPK|DAP|kali"
+        },
+        {
+          "id": "fw-br",
+          "name": "브라질",
+          "google": "fertilizante OR fertilizantes OR ureia OR potássio",
+          "lang": "pt",
+          "edition": "BR",
+          "country": "브라질",
+          "when": "2d",
+          "take": 3,
+          "mix": true,
+          "must": "fertilizante|ureia|potássio|fosfat"
+        },
+        {
+          "id": "fw-jp",
+          "name": "일본",
+          "google": "肥料 OR 尿素",
+          "lang": "ja",
+          "country": "일본",
+          "when": "2d",
+          "take": 3,
+          "mix": true,
+          "must": "肥料|尿素",
+          "default": false
+        },
+        {
+          "id": "fw-gb",
+          "name": "영국·유럽",
+          "google": "fertiliser OR fertilizer OR urea",
+          "lang": "en",
+          "edition": "GB",
+          "country": "유럽",
+          "when": "2d",
+          "take": 3,
+          "mix": true,
+          "must": "fertili[sz]er|urea|potash|phosphate|ammonia|nitrogen|DAP|NPK",
+          "default": false
+        },
+        {
+          "id": "fw-ru",
+          "name": "러시아",
+          "google": "удобрения OR карбамид OR калий",
+          "lang": "ru",
+          "country": "러시아",
+          "when": "2d",
+          "take": 3,
+          "mix": true,
+          "must": "удобр|карбамид|калий|аммиа",
+          "default": false
+        }
+      ]
+    },
+    {
       "id": "ai",
       "title": "AI 뉴스",
       "limit": 6,

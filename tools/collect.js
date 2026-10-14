@@ -18,8 +18,11 @@ const region = require('./region.js');
 const SPARE = 2; // 언론사마다 take보다 2건 더 모은다: 다른 언론사와 겹치는 기사를 빼고도 take건을 채우도록
 const UA = 'Mozilla/5.0 (compatible; news-briefing/1.0; +https://github.com/kimyh1981/Personal-Project)';
 
-// 구글 뉴스 검색. lang에 따라 그 나라판(그 나라 말 기사)에서 찾는다
-const EDITIONS = { ko: ['ko', 'KR', 'KR:ko'], vi: ['vi', 'VN', 'VN:vi'], en: ['en-US', 'US', 'US:en'], ja: ['ja', 'JP', 'JP:ja'], zh: ['zh-CN', 'CN', 'CN:zh-Hans'] };
+// 구글 뉴스 검색. lang에 따라 그 나라판(그 나라 말 기사)에서 찾는다. 같은 말을 쓰는 다른 나라는 출처의 edition(IN, GB, BR)으로
+const EDITIONS = {
+  ko: ['ko', 'KR', 'KR:ko'], vi: ['vi', 'VN', 'VN:vi'], en: ['en-US', 'US', 'US:en'], ja: ['ja', 'JP', 'JP:ja'], zh: ['zh-CN', 'CN', 'CN:zh-Hans'],
+  pt: ['pt-BR', 'BR', 'BR:pt-419'], ru: ['ru', 'RU', 'RU:ru'], IN: ['en-IN', 'IN', 'IN:en'], GB: ['en-GB', 'GB', 'GB:en'], BR: ['pt-BR', 'BR', 'BR:pt-419'],
+};
 
 function googleUrl(q, when = '1d', lang = 'ko') {
   const [hl, gl, ceid] = EDITIONS[lang] || EDITIONS.ko;
@@ -163,7 +166,7 @@ async function readSource(src, log, lang, now = Date.now()) {
   }
   const tries = [];
   if (src.url) tries.push(['RSS', src.url]);
-  if (src.google) tries.push(['구글', googleUrl(src.google, src.when, lang)]);
+  if (src.google) tries.push(['구글', googleUrl(src.google, src.when, src.edition || lang)]);
   for (const [kind, url] of tries) {
     try {
       const items = rss.parseFeed(await get(url)).map((it) => ({ ...it, viaGoogle: url.startsWith('https://news.google.com/') }));
@@ -295,6 +298,8 @@ async function collect(config, now = Date.now(), key = '', opts = {}) {
         const lang = source.lang || sec.lang || 'ko';
         const take = source.take || 3;
         const read = await readSource(source, log, lang, now);
+        // latest: 검색 결과(관련도 순)를 최신 기사부터
+        if (source.latest || sec.latest) read.sort((a, b) => (Date.parse(b.publishedAt) || 0) - (Date.parse(a.publishedAt) || 0));
         const picked = boosted(boost, rss.pick({ ...sec, limit: 99 }, [{ source: { ...source, lang, take: take + SPARE + 10 }, items: read }], now, []));
         const isOld = (it) => old.has('l:' + it.link) || old.has(titleKey(it.title));
         const isPromo = (it) => promo.some((p) => p.test(it.title));
@@ -384,4 +389,4 @@ if (require.main === module) {
   })();
 }
 
-module.exports = { collect, archive, lessons, boosted, earlierKeys, itemKeys, titleKey, decode, googleUrl, translate, speechText, iosPieces, iosHours, RETRY };
+module.exports = { EDITIONS, collect, archive, lessons, boosted, earlierKeys, itemKeys, titleKey, decode, googleUrl, translate, speechText, iosPieces, iosHours, RETRY };

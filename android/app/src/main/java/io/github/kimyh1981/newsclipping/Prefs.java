@@ -44,6 +44,12 @@ final class Prefs {
     /** 섹션 재생 순서(섹션 id). 비어 있으면 서버 순서 */
     List<String> order() { return split(p.getString("order", "")); }
 
+    /** 국가별 비료 시장 뉴스: 기사 수 (기본 5)와 우리말로 더 찾을 키워드 */
+    int fertCount() { return p.getInt("fertCount", 5); }
+    void setFertCount(int n) { p.edit().putInt("fertCount", n).apply(); }
+    List<String> fertKeywords() { return split(p.getString("fertKeywords", "")); }
+    void setFertKeywords(List<String> words) { p.edit().putString("fertKeywords", String.join(",", words)).apply(); }
+
     /** 홈 화면 로고로 지난번에 보인 언론사 누리집 주소들 (앱을 열자마자 보여 주려고) */
     List<String> logoSites() { return split(p.getString("logoSites", "")); }
     void setLogoSites(List<String> sites) { p.edit().putString("logoSites", String.join(",", sites)).apply(); }
