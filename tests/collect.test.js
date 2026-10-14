@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { collect, archive, boosted, decode, googleUrl, earlierKeys, itemKeys } = require('../tools/collect.js');
+const { EDITIONS, collect, archive, boosted, decode, googleUrl, earlierKeys, itemKeys } = require('../tools/collect.js');
 const brief = require('../js/brief.js');
 
 const NOW = Date.parse('2026-10-05T21:00:00Z');
@@ -167,7 +167,8 @@ test('feeds.json: 언론사 id가 모두 있고 겹치지 않으며, 외국 언�
   for (const s of cfg.sections) for (const x of s.sources) {
     assert.ok(x.url || x.google, x.id);
     const lang = x.lang || s.lang || 'ko';
-    assert.ok(['ko', 'en', 'vi', 'zh', 'ja'].includes(lang), x.id);
+    assert.ok(['ko', 'en', 'vi', 'zh', 'ja', 'pt', 'ru', 'id', 'th'].includes(lang), x.id);
+    assert.ok(EDITIONS[x.edition || lang], x.id); // 구글 뉴스 나라판이 있어야 한다
   }
   assert.equal(cfg.sections.at(-1).id, 'vietnam', '베트남 농업·비료는 맨 마지막');
 });
@@ -253,4 +254,18 @@ test('홍보성 기사(행사·대회·기부)는 원고에서 아예 빠진다'
   const config = { sections: [{ id: 'f', title: '농업 신문 헤드라인', limit: 5, promo: ['축제|대회|기부'], sources: [{ id: 'a', name: '가신문', url: 'https://a/rss', take: 4 }] }] };
   const b = await collect(config, NOW);
   assert.deepEqual(b.sections[0].sources[0].items.map((i) => i.title), ['쌀값 반등', '비료값 안정']);
+});
+
+test('국가별 비료 섹션: 같은 말을 쓰는 다른 나라판(edition)에서 찾고, latest면 최신 기사부터', async (t) => {
+  assert.match(googleUrl('urea', '2d', 'IN'), /hl=en-IN&gl=IN&ceid=IN:en$/);
+  assert.match(googleUrl('ureia', '2d', 'BR'), /gl=BR&ceid=BR:pt-419$/);
+  const q = googleUrl('비료값', '2d', 'ko');
+  const old = item('비료값 오른다', 'Mon, 05 Oct 2026 08:00:00 GMT');
+  const fresh = item('비료값 내린다', 'Mon, 05 Oct 2026 20:00:00 GMT');
+  t.mock.method(globalThis, 'fetch', async (url) => {
+    if (url !== q) throw new Error('예상 못한 주소 ' + url);
+    return new Response(`<rss><channel>${old}${fresh}</channel></rss>`, { headers: { 'content-type': 'application/rss+xml' } });
+  });
+  const b = await collect({ sections: [{ id: 'fert-world', title: '국가별 비료 시장 뉴스', limit: 5, latest: true, sources: [{ id: 'fw-kr', name: '한국', google: '비료값', when: '2d', take: 2, mix: true }] }] }, NOW);
+  assert.deepEqual(b.sections[0].sources[0].items.map((it) => it.title), ['비료값 내린다', '비료값 오른다']);
 });

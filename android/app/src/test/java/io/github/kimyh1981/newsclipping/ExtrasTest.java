@@ -125,4 +125,21 @@ public class ExtrasTest {
         for (Brief.Section s : secs) out.add(s.id);
         return out;
     }
+
+    @Test public void fertWorldCountAndLatest() throws Exception {
+        Brief b = Brief.parse(read("briefing.json"));
+        Brief.Section sec = b.ordered(null).get(0);
+        int before = 0;
+        for (Brief.Picked p : b.select(null)) if (p.id.equals(sec.id)) before = p.items.size();
+        b.setLimit(sec.id, 1);
+        for (Brief.Picked p : b.select(null)) if (p.id.equals(sec.id)) assertTrue(p.items.size() <= Math.max(1, before));
+        assertTrue(b.sourcesOf("없는 섹션").isEmpty());
+        List<Extras.Entry> e = Extras.latestFirst(Arrays.asList(
+                new Extras.Entry("옛", "", "", "", 1000), new Extras.Entry("모름", "", "", "", 0), new Extras.Entry("새", "", "", "", 5000)));
+        assertEquals("새", e.get(0).title);
+        assertEquals("모름", e.get(2).title);
+        assertEquals(Extras.keywordSourceId("요소수"), Extras.keywordSourceId("요소수"));
+        assertTrue(Extras.keywordSourceId("요소수").startsWith("kw-"));
+        assertTrue(Extras.google("요소수", "2d").contains("when%3A2d"));
+    }
 }
