@@ -19,4 +19,12 @@ public class UpdaterTest {
         assertEquals("1.37", r.name);
         assertEquals("https://github.com/x/newsclipping.apk", r.apk);
     }
+
+    @Test public void installHelpByStatus() {
+        assertEquals(Updater.HELP_NONE, Updater.helpFor(android.content.pm.PackageInstaller.STATUS_SUCCESS));
+        assertEquals(Updater.HELP_SECURITY, Updater.helpFor(android.content.pm.PackageInstaller.STATUS_FAILURE_BLOCKED));
+        assertEquals(Updater.HELP_SECURITY, Updater.helpFor(android.content.pm.PackageInstaller.STATUS_FAILURE_ABORTED));
+        assertEquals(Updater.HELP_REINSTALL, Updater.helpFor(android.content.pm.PackageInstaller.STATUS_FAILURE_CONFLICT));
+        assertEquals(Updater.HELP_OTHER, Updater.helpFor(android.content.pm.PackageInstaller.STATUS_FAILURE_STORAGE));
+    }
 }

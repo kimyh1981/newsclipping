@@ -350,3 +350,13 @@
     })
     .catch(() => { $('meta').textContent = '오늘 브리핑을 아직 만들지 못했어요. 잠시 후 다시 열어 주세요.'; });
 })();
+
+// 앱 받기: 받기 전에 보안 설정에 막혔을 때 할 일을 팝업으로 먼저 보여 준다
+(() => {
+  const link = document.getElementById('apkLink');
+  const help = document.getElementById('apkHelp');
+  if (!link || !help || typeof help.showModal !== 'function') return;
+  link.addEventListener('click', (e) => { e.preventDefault(); help.showModal(); });
+  document.getElementById('apkGo').addEventListener('click', () => help.close());
+  document.getElementById('apkClose').addEventListener('click', () => help.close());
+})();
