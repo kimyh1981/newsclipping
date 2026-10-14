@@ -18,6 +18,8 @@ const brief = require('../js/brief.js');
 const pron = require('../js/pron.js');
 const VOICE = 'ko-KR-Chirp3-HD-Aoede';
 const EDGE_VOICE = 'ko-KR-InJoonNeural'; // 차분한 남성 뉴스 톤 (주인이 고름, 2026-10-14)
+const EN_VOICE = 'en-US-AndrewNeural'; // 농업영어의 영어 줄 (edge만, 배우는 사람에게 맞게 조금 천천히)
+const EN_RATE = '-10%';
 const ENDPOINT = 'https://texttospeech.googleapis.com/v1/text:synthesize';
 
 // 녹음 뒤 다듬기(ffmpeg): 차 스피커에서 'ㅅ' 소리가 날카롭지 않게 고음을 낮추고 목소리 몸통을 조금 올린 뒤 스테레오로.
@@ -35,11 +37,11 @@ function shape(file) {
 
 const audioId = (text) => crypto.createHash('sha1').update(text.trim(), 'utf8').digest('hex').slice(0, 16);
 
-// 앱이 읽을 수 있는 줄을 중요한 순서대로: [글자, 묶음] (묶음별로 한도를 나눠 쓴다)
+// 앱이 읽을 수 있는 줄을 중요한 순서대로: [글자, 묶음, 영어 줄이면 true] (묶음별로 한도를 나눠 쓴다)
 function wanted(b) {
   const date = b.dateLabel;
   const out = [];
-  const add = (text, kind) => { if (text && text.trim()) out.push([text.trim(), kind]); };
+  const add = (text, kind, en = false) => { if (text && text.trim()) out.push([text.trim(), kind, en]); };
   add(brief.opening(date), 'fixed');
   add(brief.closing(date), 'fixed');
   add(brief.EMPTY, 'fixed');
@@ -63,6 +65,15 @@ function wanted(b) {
   const all = b.sections.flatMap((s) => s.sources.map((x) => x.id));
   const picked = [...new Set([...brief.select(b), ...brief.select(b, all)].flatMap((s) => s.items))];
   for (const it of picked) for (const s of it.say || []) add(s, 'body');
+  // 제품 공부: 회차마다 기기가 고르므로 모든 회를 녹음해 둔다 (한 번 녹음하면 캐시로 계속 쓴다)
+  for (const ep of (b.lessons && b.lessons.product && b.lessons.product.episodes) || []) {
+    add(brief.lessonIntro(ep.n, ep.title), 'lesson');
+    for (const line of ep.lines) add(line, 'lesson');
+  }
+  // 농업영어: 영어 줄은 영어 목소리로, 한국어 풀이 줄은 같은 한국어 목소리로
+  for (const ep of (b.lessons && b.lessons.english && b.lessons.english.episodes) || []) {
+    for (const line of ep.lines) add(line.en || line.ko, 'lesson', !!line.en);
+  }
   const seen = new Set();
   return out.filter(([t]) => (seen.has(t) ? false : seen.add(t)));
 }
@@ -110,9 +121,13 @@ async function record(b, opts) {
   let fresh = 0;
   let stop = '';
   const todo = [];
-  for (const [text, kind] of wanted(b)) {
+  const keep = new Set();
+  for (const [text, kind, en] of wanted(b)) {
+    if (en && engine !== 'edge') continue; // 영어 목소리는 edge에만 있다: 없으면 앱이 폰 영어 음성으로 읽는다
     const id = audioId(text);
-    const cached = cache && path.join(cache, `${voice}-p${pron.VERSION}-${SHAPE}-${id}.mp3`); // 읽는 규칙을 바꾸면 다시 녹음
+    const name = en ? `${EN_VOICE}-${SHAPE}-${id}.mp3` : `${voice}-p${pron.VERSION}-${SHAPE}-${id}.mp3`; // 읽는 규칙을 바꾸면 다시 녹음 (영어 줄은 규칙을 안 거친다)
+    const cached = cache && path.join(cache, name);
+    keep.add(name);
     if (cached && fs.existsSync(cached)) {
       fs.copyFileSync(cached, path.join(dir, `${id}.mp3`));
       ids.push(id);
@@ -120,7 +135,9 @@ async function record(b, opts) {
     }
     if (spent + text.length > budget) { if (kind === 'fixed' || kind === 'headline') stop = '한도'; continue; }
     spent += text.length;
-    todo.push({ id, text: pron.say(text), file: path.join(dir, `${id}.mp3`), cached }); // 이름은 쓴 글로, 녹음은 들리는 대로
+    todo.push(en
+      ? { id, text, file: path.join(dir, `${id}.mp3`), cached, voice: EN_VOICE, rate: EN_RATE }
+      : { id, text: pron.say(text), file: path.join(dir, `${id}.mp3`), cached }); // 이름은 쓴 글로, 녹음은 들리는 대로
   }
   let unshaped = 0;
   const done = (job) => {
@@ -131,7 +148,7 @@ async function record(b, opts) {
   };
   if (engine === 'edge' && todo.length) {
     try {
-      const res = batch(todo.map(({ id, text, file }) => ({ id, text, file })), voice);
+      const res = batch(todo.map(({ id, text, file, voice: v, rate }) => ({ id, text, file, ...(v ? { voice: v, rate } : {}) })), voice);
       const errors = [];
       for (const job of todo) {
         const ok = fs.existsSync(job.file) && fs.statSync(job.file).size > 0;
@@ -159,7 +176,6 @@ async function record(b, opts) {
   }
   // 캐시에는 오늘 쓰는 파일만 남긴다 (어제 기사 녹음은 지운다)
   if (cache) {
-    const keep = new Set(ids.map((id) => `${voice}-p${pron.VERSION}-${SHAPE}-${id}.mp3`));
     for (const f of fs.readdirSync(cache)) if (!keep.has(f)) fs.rmSync(path.join(cache, f), { force: true });
   }
   if (unshaped) log.push(`녹음 다듬기(ffmpeg)를 못 한 줄 ${unshaped}개: 모노 그대로`);
@@ -167,4 +183,4 @@ async function record(b, opts) {
   return ids.length ? { voice, base: 'audio/', ids: ids.sort() } : null;
 }
 
-module.exports = { record, wanted, audioId, synthesize, edgeBatch, shape, VOICE, EDGE_VOICE };
+module.exports = { record, wanted, audioId, synthesize, edgeBatch, shape, VOICE, EDGE_VOICE, EN_VOICE };

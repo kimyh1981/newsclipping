@@ -53,6 +53,58 @@ final class Prefs {
     List<String> keywords() { return split(p.getString("keywords", "")); }
     void setKeywords(List<String> words) { p.edit().putString("keywords", String.join(",", words)).apply(); }
 
+    // ---- 제품 공부 진도 ----
+
+    /** 평일 뉴스 뒤에 제품 공부 한 회를 읽는다 */
+    boolean lessonOn() { return p.getBoolean("lessonOn", true); }
+    void setLessonOn(boolean v) { p.edit().putBoolean("lessonOn", v).apply(); }
+    /** 제품 공부 뒤에 같은 회의 농업영어 */
+    boolean englishOn() { return p.getBoolean("englishOn", true); }
+    void setEnglishOn(boolean v) { p.edit().putBoolean("englishOn", v).apply(); }
+
+    /** 이번 바퀴에서 끝까지 들은 회 → 들은 날 */
+    java.util.Map<Integer, String> lessonDone() { return Lessons.parseDone(p.getString("lessonDone", "")); }
+    int lessonRound() { return p.getInt("lessonRound", 1); }
+
+    void markLessonDone(int n) {
+        java.util.Map<Integer, String> done = lessonDone();
+        if (!done.containsKey(n)) done.put(n, today());
+        p.edit().putString("lessonDone", Lessons.doneString(done)).apply();
+    }
+
+    /** 다시 듣기로 표시한 회 (다음 바퀴에서 먼저) */
+    List<Integer> lessonStars() {
+        List<Integer> out = new ArrayList<>();
+        for (String x : split(p.getString("lessonStars", ""))) { try { out.add(Integer.parseInt(x)); } catch (NumberFormatException ignored) { } }
+        return out;
+    }
+
+    void toggleStar(int n) {
+        List<Integer> stars = lessonStars();
+        if (!stars.remove(Integer.valueOf(n))) stars.add(n);
+        List<String> s = new ArrayList<>();
+        for (int x : stars) s.add(String.valueOf(x));
+        p.edit().putString("lessonStars", String.join(",", s)).apply();
+    }
+
+    /** 오늘 들을 회: 오늘 이미 정했으면 그 회, 아니면 이번 바퀴의 다음 회(다 들었으면 다음 바퀴의 첫 회).
+     *  assign이면 오늘 회로 정해 저장한다 (바퀴가 끝났으면 다음 바퀴로 넘긴다). 회차가 없으면 -1 */
+    int lessonForToday(List<Integer> all, boolean assign) {
+        if (all.isEmpty()) return -1;
+        String t = p.getString("lessonToday", "");
+        if (t.startsWith(today() + ":")) {
+            try { int n = Integer.parseInt(t.substring(11)); if (all.contains(n)) return n; } catch (NumberFormatException ignored) { }
+        }
+        int round = lessonRound();
+        int n = Lessons.next(Lessons.order(all, lessonStars(), round), lessonDone());
+        if (n < 0) {
+            n = Lessons.order(all, lessonStars(), round + 1).get(0);
+            if (assign) p.edit().putInt("lessonRound", round + 1).putString("lessonDone", "").apply();
+        }
+        if (assign) p.edit().putString("lessonToday", today() + ":" + n).apply();
+        return n;
+    }
+
     private static List<String> split(String s) {
         List<String> out = new ArrayList<>();
         for (String x : s.split(",")) if (!x.trim().isEmpty()) out.add(x.trim());

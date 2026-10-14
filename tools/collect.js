@@ -201,7 +201,20 @@ function earlierKeys(live, now, days = 2) {
 // 지난 원고 보관: archive/<서울 날짜>.json을 최근 ARCHIVE_DAYS일치 남기고 archive/index.json에 날짜 목록을 둔다.
 // 사이트는 배포마다 통째로 바뀌므로, 지금 사이트에 있는 지난 날짜 파일을 받아 다시 올린다 (웹 화면에서 날짜를 골라 본다)
 const ARCHIVE_DAYS = 7;
-const slim = (b) => { const { audio, earlier, ...rest } = b; return rest; }; // 녹음은 그날 것만 남으니 빼고, 겹침 열쇠도 뺀다
+const slim = (b) => { const { audio, earlier, lessons: _, ...rest } = b; return rest; }; // 녹음은 그날 것만 남으니 빼고, 겹침 열쇠와 제품 공부 원고(날마다 같음)도 뺀다
+
+// 제품 공부(product)와 같은 회의 농업영어(english) 원고
+function lessons() {
+  const out = {};
+  for (const name of ['product', 'english']) {
+    try {
+      out[name] = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'lessons', `${name}.json`), 'utf8'));
+    } catch (err) {
+      console.log(`${name} 원고를 못 읽음: ${err.message}`);
+    }
+  }
+  return out.product ? out : undefined;
+}
 
 async function archive(out, b, live, now, getText) {
   const today = naver.seoulDate(now);
@@ -335,6 +348,8 @@ if (require.main === module) {
       summaryKey: process.env.ANTHROPIC_API_KEY || '',
       summaryLimit: process.env.SUMMARY_LIMIT === undefined ? 300 : Number(process.env.SUMMARY_LIMIT),
     });
+    // 제품 공부 원고(평일 뉴스 뒤 한 회씩, 어느 회를 읽을지는 기기가 진도에 따라 고른다)
+    b.lessons = lessons();
     // 원고 줄을 신경망 음성으로 미리 녹음 (기본: 무료 MS 엣지 음성, GOOGLE_TTS_KEY가 있으면 구글, TTS_ENGINE=off면 안 함). 녹음이 없으면 앱이 폰 음성으로 읽는다
     const key = process.env.GOOGLE_TTS_KEY || '';
     b.audio = await tts.record(b, {
@@ -361,4 +376,4 @@ if (require.main === module) {
   })();
 }
 
-module.exports = { collect, archive, boosted, earlierKeys, itemKeys, titleKey, decode, googleUrl, translate, speechText, iosPieces, iosHours, RETRY };
+module.exports = { collect, archive, lessons, boosted, earlierKeys, itemKeys, titleKey, decode, googleUrl, translate, speechText, iosPieces, iosHours, RETRY };

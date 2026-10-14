@@ -49,8 +49,29 @@ final class Brief {
         final Item item;
         /** 폰이 직접 가져온 기사의 줄(헤드라인과 그 언론사 소개): 서버 녹음을 찾지 않는다 */
         final boolean local;
+        /** 제품 공부·농업영어 줄이면 그 회 번호, 아니면 0 */
+        final int lesson;
+        /** 농업영어 코너의 줄 (한국어 풀이 줄 포함) */
+        final boolean english;
+        /** 영어 목소리로 읽는 줄: 한국어 읽기 규칙을 거치지 않는다 */
+        final boolean en;
+        /** 이 줄 뒤에 쉬는 시간(밀리초): 따라 말할 틈 */
+        final int pause;
         Line(String text, Item item) { this(text, item, item != null && item.local); }
-        Line(String text, Item item, boolean local) { this.text = text; this.item = item; this.local = local; }
+        Line(String text, Item item, boolean local) { this(text, item, local, 0); }
+        Line(String text, Item item, boolean local, int lesson) { this(text, item, local, lesson, false, false, 0); }
+        Line(String text, Item item, boolean local, int lesson, boolean english, boolean en, int pause) {
+            this.text = text; this.item = item; this.local = local; this.lesson = lesson; this.english = english; this.en = en; this.pause = pause;
+        }
+    }
+
+    /** 제품 공부 한 회 (서버 lessons/product.json)와 같은 회의 농업영어 (lessons/english.json, 없으면 빈 목록) */
+    static final class Lesson {
+        final int n;
+        final String title;
+        final List<String> lines;
+        final List<Line> english = new ArrayList<>();
+        Lesson(int n, String title, List<String> lines) { this.n = n; this.title = title; this.lines = lines; }
     }
 
     static final class Source {
@@ -93,6 +114,11 @@ final class Brief {
         return (i % 2 == 1 ? "다음은 " : "이어서 ") + title + "입니다.";
     }
 
+    /** 뉴스 뒤 제품 공부의 첫 줄 (js/brief.js lessonIntro와 같은 문장) */
+    static String lessonIntro(int n, String title) {
+        return "이어서 바이오플랜 제품 공부 시간입니다. 오늘은 " + n + "회, " + sentence(title);
+    }
+
     static String closing(String date) {
         return "지금까지 " + date + " 아침 뉴스였습니다. 오늘도 안전 운전하시고, 좋은 하루 보내세요.";
     }
@@ -115,9 +141,11 @@ final class Brief {
     /** 서버가 구글 음성으로 녹음해 둔 줄(audioId)과 그 파일이 있는 곳(briefing.json 기준 상대 경로). 없으면 빈 목록 */
     final Set<String> audioIds;
     final String audioBase;
+    /** 제품 공부 회차들 (옛 briefing.json이면 비어 있다) */
+    final List<Lesson> lessons;
 
-    private Brief(String dateLabel, boolean playToday, List<Section> sections, Set<String> audioIds, String audioBase) {
-        this.dateLabel = dateLabel; this.playToday = playToday; this.sections = sections; this.audioIds = audioIds; this.audioBase = audioBase;
+    private Brief(String dateLabel, boolean playToday, List<Section> sections, Set<String> audioIds, String audioBase, List<Lesson> lessons) {
+        this.dateLabel = dateLabel; this.playToday = playToday; this.sections = sections; this.audioIds = audioIds; this.audioBase = audioBase; this.lessons = lessons;
     }
 
     /** 녹음 파일 이름: 줄 글자(앞뒤 공백 뺌)의 SHA-1 앞 16자리. 서버 tools/tts.js의 audioId와 같은 규칙 */
@@ -158,7 +186,31 @@ final class Brief {
         JSONObject audio = b.optJSONObject("audio");
         JSONArray ids = audio == null ? null : audio.optJSONArray("ids");
         if (ids != null) for (int i = 0; i < ids.length(); i++) audioIds.add(ids.getString(i));
-        return new Brief(b.getString("dateLabel"), auto == null || auto.optBoolean("play", true), sections, audioIds, audio == null ? "audio/" : audio.optString("base", "audio/"));
+        List<Lesson> lessons = new ArrayList<>();
+        JSONObject ls = b.optJSONObject("lessons");
+        JSONObject product = ls == null ? null : ls.optJSONObject("product");
+        JSONArray eps = product == null ? null : product.optJSONArray("episodes");
+        if (eps != null) for (int i = 0; i < eps.length(); i++) {
+            JSONObject e = eps.getJSONObject(i);
+            lessons.add(new Lesson(e.getInt("n"), e.getString("title"), strings(e.optJSONArray("lines"))));
+        }
+        JSONObject english = ls == null ? null : ls.optJSONObject("english");
+        JSONArray eng = english == null ? null : english.optJSONArray("episodes");
+        if (eng != null) for (int i = 0; i < eng.length(); i++) {
+            JSONObject e = eng.getJSONObject(i);
+            int n = e.getInt("n");
+            Lesson l = null;
+            for (Lesson x : lessons) if (x.n == n) l = x;
+            JSONArray ls2 = e.optJSONArray("lines");
+            if (l == null || ls2 == null) continue;
+            for (int k = 0; k < ls2.length(); k++) {
+                JSONObject o = ls2.getJSONObject(k);
+                boolean en = o.has("en");
+                String t = (en ? o.optString("en") : o.optString("ko")).trim();
+                if (!t.isEmpty()) l.english.add(new Line(t, null, false, n, true, en, (int) Math.round(o.optDouble("pause", 0) * 1000)));
+            }
+        }
+        return new Brief(b.getString("dateLabel"), auto == null || auto.optBoolean("play", true), sections, audioIds, audio == null ? "audio/" : audio.optString("base", "audio/"), lessons);
     }
 
     Set<String> defaults() {
@@ -263,6 +315,42 @@ final class Brief {
         lines.add(new Line("", null));
         lines.add(new Line(closing(date), null));
         return lines;
+    }
+
+    Lesson lesson(int n) {
+        for (Lesson l : lessons) if (l.n == n) return l;
+        return null;
+    }
+
+    /** 제품 공부 한 회의 줄들 (첫 줄은 소개) */
+    static List<Line> lessonLines(Lesson l) { return lessonLines(l, true, true); }
+
+    /** 제품 공부(product)와 이어지는 농업영어(english) 가운데 켠 것만 */
+    static List<Line> lessonLines(Lesson l, boolean product, boolean english) {
+        List<Line> out = new ArrayList<>();
+        if (product) {
+            out.add(new Line(lessonIntro(l.n, l.title), null, false, l.n));
+            for (String t : l.lines) out.add(new Line(t, null, false, l.n));
+        }
+        if (english && !l.english.isEmpty()) {
+            if (!out.isEmpty()) out.add(new Line("", null, false, l.n));
+            out.addAll(l.english);
+        }
+        return out;
+    }
+
+    static List<Line> withLesson(List<Line> news, Lesson l) { return withLesson(news, l, true, true); }
+
+    /** 뉴스 원고의 맺음말 앞에 제품 공부 한 회(와 농업영어)를 넣는다 */
+    static List<Line> withLesson(List<Line> news, Lesson l, boolean product, boolean english) {
+        if (l == null || news.size() < 3) return news;
+        List<Line> lesson = lessonLines(l, product, english);
+        if (lesson.isEmpty()) return news;
+        List<Line> out = new ArrayList<>(news.subList(0, news.size() - 2)); // 맨 끝은 빈 줄과 맺음말
+        out.add(new Line("", null));
+        out.addAll(lesson);
+        out.addAll(news.subList(news.size() - 2, news.size()));
+        return out;
     }
 
     String script(Set<String> enabled) {

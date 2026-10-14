@@ -10,9 +10,10 @@ android {
         applicationId 'io.github.kimyh1981.newsclipping'
         minSdk 26
         targetSdk 34
-        // 배포 작업 번호가 버전: 새 APK를 받으면 기존 앱 위에 업데이트로 설치된다
+        // versionCode는 배포 작업 번호: 새 APK를 받으면 기존 앱 위에 업데이트로 설치된다
         versionCode Integer.parseInt(System.getenv('GITHUB_RUN_NUMBER') ?: '1')
-        versionName "1.0.${System.getenv('GITHUB_RUN_NUMBER') ?: '0'}"
+        // 보이는 버전은 android/version.txt (1.<PR 번호>). PR마다 올려서 머지 안내의 'PR #N (v1.N)'과 앱 화면 버전이 같게 한다
+        versionName rootProject.file('version.txt').text.trim()
         // 뉴스 브리핑(언론사별 기사) 주소. 다른 곳에 배포하면 NEWS_URL 환경 변수로 바꾼다
         buildConfigField 'String', 'NEWS_URL', "\"${System.getenv('NEWS_URL') ?: 'https://kimyh1981.github.io/newsclipping/briefing.json'}\""
     }

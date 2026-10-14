@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """MS 엣지 '소리 내어 읽기' 신경망 음성(edge-tts)으로 여러 줄을 한꺼번에 녹음한다. tools/tts.js가 부른다.
-사용: python3 tools/edge_tts_batch.py jobs.json <음성> <빠르기>   jobs.json = [{"id", "text", "file"}]
+사용: python3 tools/edge_tts_batch.py jobs.json <음성> <빠르기>   jobs.json = [{"id", "text", "file", "voice"?, "rate"?}]
+줄에 voice·rate가 있으면 그 줄만 그 음성·빠르기로 (농업영어의 영어 줄)
 결과(표준 출력): {"id": null(성공) 또는 "오류 내용"}"""
 import asyncio
 import json
@@ -17,7 +18,7 @@ async def one(sem, job, voice, rate):
             try:
                 part = job["file"] + ".part"  # 끝까지 받은 파일만 이름을 바꾼다: 도중에 멈춰도 반쪽 파일이 남지 않게
                 # 한 줄이 30초 넘게 걸리면 끊고 다시 (2026-10-13: 연결이 멈춘 채 6분을 다 써서 한 줄도 못 녹음했다)
-                await asyncio.wait_for(edge_tts.Communicate(job["text"], voice, rate=rate).save(part), timeout=30)
+                await asyncio.wait_for(edge_tts.Communicate(job["text"], job.get("voice") or voice, rate=job.get("rate") or rate).save(part), timeout=30)
                 os.replace(part, job["file"])
                 return job["id"], None
             except Exception as e:  # 연결이 끊기거나 잠깐 막히면 쉬었다가 다시
