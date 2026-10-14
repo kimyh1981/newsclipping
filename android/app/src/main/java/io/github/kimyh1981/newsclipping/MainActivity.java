@@ -2,7 +2,6 @@ package io.github.kimyh1981.newsclipping;
 
 import android.Manifest;
 import android.app.Activity;
-import android.app.AlertDialog;
 import android.app.TimePickerDialog;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
@@ -58,6 +57,11 @@ public class MainActivity extends Activity {
     private boolean previewReady;
     private Runnable afterPreview;
     private boolean loadingSources;
+    /** 새 버전 안내 (맨 위 파란 띠). 있으면 누르면 받아서 설치 */
+    private TextView updateBar;
+    private Updater.Release update;
+    private boolean updating;
+    private long updateChecked;
 
     // 아이폰 설정 앱의 색 (밝은 화면 / 어두운 화면)
     private boolean dark;
@@ -92,6 +96,16 @@ public class MainActivity extends Activity {
         TextView intro = text("차 블루투스가 연결되면 평일 아침에 고른 언론사의 헤드라인을 읽어 드립니다.", 15, secondary);
         intro.setPadding(dp(4), 0, dp(4), dp(16));
         col.addView(intro);
+        updateBar = text("", 16, 0xFFFFFFFF);
+        updateBar.setTypeface(Typeface.DEFAULT_BOLD);
+        updateBar.setGravity(Gravity.CENTER);
+        updateBar.setPadding(dp(16), dp(14), dp(16), dp(14));
+        updateBar.setBackground(pressable(rounded(green, dp(14))));
+        updateBar.setVisibility(View.GONE);
+        updateBar.setOnClickListener(v -> installUpdate());
+        LinearLayout.LayoutParams ub = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        ub.bottomMargin = dp(14);
+        col.addView(updateBar, ub);
 
         // 지금 듣기 / 멈춤
         LinearLayout play = new LinearLayout(this);
@@ -118,7 +132,12 @@ public class MainActivity extends Activity {
         fullBtn.setTypeface(Typeface.DEFAULT_BOLD);
         fullBtn.setGravity(Gravity.CENTER);
         fullBtn.setBackground(pressable(rounded(card, dp(14))));
-        fullBtn.setOnClickListener(v -> NewsService.control(NewsService.ACTION_MORE));
+        // 전체 듣기: 듣던 기사(멈췄으면 멈춘 곳, 안 읽는 중이면 지난번 듣던 기사)부터 이어서, 자막 화면으로 넘어간다
+        fullBtn.setOnClickListener(v -> {
+            if (NewsService.isRunning()) NewsService.control(NewsService.ACTION_MORE);
+            else NewsService.start(this, true);
+            startActivity(new Intent(this, CaptionActivity.class));
+        });
         nav.addView(fullBtn, new LinearLayout.LayoutParams(0, dp(46), 1f));
         nav.addView(new View(this), new LinearLayout.LayoutParams(dp(10), 1));
         nav.addView(iconPill(Glyph.NEXT, "다음 기사", card, tint, v -> NewsService.control(NewsService.ACTION_NEXT)), new LinearLayout.LayoutParams(0, dp(46), 1f));
@@ -131,7 +150,7 @@ public class MainActivity extends Activity {
         customVal = row(today, "언론사 직접 넣기 (주소)", v -> withBrief(this::showCustom), true);
         keywordsVal = row(today, "농업 키워드", v -> showKeywords(), true);
         lessonVal = row(today, "제품 공부 진도", v -> withBrief(this::showLessons), true);
-        row(today, "자막 화면 (터치하면 전체 듣기)", v -> startActivity(new Intent(this, CaptionActivity.class)), false).setText("");
+        row(today, "자막 화면 (듣던 곳에서 이어 보기)", v -> startActivity(new Intent(this, CaptionActivity.class)), false).setText("");
 
         LinearLayout setup = section(col, "처음 한 번만", "두 가지를 허용해야 차에 탔을 때 앱을 열지 않아도 자동으로 읽습니다.");
         permVal = row(setup, "블루투스·알림 권한", v -> askPermissions(), true);
@@ -172,6 +191,50 @@ public class MainActivity extends Activity {
         NewsService.onStateChange = this::showPlayState;
         showPlayState();
         refresh();
+        checkUpdate();
+    }
+
+    /** 깃허브에 새 버전이 있으면 맨 위에 '업데이트' 띠를 띄운다 (30분에 한 번만 확인) */
+    private void checkUpdate() {
+        if (updating || System.currentTimeMillis() - updateChecked < 30 * 60_000L) return;
+        updateChecked = System.currentTimeMillis();
+        new Thread(() -> {
+            Updater.Release r = Updater.newer();
+            runOnUiThread(() -> {
+                update = r;
+                if (r == null) { updateBar.setVisibility(View.GONE); return; }
+                updateBar.setText("새 버전 " + r.name + "이 있습니다 · 눌러서 업데이트");
+                updateBar.setVisibility(View.VISIBLE);
+            });
+        }, "news-update").start();
+    }
+
+    private void installUpdate() {
+        if (update == null || updating) return;
+        if (!Updater.canInstall(this)) {
+            new Sheet(this)
+                    .setTitle("설치 허용이 한 번 필요합니다")
+                    .setMessage("방금 열린 화면에서 '이 출처 허용'을 켜고 돌아와서 업데이트를 다시 눌러 주세요. 처음 한 번만 하면 됩니다.")
+                    .setPositiveButton("확인", null)
+                    .show();
+            updateChecked = 0;
+            return;
+        }
+        updating = true;
+        Updater.Release r = update;
+        updateBar.setText("새 버전 받는 중…");
+        new Thread(() -> {
+            try {
+                Updater.download(this, r, pct -> runOnUiThread(() -> updateBar.setText(pct < 0 ? "새 버전 받는 중…" : "새 버전 받는 중 " + pct + "%")));
+                runOnUiThread(() -> { updating = false; updateBar.setText("설치 화면에서 '업데이트'를 눌러 주세요"); });
+            } catch (Exception e) {
+                runOnUiThread(() -> {
+                    updating = false;
+                    updateBar.setText("새 버전 " + r.name + "이 있습니다 · 눌러서 업데이트");
+                    new Sheet(this).setMessage("새 버전을 받지 못했습니다. 인터넷 연결을 확인하고 다시 눌러 주세요.").setPositiveButton("확인", null).show();
+                });
+            }
+        }, "news-update-get").start();
     }
 
     @Override
@@ -411,15 +474,16 @@ public class MainActivity extends Activity {
             askPermissions();
             return;
         }
-        new AlertDialog.Builder(this)
+        new Sheet(this)
                 .setTitle("차 블루투스를 고르세요")
                 .setItems(names.toArray(new String[0]), (d, i) -> { prefs.setCar(addrs.get(i), i == 0 ? "" : names.get(i)); refresh(); })
                 .show();
     }
 
     private void pickTime() {
-        new TimePickerDialog(this, (v1, h1, m1) ->
-                new TimePickerDialog(this, (v2, h2, m2) -> { prefs.setWindow(h1 * 60 + m1, h2 * 60 + m2); refresh(); },
+        int theme = dark ? android.R.style.Theme_Material_Dialog_Alert : android.R.style.Theme_Material_Light_Dialog_Alert;
+        new TimePickerDialog(this, theme, (v1, h1, m1) ->
+                new TimePickerDialog(this, theme, (v2, h2, m2) -> { prefs.setWindow(h1 * 60 + m1, h2 * 60 + m2); refresh(); },
                         prefs.end() / 60, prefs.end() % 60, true) {{ setTitle("끝나는 시각"); }}.show(),
                 prefs.start() / 60, prefs.start() % 60, true) {{ setTitle("시작 시각"); }}.show();
     }
@@ -443,7 +507,7 @@ public class MainActivity extends Activity {
                 loadingSources = false;
                 refresh();
                 if (brief == null) {
-                    new AlertDialog.Builder(this).setMessage("언론사 목록을 불러오지 못했습니다. 인터넷 연결을 확인해 주세요.").setPositiveButton("확인", null).show();
+                    new Sheet(this).setMessage("언론사 목록을 불러오지 못했습니다. 인터넷 연결을 확인해 주세요.").setPositiveButton("확인", null).show();
                     return;
                 }
                 next.accept(brief);
@@ -461,7 +525,7 @@ public class MainActivity extends Activity {
             labels[i] = r[0] + " · " + r[1] + (r[3].isEmpty() ? "" : " (" + r[3] + ")");
             checked[i] = chosen.contains(r[2]);
         }
-        new AlertDialog.Builder(this)
+        new Sheet(this)
                 .setTitle("들을 언론사를 고르세요")
                 .setMultiChoiceItems(labels, checked, (d, i, on) -> checked[i] = on)
                 .setPositiveButton("저장", (d, w) -> {
@@ -480,7 +544,8 @@ public class MainActivity extends Activity {
         List<Brief.Section> secs = new ArrayList<>(b.ordered(prefs.order()));
         LinearLayout list = new LinearLayout(this);
         list.setOrientation(LinearLayout.VERTICAL);
-        list.setPadding(dp(12), dp(8), dp(12), 0);
+        list.setPadding(dp(16), dp(4), dp(8), dp(4));
+        list.setBackground(rounded(card, dp(12)));
         Runnable[] draw = new Runnable[1];
         draw[0] = () -> {
             list.removeAllViews();
@@ -503,11 +568,9 @@ public class MainActivity extends Activity {
             }
         };
         draw[0].run();
-        ScrollView sv = new ScrollView(this);
-        sv.addView(list);
-        new AlertDialog.Builder(this)
+        new Sheet(this)
                 .setTitle("섹션 순서 (위에서부터 읽습니다)")
-                .setView(sv)
+                .setView(list)
                 .setPositiveButton("저장", (d, w) -> {
                     List<String> ids = new ArrayList<>();
                     for (Brief.Section x : secs) ids.add(x.id);
@@ -524,11 +587,11 @@ public class MainActivity extends Activity {
         List<Extras.Custom> list = prefs.custom();
         String[] labels = new String[list.size()];
         for (int i = 0; i < list.size(); i++) labels[i] = list.get(i).name + " · " + sectionTitle(b, list.get(i).section);
-        AlertDialog.Builder d = new AlertDialog.Builder(this)
+        Sheet d = new Sheet(this)
                 .setTitle(list.isEmpty() ? "직접 넣은 언론사가 없습니다" : "직접 넣은 언론사 (누르면 지웁니다)")
                 .setPositiveButton("추가", (x, w) -> addCustom(b))
                 .setNegativeButton("닫기", null);
-        if (!list.isEmpty()) d.setItems(labels, (x, i) -> new AlertDialog.Builder(this)
+        if (!list.isEmpty()) d.setItems(labels, (x, i) -> new Sheet(this)
                 .setMessage(list.get(i).name + "을(를) 지울까요?")
                 .setPositiveButton("지우기", (y, w) -> {
                     Extras.Custom gone = list.remove(i);
@@ -550,7 +613,8 @@ public class MainActivity extends Activity {
     private void addCustom(Brief b) {
         LinearLayout form = new LinearLayout(this);
         form.setOrientation(LinearLayout.VERTICAL);
-        form.setPadding(dp(20), dp(8), dp(20), 0);
+        form.setPadding(dp(16), dp(8), dp(16), dp(8));
+        form.setBackground(rounded(card, dp(12)));
         android.widget.EditText url = new android.widget.EditText(this);
         url.setHint("주소 (예: www.nongmin.com 또는 RSS 주소)");
         url.setSingleLine(true);
@@ -574,11 +638,9 @@ public class MainActivity extends Activity {
         }
         if (group.getCheckedRadioButtonId() == -1 && !secs.isEmpty()) group.check(1000);
         form.addView(group);
-        ScrollView sv = new ScrollView(this);
-        sv.addView(form);
-        new AlertDialog.Builder(this)
+        new Sheet(this)
                 .setTitle("언론사 직접 넣기")
-                .setView(sv)
+                .setView(form)
                 .setPositiveButton("확인", (d, w) -> {
                     String u = Extras.normalize(url.getText().toString());
                     int idx = group.getCheckedRadioButtonId() - 1000;
@@ -597,7 +659,7 @@ public class MainActivity extends Activity {
             runOnUiThread(() -> {
                 if (f == null) {
                     refresh();
-                    new AlertDialog.Builder(this).setMessage("이 주소에서 기사를 찾지 못했습니다. 주소를 확인하거나 RSS 주소를 넣어 주세요.").setPositiveButton("확인", null).show();
+                    new Sheet(this).setMessage("이 주소에서 기사를 찾지 못했습니다. 주소를 확인하거나 RSS 주소를 넣어 주세요.").setPositiveButton("확인", null).show();
                     return;
                 }
                 String n = !name.isEmpty() ? name : !f.name.isEmpty() && !f.viaGoogle ? f.name : Extras.host(url);
@@ -609,7 +671,7 @@ public class MainActivity extends Activity {
                 Set<String> on = prefs.sources();
                 if (on != null) { on.add(id); prefs.setSources(on); } // 기본값을 쓰면 새 언론사는 저절로 켜진다
                 refresh();
-                new AlertDialog.Builder(this)
+                new Sheet(this)
                         .setMessage(n + "을(를) '" + sec.title + "'에 넣었습니다. " + (f.viaGoogle ? "RSS가 없어 구글 뉴스에서 이 사이트 기사를 찾아 읽습니다. " : "")
                                 + "지금 기사 " + f.entries.size() + "건이 보입니다. 다음 재생부터 언론사마다 " + Extras.TAKE + "건씩 폰 음성으로 읽습니다.")
                         .setPositiveButton("확인", null).show();
@@ -620,7 +682,7 @@ public class MainActivity extends Activity {
     /** 제품 공부 진도: 오늘 회, 남은 회(예정 날짜), 완료한 회(누르면 다시 듣기·다시 듣기 표시) */
     private void showLessons(Brief b) {
         if (b.lessons.isEmpty()) {
-            new AlertDialog.Builder(this).setMessage("제품 공부 원고가 아직 서버에 없습니다. 내일 아침 원고부터 들어옵니다.").setPositiveButton("확인", null).show();
+            new Sheet(this).setMessage("제품 공부 원고가 아직 서버에 없습니다. 내일 아침 원고부터 들어옵니다.").setPositiveButton("확인", null).show();
             return;
         }
         List<Integer> all = Lessons.numbers(b.lessons);
@@ -634,67 +696,77 @@ public class MainActivity extends Activity {
 
         LinearLayout list = new LinearLayout(this);
         list.setOrientation(LinearLayout.VERTICAL);
-        list.setPadding(dp(20), dp(8), dp(20), dp(8));
-        AlertDialog[] dlg = new AlertDialog[1];
-        Switch on = new Switch(this);
-        on.setText("평일 뉴스 뒤에 제품 공부 듣기");
-        on.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
-        on.setChecked(prefs.lessonOn());
-        on.setOnCheckedChangeListener((v, c) -> { prefs.setLessonOn(c); refresh(); });
-        list.addView(on);
-        Switch eng = new Switch(this);
-        eng.setText("이어서 같은 회의 농업영어 듣기");
-        eng.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
-        eng.setChecked(prefs.englishOn());
-        eng.setOnCheckedChangeListener((v, c) -> { prefs.setEnglishOn(c); refresh(); });
-        list.addView(eng);
+        Sheet[] dlg = new Sheet[1];
+        LinearLayout onOff = group(list, null);
+        switchRow(onOff, "평일 뉴스 뒤에 제품 공부", prefs::setLessonOn, true).setChecked(prefs.lessonOn());
+        switchRow(onOff, "이어서 같은 회의 농업영어", prefs::setEnglishOn, false).setChecked(prefs.englishOn());
 
         Brief.Lesson t = b.lesson(todayN);
         if (t != null) {
-            list.addView(head((done.containsKey(todayN) && !nextRound ? "오늘 (들음)" : "오늘") + " · " + Lessons.label(left.containsKey(todayN) ? left.get(todayN) : Prefs.today())));
-            list.addView(lessonRow(t, todayN + "회 " + t.title, label, () -> { dlg[0].dismiss(); NewsService.playLesson(this, todayN); }));
+            LinearLayout g = group(list, (done.containsKey(todayN) && !nextRound ? "오늘 (들음)" : "오늘") + " · " + Lessons.label(left.containsKey(todayN) ? left.get(todayN) : Prefs.today()));
+            lessonRow(g, todayN + "회 " + t.title, "▶", label, false, () -> { dlg[0].dismiss(); NewsService.playLesson(this, todayN); });
         }
-        list.addView(head("남은 회 · 평일 하루 한 회"));
-        for (java.util.Map.Entry<Integer, String> e : left.entrySet()) {
-            if (e.getKey() == todayN) continue;
-            Brief.Lesson l = b.lesson(e.getKey());
-            if (l == null) continue;
-            list.addView(lessonRow(l, Lessons.label(e.getValue()) + "  " + l.n + "회 " + l.title, secondary, () -> { dlg[0].dismiss(); NewsService.playLesson(this, l.n); }));
-        }
-        if (!done.isEmpty()) {
-            list.addView(head("완료 · 누르면 다시 듣기, 길게 누르면 다시 듣기 표시"));
-            for (java.util.Map.Entry<Integer, String> e : done.entrySet()) {
-                Brief.Lesson l = b.lesson(e.getKey());
-                if (l == null) continue;
-                TextView r = lessonRow(l, "✓ " + Lessons.label(e.getValue()) + "  " + l.n + "회 " + l.title + (stars.contains(l.n) ? "  ★" : ""), label, () -> { dlg[0].dismiss(); NewsService.playLesson(this, l.n); });
-                r.setOnLongClickListener(v -> {
-                    prefs.toggleStar(l.n);
-                    ((TextView) v).setText("✓ " + Lessons.label(e.getValue()) + "  " + l.n + "회 " + l.title + (prefs.lessonStars().contains(l.n) ? "  ★" : ""));
-                    return true;
-                });
-                list.addView(r);
+        List<java.util.Map.Entry<Integer, String>> rest = new ArrayList<>();
+        for (java.util.Map.Entry<Integer, String> e : left.entrySet()) if (e.getKey() != todayN && b.lesson(e.getKey()) != null) rest.add(e);
+        if (!rest.isEmpty()) {
+            LinearLayout g = group(list, "남은 회 · 평일 하루 한 회");
+            for (int i = 0; i < rest.size(); i++) {
+                Brief.Lesson l = b.lesson(rest.get(i).getKey());
+                lessonRow(g, l.n + "회 " + l.title, Lessons.label(rest.get(i).getValue()), secondary, i < rest.size() - 1, () -> { dlg[0].dismiss(); NewsService.playLesson(this, l.n); });
             }
         }
-        ScrollView sv = new ScrollView(this);
-        sv.addView(list);
-        dlg[0] = new AlertDialog.Builder(this)
+        List<java.util.Map.Entry<Integer, String>> fin = new ArrayList<>();
+        for (java.util.Map.Entry<Integer, String> e : done.entrySet()) if (b.lesson(e.getKey()) != null) fin.add(e);
+        if (!fin.isEmpty()) {
+            LinearLayout g = group(list, "완료 · 누르면 다시 듣기, 길게 누르면 ★ 다시 듣기 표시");
+            for (int i = 0; i < fin.size(); i++) {
+                Brief.Lesson l = b.lesson(fin.get(i).getKey());
+                String day = Lessons.label(fin.get(i).getValue());
+                TextView v = lessonRow(g, "✓ " + l.n + "회 " + l.title, (stars.contains(l.n) ? "★ " : "") + day, label, i < fin.size() - 1, () -> { dlg[0].dismiss(); NewsService.playLesson(this, l.n); });
+                ((View) v.getParent()).setOnLongClickListener(x -> {
+                    prefs.toggleStar(l.n);
+                    v.setText((prefs.lessonStars().contains(l.n) ? "★ " : "") + day);
+                    return true;
+                });
+            }
+        }
+        dlg[0] = new Sheet(this)
                 .setTitle("제품 공부·농업영어" + (round > 1 ? " · " + round + "바퀴째" : "") + " · " + done.size() + "/" + all.size())
-                .setView(sv)
+                .setView(list)
                 .setPositiveButton("닫기", null)
                 .show();
     }
 
-    private TextView head(String s) {
-        TextView h = text(s, 13, secondary);
-        h.setPadding(0, dp(16), 0, dp(4));
-        return h;
+    /** 팝업 안의 회색 소제목 + 흰 둥근 묶음 */
+    private LinearLayout group(LinearLayout parent, String header) {
+        if (header != null) {
+            TextView h = text(header, 13, secondary);
+            h.setPadding(dp(16), dp(16), dp(16), dp(6));
+            parent.addView(h);
+        }
+        LinearLayout g = new LinearLayout(this);
+        g.setOrientation(LinearLayout.VERTICAL);
+        g.setBackground(rounded(card, dp(12)));
+        g.setClipToOutline(true);
+        parent.addView(g);
+        return g;
     }
 
-    private TextView lessonRow(Brief.Lesson l, String s, int color, Runnable onTap) {
-        TextView r = text(s, 16, color);
-        r.setPadding(0, dp(10), 0, dp(10));
-        r.setOnClickListener(v -> onTap.run());
-        return r;
+    /** 회차 한 줄: 이름 · 회색 값(날짜). 값 TextView를 돌려준다 */
+    private TextView lessonRow(LinearLayout g, String name, String value, int color, boolean dividerAfter, Runnable onTap) {
+        LinearLayout r = new LinearLayout(this);
+        r.setGravity(Gravity.CENTER_VERTICAL);
+        r.setMinimumHeight(dp(48));
+        r.setPadding(dp(16), dp(8), dp(14), dp(8));
+        r.addView(text(name, 16, color), new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+        TextView v = text(value, 15, secondary);
+        v.setPadding(dp(8), 0, 0, 0);
+        r.addView(v);
+        r.setBackground(pressable(new ColorDrawable(card)));
+        r.setOnClickListener(x -> onTap.run());
+        g.addView(r);
+        if (dividerAfter) divider(g);
+        return v;
     }
 
     /** 농업 키워드: 쉼표로 여러 개 */
@@ -703,9 +775,10 @@ public class MainActivity extends Activity {
         words.setText(String.join(", ", prefs.keywords()));
         words.setHint("예: 비료, 미생물, 바이오플랜");
         LinearLayout box = new LinearLayout(this);
-        box.setPadding(dp(20), dp(8), dp(20), 0);
+        box.setPadding(dp(16), dp(8), dp(16), dp(8));
+        box.setBackground(rounded(card, dp(12)));
         box.addView(words, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
-        new AlertDialog.Builder(this)
+        new Sheet(this)
                 .setTitle("농업 키워드")
                 .setMessage("농업 신문 헤드라인에 키워드 기사가 없으면, 그 키워드의 오늘 기사를 한 건씩 더 찾아 읽습니다. 쉼표로 여러 개 넣을 수 있습니다.")
                 .setView(box)
@@ -727,7 +800,7 @@ public class MainActivity extends Activity {
         preview = new TextToSpeech(this, st -> runOnUiThread(() -> {
             if (st != TextToSpeech.SUCCESS) {
                 preview = null;
-                new AlertDialog.Builder(this).setMessage("음성 엔진을 시작하지 못했습니다.").setPositiveButton("확인", null).show();
+                new Sheet(this).setMessage("음성 엔진을 시작하지 못했습니다.").setPositiveButton("확인", null).show();
                 return;
             }
             preview.setLanguage(Locale.KOREAN);
@@ -755,7 +828,7 @@ public class MainActivity extends Activity {
     private void pickVoice() {
         List<Voice> voices = Voices.korean(preview);
         if (voices.isEmpty()) {
-            new AlertDialog.Builder(this)
+            new Sheet(this)
                     .setMessage("고를 수 있는 한국어 음성이 없습니다. 설정의 '텍스트 음성 변환'에서 Google 음성 서비스와 한국어 음성 데이터를 받아 주세요.")
                     .setPositiveButton("설정 열기", (d, w) -> openTtsSettings())
                     .setNegativeButton("닫기", null).show();
@@ -768,7 +841,7 @@ public class MainActivity extends Activity {
             labels[i + 1] = Voices.label(voices.get(i), i);
             if (voices.get(i).getName().equals(prefs.voice())) choice[0] = i + 1;
         }
-        new AlertDialog.Builder(this)
+        new Sheet(this)
                 .setTitle("목소리를 고르세요 (누르면 들려 드립니다)")
                 .setSingleChoiceItems(labels, choice[0], (d, i) -> {
                     choice[0] = i;
@@ -792,7 +865,7 @@ public class MainActivity extends Activity {
         for (Voice v : voices) if (v.getName().equals(prefs.voice())) current = v;
         if (current == null) current = Voices.best(voices);
         final Voice voice = current;
-        new AlertDialog.Builder(this)
+        new Sheet(this)
                 .setTitle("말 빠르기 (누르면 들려 드립니다)")
                 .setSingleChoiceItems(Rules.RATE_LABELS, choice[0], (d, i) -> { choice[0] = i; say(voice, Rules.RATES[i]); })
                 .setPositiveButton("저장", (d, w) -> { preview.stop(); prefs.setRate(Rules.RATES[choice[0]]); refresh(); })

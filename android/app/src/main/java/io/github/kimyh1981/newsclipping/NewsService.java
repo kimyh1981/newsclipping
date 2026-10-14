@@ -55,6 +55,8 @@ public class NewsService extends Service {
     static final String ACTION_MORE = "more"; // 전체 듣기 (예전 알림의 '자세히'도 같은 동작)
     static final String ACTION_PREV = "prev";
     static final String ACTION_NEXT = "next";
+    /** 제품 공부 중이면 같은 회의 농업영어로, 농업영어 중이면 그 회를 마치고 맺음말로 건너뛴다 */
+    static final String ACTION_SKIP_LESSON = "skip-lesson";
     static final String ACTION_PAUSE = "pause";
     static final String ACTION_RESUME = "resume";
     /** 멈춘 채로 이만큼 지나면 끝낸다 */
@@ -65,7 +67,7 @@ public class NewsService extends Service {
     /** 제품 공부 한 회만 듣기 (진도 화면에서) */
     static final String EXTRA_LESSON = "lesson";
     private static final String TAG = "newsclipping";
-    private static final String CHANNEL = "news";
+    static final String CHANNEL = "news";
     private static final int NOTIFY_ID = 1;
     private static final int RETRY_NOTIFY_ID = 2;
 
@@ -194,7 +196,13 @@ public class NewsService extends Service {
     static final class Caption {
         final String source, title, text;
         final boolean full;
-        Caption(String source, String title, String text, boolean full) { this.source = source; this.title = title; this.text = text; this.full = full; }
+        /** 제품 공부·농업영어 회 번호 (뉴스면 0)와 농업영어인지 */
+        final int lesson;
+        final boolean english;
+        Caption(String source, String title, String text, boolean full) { this(source, title, text, full, 0, false); }
+        Caption(String source, String title, String text, boolean full, int lesson, boolean english) {
+            this.source = source; this.title = title; this.text = text; this.full = full; this.lesson = lesson; this.english = english;
+        }
     }
     private static volatile Caption caption;
     /** 자막 화면이 지금 읽는 글이 바뀔 때마다(그리고 멈추거나 끝날 때) 다시 그리려고 단다 */
@@ -215,6 +223,7 @@ public class NewsService extends Service {
             case ACTION_PREV: jump(prevTarget()); break;
             case ACTION_NEXT: jump(nextTarget()); break;
             case ACTION_MORE: full(); break;
+            case ACTION_SKIP_LESSON: skipLesson(); break;
             case ACTION_PAUSE: pause(false); break;
             case ACTION_RESUME: resume(); break;
             default: break;
@@ -233,7 +242,7 @@ public class NewsService extends Service {
             return START_NOT_STICKY;
         }
         String action = intent == null ? null : intent.getAction();
-        if (ACTION_MORE.equals(action) || ACTION_PREV.equals(action) || ACTION_NEXT.equals(action) || ACTION_PAUSE.equals(action) || ACTION_RESUME.equals(action)) {
+        if (ACTION_MORE.equals(action) || ACTION_SKIP_LESSON.equals(action) || ACTION_PREV.equals(action) || ACTION_NEXT.equals(action) || ACTION_PAUSE.equals(action) || ACTION_RESUME.equals(action)) {
             handle(action);
             return START_NOT_STICKY;
         }
@@ -250,6 +259,7 @@ public class NewsService extends Service {
         from = intent == null ? null : intent.getStringExtra(EXTRA_FROM);
         lessonOnly = intent == null ? 0 : intent.getIntExtra(EXTRA_LESSON, 0);
         new Thread(() -> prepare(manual), "news-fetch").start();
+        new Thread(() -> Updater.notifyIfNew(this), "news-update-check").start(); // 새 앱 버전이 있으면 알림 한 번
         return START_NOT_STICKY;
     }
 
@@ -511,7 +521,7 @@ public class NewsService extends Service {
         Brief.Item it = i < lines.size() ? lines.get(i).item : null;
         int lesson = i < lines.size() ? lines.get(i).lesson : 0;
         boolean english = i < lines.size() && lines.get(i).english;
-        caption = lesson > 0 ? new Caption(english ? "농업영어" : "바이오플랜 제품 공부", lesson + "회", s.text, false)
+        caption = lesson > 0 ? new Caption(english ? "농업영어" : "바이오플랜 제품 공부", lesson + "회", s.text, false, lesson, english)
                 : it == null ? new Caption("뉴스클리핑", "", s.text, false) : new Caption(it.source, it.title, s.text, full);
         Runnable c = onCaption;
         if (c != null) c.run();
@@ -582,13 +592,33 @@ public class NewsService extends Service {
         return f;
     }
 
-    /** 이전 기사 (멈춤 중이면 멈춘 기사 기준) */
+    /** 이전 기사 (멈춤 중이면 멈춘 기사 기준). 제품 공부·농업영어 중이면 이전 문단 */
     private int prevTarget() {
+        if (inLesson()) return Rules.prevParagraph(lessonOf(), current);
         return Rules.prevItem(itemFlags(), current);
     }
 
-    /** 다음 기사. 'OO 소식입니다.'를 읽는 중이면 바로 뒤 기사가 지금 기사이므로 그다음 */
+    private boolean inLesson() { return current < lines.size() && lines.get(current).lesson > 0; }
+
+    /** 줄마다 제품 공부(1)·농업영어(2)·그 밖(0), 빈 줄은 -1 */
+    private int[] lessonOf() {
+        int[] f = new int[lines.size()];
+        for (int i = 0; i < f.length; i++) {
+            Brief.Line l = lines.get(i);
+            f[i] = l.text.isEmpty() ? -1 : l.lesson == 0 ? 0 : l.english ? 2 : 1;
+        }
+        return f;
+    }
+
+    /** 제품 공부 중이면 같은 회의 농업영어 첫 줄로, 농업영어 중(또는 영어가 없으면)이면 그 회 다음 줄(맺음말)로 */
+    private void skipLesson() {
+        if (!inLesson()) return;
+        jump(Rules.skipLesson(lessonOf(), current));
+    }
+
+    /** 다음 기사. 'OO 소식입니다.'를 읽는 중이면 바로 뒤 기사가 지금 기사이므로 그다음. 제품 공부·농업영어 중이면 다음 문단 */
     private int nextTarget() {
+        if (inLesson()) return Rules.nextParagraph(lessonOf(), current);
         boolean[] f = itemFlags();
         int i = Rules.nextItem(f, current);
         if (i == current + 1 && current < lines.size() && lines.get(current).text.endsWith("소식입니다.")) i = Rules.nextItem(f, i);
@@ -609,6 +639,7 @@ public class NewsService extends Service {
      *  읽는 중에 '다음'(자막 화면을 왼쪽으로 쓸기·핸들 다음 버튼)을 누르면 전체 듣기를 끝내고 다음 기사 헤드라인으로 */
     private void full() {
         if (tts == null || stopped || lines.isEmpty()) return;
+        if (inLesson()) { if (paused) resume(); return; } // 제품 공부·농업영어에는 펼칠 본문이 없다: 멈춰 있었으면 이어 듣기
         int i = Math.min(current, lines.size() - 1);
         while (i > 0 && lines.get(i).item == null) i--;
         Brief.Item it = lines.get(i).item;

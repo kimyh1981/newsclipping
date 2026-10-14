@@ -12,6 +12,8 @@
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
     <!-- 차 연결로 읽기 시작할 때 화면 밖에서 자막 화면을 띄우려면 '다른 앱 위에 표시' 허용이 필요하다 -->
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+    <!-- 앱 안에서 새 버전 APK를 받아 설치한다 (처음 한 번 '이 출처의 앱 설치 허용') -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
     <queries>
         <intent>
@@ -61,6 +63,11 @@
                 <action android:name="android.bluetooth.device.action.ACL_DISCONNECTED" />
             </intent-filter>
         </receiver>
+
+        <!-- 업데이트 설치 세션의 결과: 확인이 필요하면 시스템 설치 화면을 띄운다 -->
+        <receiver
+            android:name=".Updater$InstallResult"
+            android:exported="false" />
 
         <service
             android:name=".NewsService"
