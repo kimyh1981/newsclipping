@@ -213,7 +213,67 @@ final class Pron {
     private static final String[] ROUGH = {"", "한두", "두세", "서너", "네다섯", "대여섯", "예닐곱", "일고여덟"};
     private static final Pattern RANGE = Pattern.compile("(?<![\\d.,])(\\d{1,2})\\s*(?:~|-|에서\\s?)(\\d{1,2})(\\s?)(" + COUNTER + "|대(?=[가를의는도만와씩로\\s,.]|$))");
     private static final Pattern TIME = Pattern.compile("(?<![\\d:])([01]?\\d|2[0-4]):([0-5]\\d)(?![\\d:])");
-    private static final Pattern MONEY = Pattern.compile("([$€£¥₩])\\s?((?:\\d{1,3}(?:,\\d{3})+|\\d+)(?:\\.\\d+)?)(\\s?[조억만천])?");
+    // 나라마다 통화 이름 (js/pron.js의 MONEY·CODES와 같게). ¥는 중국 얘기면 위안, 아니면 엔
+    private static final String[][] MONEY_SIGNS = {
+        {"US$", "달러"}, {"A$", "호주달러"}, {"AU$", "호주달러"}, {"C$", "캐나다달러"}, {"CA$", "캐나다달러"}, {"HK$", "홍콩달러"}, {"S$", "싱가포르달러"},
+        {"NT$", "대만달러"}, {"NZ$", "뉴질랜드달러"}, {"R$", "헤알"}, {"Rp", "루피아"}, {"Rs.", "루피"}, {"Rs", "루피"}, {"RM", "링깃"},
+        {"$", "달러"}, {"€", "유로"}, {"£", "파운드"}, {"₩", "원"}, {"₹", "루피"}, {"₫", "동"}, {"₽", "루블"}, {"฿", "바트"}, {"₱", "페소"}, {"₺", "리라"}, {"₦", "나이라"}, {"₴", "흐리브냐"},
+    };
+    private static final String[][] MONEY_CODES = {
+        {"USD", "달러"}, {"EUR", "유로"}, {"JPY", "엔"}, {"CNY", "위안"}, {"RMB", "위안"}, {"GBP", "파운드"}, {"KRW", "원"}, {"VND", "동"}, {"INR", "루피"}, {"BRL", "헤알"}, {"RUB", "루블"},
+        {"IDR", "루피아"}, {"THB", "바트"}, {"AUD", "호주달러"}, {"CAD", "캐나다달러"}, {"CHF", "스위스프랑"}, {"HKD", "홍콩달러"}, {"SGD", "싱가포르달러"}, {"TWD", "대만달러"},
+        {"NZD", "뉴질랜드달러"}, {"MXN", "멕시코페소"}, {"MYR", "링깃"}, {"SAR", "리얄"}, {"AED", "디르함"}, {"ZAR", "랜드"}, {"NGN", "나이라"}, {"EGP", "이집트파운드"},
+        {"PKR", "파키스탄루피"}, {"BDT", "타카"}, {"PLN", "즐로티"}, {"SEK", "크로나"}, {"NOK", "크로네"}, {"DKK", "크로네"}, {"ARS", "아르헨티나페소"}, {"CLP", "칠레페소"}, {"COP", "콜롬비아페소"},
+    };
+    private static final java.util.Map<String, String> MONEY_NAME = new java.util.HashMap<>();
+    private static final String AMOUNT = "((?:\\d{1,3}(?:,\\d{3})+|\\d+)(?:\\.\\d+)?)(\\s?[조억만천])?";
+    private static final String JOSA = "(으로|로|을|를|은|는|과|와|이(?![가-힣])|가(?![가-힣]))?";
+    private static final Pattern SIGN_RE, CODE_AFTER, CODE_BEFORE;
+    private static final Pattern CHINA = Pattern.compile("중국|위안|인민폐|China|Chinese|CNY|RMB");
+    static {
+        StringBuilder signs = new StringBuilder();
+        java.util.List<String> keys = new java.util.ArrayList<>();
+        for (String[] m : MONEY_SIGNS) { MONEY_NAME.put(m[0], m[1]); keys.add(m[0]); }
+        keys.sort((a, b) -> b.length() - a.length());
+        for (String k : keys) signs.append(Pattern.quote(k)).append('|');
+        StringBuilder codes = new StringBuilder();
+        for (String[] m : MONEY_CODES) { MONEY_NAME.put(m[0], m[1]); codes.append(codes.length() > 0 ? "|" : "").append(m[0]); }
+        SIGN_RE = Pattern.compile("(?<![A-Za-z])(" + signs + "¥)\\s?" + AMOUNT + JOSA);
+        CODE_AFTER = Pattern.compile(AMOUNT + "\\s?(" + codes + "|元|円|đ)(?![A-Za-z])" + JOSA);
+        CODE_BEFORE = Pattern.compile("(?<![A-Za-z])(" + codes + ")\\s?" + AMOUNT + JOSA);
+    }
+
+    private static String josa(String word, String p) {
+        if (p == null) return word;
+        int j = jong(word.charAt(word.length() - 1));
+        boolean has = j != 0;
+        if (p.equals("으로") || p.equals("로")) return word + (has && j != 8 ? "으로" : "로");
+        if (p.equals("을") || p.equals("를")) return word + (has ? "을" : "를");
+        if (p.equals("은") || p.equals("는")) return word + (has ? "은" : "는");
+        if (p.equals("과") || p.equals("와")) return word + (has ? "과" : "와");
+        return word + (has ? "이" : "가");
+    }
+
+    static String money(String s) {
+        String yen = CHINA.matcher(s).find() ? "위안" : "엔";
+        s = moneyPass(s, SIGN_RE, 1, 2, 3, 4, yen);
+        s = moneyPass(s, CODE_BEFORE, 1, 2, 3, 4, yen);
+        return moneyPass(s, CODE_AFTER, 3, 1, 2, 4, yen);
+    }
+
+    private static String moneyPass(String s, Pattern re, int ci, int ni, int ui, int pi, String yen) {
+        Matcher m = re.matcher(s);
+        StringBuffer sb = new StringBuffer();
+        while (m.find()) {
+            String c = m.group(ci);
+            String w = c.equals("¥") ? yen : c.equals("元") ? "위안" : c.equals("円") ? "엔" : c.equals("đ") ? "동" : MONEY_NAME.get(c);
+            if (w.matches("^.{2,}(달러|페소|프랑|파운드|루피)$")) w = " " + w; // 삼억 호주달러
+            String u = m.group(ui) == null ? "" : m.group(ui);
+            m.appendReplacement(sb, Matcher.quoteReplacement(josa(m.group(ni) + u + w, m.group(pi))));
+        }
+        m.appendTail(sb);
+        return sb.toString();
+    }
     private static final Pattern EVENT = Pattern.compile("(?<![\\d.])(\\d{1,2})\\s?·\\s?(\\d{1,2})(?![\\d.])");
     private static final Pattern BIG_UNIT = Pattern.compile("(\\d[만억조천])\\s?(" + UNIT + ")(?![A-Za-z])");
     private static final Pattern FRACTION = Pattern.compile("(?<![\\d/.])(\\d{1,3})/(\\d{1,3})(?![\\d/])");
@@ -290,15 +350,7 @@ final class Pron {
         }
         m.appendTail(sb);
         s = sb.toString();
-        m = MONEY.matcher(s);
-        sb = new StringBuffer();
-        while (m.find()) {
-            String c = m.group(1);
-            String word = c.equals("$") ? "달러" : c.equals("€") ? "유로" : c.equals("£") ? "파운드" : c.equals("¥") ? "엔" : "원";
-            m.appendReplacement(sb, Matcher.quoteReplacement(m.group(2) + (m.group(3) == null ? "" : m.group(3)) + word));
-        }
-        m.appendTail(sb);
-        s = sb.toString();
+        s = money(s);
         s = s.replaceAll("(?<![^\\s(])\\+(?=\\d)", "플러스 ").replaceAll("±\\s?(?=\\d)", "플러스마이너스 ");
         s = s.replaceAll("([1-4])/4\\s?분기", "$1분기");
         s = FRACTION.matcher(s).replaceAll("$2분의 $1");

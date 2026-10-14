@@ -9,7 +9,7 @@
   else root.Pron = factory();
 })(typeof self !== 'undefined' ? self : this, function () {
   // 규칙을 바꾸면 올린다: 서버가 예전 규칙으로 녹음해 둔 파일을 다시 녹음한다
-  const VERSION = 4;
+  const VERSION = 5;
 
   // [쓴 글, 소리, 뒤에 오면 바꾸지 않는 말]. 낱말 첫머리에서만 찾는다 (재평가처럼 앞에 붙은 말은 그대로)
   // 제26·28항 경음화(한자어 ㄹ 뒤 ㄷㅅㅈ, 사이시옷 없는 사잇소리), 제29항 ㄴ첨가
@@ -165,7 +165,42 @@
   // 1~2명 → 한두 명, 3~4개 → 서너 개
   const ROUGH = { 1: '한두', 2: '두세', 3: '서너', 4: '네다섯', 5: '대여섯', 6: '예닐곱', 7: '일고여덟' };
   const RANGE = new RegExp(`(?<![\\d.,])(\\d{1,2})\\s*(?:~|-|에서\\s?)(\\d{1,2})(\\s?)(${COUNTER}|대(?=[가를의는도만와씩로\\s,.]|$))`, 'g');
-  const MONEY = { '$': '달러', '€': '유로', '£': '파운드', '¥': '엔', '₩': '원' };
+  // 나라마다 통화 이름: 기호나 코드(US$·R$·₹·₫·USD·VND…)를 그 나라 돈 이름으로. ¥는 중국 얘기면 위안, 아니면 엔
+  const MONEY = {
+    'US$': '달러', 'A$': '호주달러', 'AU$': '호주달러', 'C$': '캐나다달러', 'CA$': '캐나다달러', 'HK$': '홍콩달러', 'S$': '싱가포르달러',
+    'NT$': '대만달러', 'NZ$': '뉴질랜드달러', 'R$': '헤알', 'Rp': '루피아', 'Rs.': '루피', 'Rs': '루피', 'RM': '링깃',
+    '$': '달러', '€': '유로', '£': '파운드', '₩': '원', '₹': '루피', '₫': '동', '₽': '루블', '฿': '바트', '₱': '페소', '₺': '리라', '₦': '나이라', '₴': '흐리브냐',
+  };
+  const CODES = {
+    USD: '달러', EUR: '유로', JPY: '엔', CNY: '위안', RMB: '위안', GBP: '파운드', KRW: '원', VND: '동', INR: '루피', BRL: '헤알', RUB: '루블',
+    IDR: '루피아', THB: '바트', AUD: '호주달러', CAD: '캐나다달러', CHF: '스위스프랑', HKD: '홍콩달러', SGD: '싱가포르달러', TWD: '대만달러',
+    NZD: '뉴질랜드달러', MXN: '멕시코페소', MYR: '링깃', SAR: '리얄', AED: '디르함', ZAR: '랜드', NGN: '나이라', EGP: '이집트파운드',
+    PKR: '파키스탄루피', BDT: '타카', PLN: '즐로티', SEK: '크로나', NOK: '크로네', DKK: '크로네', ARS: '아르헨티나페소', CLP: '칠레페소', COP: '콜롬비아페소',
+  };
+  // 돈 이름 뒤 조사를 받침에 맞춘다: 100억을 → 백억 호주달러를, 2만으로 → 이만 동으로
+  const JOSA = '(으로|로|을|를|은|는|과|와|이(?![가-힣])|가(?![가-힣]))?';
+  const PAIRS = { 을: ['을', '를'], 를: ['을', '를'], 은: ['은', '는'], 는: ['은', '는'], 과: ['과', '와'], 와: ['과', '와'], 이: ['이', '가'], 가: ['이', '가'] };
+  function josa(word, p) {
+    if (!p) return word;
+    const j = jong(word.charCodeAt(word.length - 1));
+    if (p === '으로' || p === '로') return word + (j && j !== 8 ? '으로' : '로');
+    return word + PAIRS[p][j ? 0 : 1];
+  }
+  const AMOUNT = '((?:\\d{1,3}(?:,\\d{3})+|\\d+)(?:\\.\\d+)?)(\\s?[조억만천])?';
+  const SIGN_RE = new RegExp(`(?<![A-Za-z])(${Object.keys(MONEY).sort((a, b) => b.length - a.length).map(escape).join('|')}|¥)\\s?${AMOUNT}${JOSA}`, 'g');
+  const CODE = Object.keys(CODES).join('|');
+  const CODE_AFTER = new RegExp(`${AMOUNT}\\s?(${CODE}|元|円|đ)(?![A-Za-z])${JOSA}`, 'g');
+  const CODE_BEFORE = new RegExp(`(?<![A-Za-z])(${CODE})\\s?${AMOUNT}${JOSA}`, 'g');
+  const CHINA = /중국|위안|인민폐|China|Chinese|CNY|RMB/;
+
+  function money(s) {
+    const yen = CHINA.test(s) ? '위안' : '엔';
+    // 호주달러·캐나다달러처럼 나라 이름이 붙은 돈은 띄어 읽는다 (삼억 호주달러)
+    const name = (c) => { const w = c === '¥' ? yen : c === '元' ? '위안' : c === '円' ? '엔' : c === 'đ' ? '동' : MONEY[c] || CODES[c]; return /^.{2,}(달러|페소|프랑|파운드|루피)$/.test(w) ? ` ${w}` : w; };
+    s = s.replace(SIGN_RE, (m, c, n, u, p) => josa(`${n}${u || ''}${name(c)}`, p));
+    s = s.replace(CODE_BEFORE, (m, c, n, u, p) => josa(`${n}${u || ''}${name(c)}`, p));
+    return s.replace(CODE_AFTER, (m, n, u, c, p) => josa(`${n}${u || ''}${name(c)}`, p));
+  }
 
   function sino4(n) {
     const d = String(n).padStart(4, '0');
@@ -210,7 +245,7 @@
     s = s.replace(new RegExp(`(\\d[만억조천])\\s?(${UNIT})(?![A-Za-z])`, 'g'), (m, n, u) => `${n} ${UNITS[u]}`);
     s = s.replace(/(\d{4})\s?[.\-/]\s?(\d{1,2})\s?[.\-/]\s?(\d{1,2})(?!\d)\.?/g, '$1년 $2월 $3일');
     s = s.replace(/(?<![\d:])([01]?\d|2[0-4]):([0-5]\d)(?![\d:])/g, (m, h, mm) => `${+h}시${+mm ? ` ${+mm}분` : ''}`);
-    s = s.replace(/([$€£¥₩])\s?((?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?)(\s?[조억만천])?/g, (m, c, n, u) => `${n}${u || ''}${MONEY[c]}`);
+    s = money(s);
     s = s.replace(/(?<![^\s(])\+(?=\d)/g, '플러스 ').replace(/±\s?(?=\d)/g, '플러스마이너스 ');
     s = s.replace(/([1-4])\/4\s?분기/g, '$1분기').replace(/(?<![\d/.])(\d{1,3})\/(\d{1,3})(?![\d/])/g, (m, a, b) => `${b}분의 ${a}`);
     s = s.replace(RANGE, (m, a, b, sp, c) => (+b === +a + 1 && ROUGH[a] ? `${ROUGH[a]}${sp}${c}` : `${a}${sp}${c}에서 ${b}${sp}${c}`));
@@ -258,9 +293,12 @@
     return s.replace(/(?<![A-Za-z0-9])[A-Z](?=-?[가-힣])/g, spell); // A씨, K-푸드, Z세대
   }
 
-  function say(text) {
+  // english: 다국어 음성용. 영문(NATO·AI·R&D)을 우리말 소리로 바꾸지 않고 그대로 두어 음성이 미국식 영어로 읽게 한다
+  function say(text, opts = {}) {
     if (!text) return text;
-    return pauses(stations(adnominal(words(symbols(latin(numbers(text)))))));
+    const s = numbers(text);
+    const en = opts.english ? s.replace(/([A-Za-z])\s?&\s?(?=[A-Za-z])/g, '$1 and ') : latin(s);
+    return pauses(stations(adnominal(words(symbols(en)))));
   }
 
   return { VERSION, say, tense, numbers, symbols, latin };
