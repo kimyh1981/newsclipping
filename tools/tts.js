@@ -46,15 +46,19 @@ function wanted(b) {
   const date = b.dateLabel;
   const out = [];
   const add = (text, kind, en = false) => { if (text && text.trim()) out.push([text.trim(), kind, en]); };
-  add(brief.opening(date), 'fixed');
-  add(brief.closing(date), 'fixed');
+  // 앱은 듣는 시각에 따라 아침(출근길)·저녁(퇴근길) 인사를 고른다: 둘 다 녹음해 둔다
+  const evening = b.edition === 'evening';
+  add(brief.opening(date, evening), 'fixed');
+  add(brief.closing(date, evening), 'fixed');
+  add(brief.opening(date, !evening), 'fixed');
+  add(brief.closing(date, !evening), 'fixed');
   add(brief.EMPTY, 'fixed');
-  // 다음 날 아침 서버 실행이 늦거나 빠지면 앱이 이 원고를 다음 날 날짜로 읽는다: 그 인사·맺음말도 녹음해 둔다
+  // 다음 날 서버 실행이 늦거나 빠지면 앱이 이 원고를 다음 날 날짜로 읽는다: 그 인사·맺음말도 녹음해 둔다
   const next = brief.koreanDate(Date.parse(b.generatedAt) + 24 * 3600e3);
-  add(brief.opening(next), 'fixed');
+  for (const e of [false, true]) { add(brief.opening(next, e), 'fixed'); add(brief.closing(next, e), 'fixed'); }
   add(brief.STALE, 'fixed');
-  add(brief.closing(next), 'fixed');
-  add(`좋은 아침입니다. ${date}입니다. 오늘은 뉴스를 가져오지 못했습니다. 안전 운전하세요.`, 'fixed');
+  add(brief.noNews(date, false), 'fixed');
+  add(brief.noNews(date, true), 'fixed');
   for (const sec of b.sections) {
     add(brief.intro(sec.title, 0, 3), 'fixed'); // 먼저 ~부터 전해 드립니다.
     add(brief.intro(sec.title, 1, 3), 'fixed'); // 다음은 ~입니다.

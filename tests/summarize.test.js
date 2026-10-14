@@ -80,3 +80,21 @@ test('네이버 기사 본문(dic_area)은 <br>로 나뉜 문단을 읽고 사�
 <article id="dic_area" class="go_trans _article_content"><span class="end_photo_org"><img src="x.jpg"><em class="img_desc">비료를 싣는 모습. 사진=연합뉴스 제공 설명이 꽤 길다</em></span><br>${p1}<br><br>${p2}<br><br>${p3}</article></body></html>`;
   assert.equal(articleText(html, rss.decodeEntities), [p1, p2, p3].join('\n'));
 });
+
+test('원래 기사 본문을 못 받으면(유료·차단) 같은 소식을 쓴 다른 언론사 기사에서 받는다', async () => {
+  const items = [{ title: '금값 강세', source: '로이터', link: 'https://paywall/1' }];
+  const get = async (url) => {
+    if (url === 'https://paywall/1') { const e = new Error('HTTP 401'); e.status = 401; throw e; }
+    if (url === 'https://other/2') return ARTICLE;
+    throw new Error('없는 주소');
+  };
+  const log = [];
+  await summarize(items, { get, decodeEntities: rss.decodeEntities, translate: async (t) => t, log, run: (f) => f(), elsewhere: async () => ['https://paywall/1', 'https://other/2'] });
+  assert.ok(items[0].summary.startsWith('정부가 내년부터 화학비료'));
+  assert.match(log.join('\n'), /1건 중 1건 \(다른 언론사 기사로 1건\)/);
+  const none = [{ title: '막힌 기사', source: '로이터', link: 'https://paywall/1' }];
+  const log2 = [];
+  await summarize(none, { get, decodeEntities: rss.decodeEntities, translate: async (t) => t, log: log2, run: (f) => f(), elsewhere: async () => [] });
+  assert.equal(none[0].summary, undefined);
+  assert.match(log2.join('\n'), /요약 실패 \(HTTP 401\) 로이터 막힌 기사/);
+});

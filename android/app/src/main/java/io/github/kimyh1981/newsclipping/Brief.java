@@ -109,7 +109,11 @@ final class Brief {
     }
 
     // 아나운서처럼: 요일에 맞춘 인사, 섹션마다 다른 연결 말, 언론사 소개, 맺음말 (js/brief.js와 같은 문장)
-    static String opening(String date) {
+    static String opening(String date) { return opening(date, false); }
+
+    /** evening: 오후(퇴근길) 인사. 듣는 시각이 낮 12시 이후면 (js/brief.js opening과 같은 문장) */
+    static String opening(String date, boolean evening) {
+        if (evening) return "안녕하세요. " + date + " 저녁, 퇴근길 뉴스 브리핑입니다." + (date.endsWith("금요일") ? " 한 주 동안 수고 많으셨습니다." : "");
         String extra = date.endsWith("월요일") ? " 새로운 한 주, 힘차게 시작해 보시죠." : date.endsWith("금요일") ? " 한 주의 마무리, 오늘도 힘내세요." : "";
         return "좋은 아침입니다. " + date + ", 출근길 뉴스 브리핑입니다." + extra;
     }
@@ -125,15 +129,30 @@ final class Brief {
         return "이어서 바이오플랜 제품 공부 시간입니다. 오늘은 " + n + "회, " + sentence(title);
     }
 
-    static String closing(String date) {
-        return "지금까지 " + date + " 아침 뉴스였습니다. 오늘도 안전 운전하시고, 좋은 하루 보내세요.";
+    static String closing(String date) { return closing(date, false); }
+
+    static String closing(String date, boolean evening) {
+        return evening ? "지금까지 " + date + " 저녁 뉴스였습니다. 오늘 하루도 수고 많으셨습니다. 안전 운전하세요."
+                : "지금까지 " + date + " 아침 뉴스였습니다. 오늘도 안전 운전하시고, 좋은 하루 보내세요.";
+    }
+
+    /** 뉴스가 하나도 없을 때 (js/brief.js noNews와 같은 문장) */
+    static String noNews(String date, boolean evening) {
+        return (evening ? "안녕하세요" : "좋은 아침입니다") + ". " + date + "입니다. 오늘은 뉴스를 가져오지 못했습니다. 안전 운전하세요.";
     }
 
     /** 서버가 오늘 원고를 아직 못 만들어 어제 원고를 읽을 때 인사 뒤에 붙인다 (js/brief.js STALE과 같은 문장) */
-    static final String STALE = "오늘 아침 소식은 아직 정리되지 않아, 어제 모은 뉴스로 전해 드립니다.";
+    static final String STALE = "오늘 소식은 아직 정리되지 않아, 어제 모은 뉴스로 전해 드립니다.";
     private static final String[] DAYS = {"일", "월", "화", "수", "목", "금", "토"};
 
     /** 서울 날짜 '10월 7일 수요일' (서버의 dateLabel과 같은 모양) */
+    /** 서울 시각 낮 12시 이후면 오후(퇴근길) 원고로 읽는다 */
+    static boolean evening(long now) {
+        java.util.Calendar c = java.util.Calendar.getInstance(java.util.TimeZone.getTimeZone("Asia/Seoul"));
+        c.setTimeInMillis(now);
+        return c.get(java.util.Calendar.HOUR_OF_DAY) >= 12;
+    }
+
     static String koreanDate(long now) {
         java.util.Calendar c = java.util.Calendar.getInstance(java.util.TimeZone.getTimeZone("Asia/Seoul"));
         c.setTimeInMillis(now);
@@ -328,7 +347,10 @@ final class Brief {
 
     /** picked: select로 고른 섹션(폰이 붙인 키워드 기사가 들어 있을 수 있다).
      *  today: 오늘 서울 날짜. 원고 날짜와 다르면(서버가 오늘 원고를 아직 못 만듦) 인사·맺음말은 오늘 날짜로, 어제 뉴스라고 알린다 */
-    List<Line> linesOf(List<Picked> picked, String today) {
+    List<Line> linesOf(List<Picked> picked, String today) { return linesOf(picked, today, false); }
+
+    /** evening: 듣는 시각이 낮 12시 이후 (퇴근길 인사·맺음말) */
+    List<Line> linesOf(List<Picked> picked, String today, boolean evening) {
         boolean stale = today != null && !today.equals(dateLabel);
         String date = stale ? today : dateLabel;
         List<Picked> secs = picked;
@@ -336,10 +358,10 @@ final class Brief {
         for (Picked p : secs) any |= !p.items.isEmpty();
         List<Line> lines = new ArrayList<>();
         if (!any) {
-            lines.add(new Line("좋은 아침입니다. " + date + "입니다. 오늘은 뉴스를 가져오지 못했습니다. 안전 운전하세요.", null));
+            lines.add(new Line(noNews(date, evening), null));
             return lines;
         }
-        lines.add(new Line(opening(date), null));
+        lines.add(new Line(opening(date, evening), null));
         if (stale) lines.add(new Line(STALE, null));
         for (int i = 0; i < secs.size(); i++) {
             Picked sec = secs.get(i);
@@ -354,7 +376,7 @@ final class Brief {
             }
         }
         lines.add(new Line("", null));
-        lines.add(new Line(closing(date), null));
+        lines.add(new Line(closing(date, evening), null));
         return lines;
     }
 
