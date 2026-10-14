@@ -205,13 +205,15 @@ public class MainActivity extends Activity {
         LinearLayout bar = new LinearLayout(this);
         bar.setBackgroundColor(dark ? 0xFF121212 : 0xFFF9F9F9);
         bar.setPadding(0, dp(6), 0, dp(6));
-        String[] names = {"뉴스클리핑", "자막", "제품공부", "뉴스설정", "설정"};
+        String[] names = {"뉴스클리핑", "자막실행", "제품공부", "뉴스설정", "설정"};
         tabs = new TextView[names.length];
         for (int i = 0; i < names.length; i++) {
             final int at = i;
             TextView t = text(names[i], 11, secondary);
-            t.setSingleLine(true);
+            t.setMaxLines(1);
             t.setGravity(Gravity.CENTER);
+            // 글자 크기를 크게 해 둔 폰에서도 '뉴스클리핑'이 잘리지 않게 칸에 맞춰 줄인다
+            t.setAutoSizeTextTypeUniformWithConfiguration(8, 11, 1, TypedValue.COMPLEX_UNIT_SP);
             t.setCompoundDrawablePadding(dp(3));
             t.setPadding(0, dp(2), 0, dp(2));
             t.setBackground(pressable(new ColorDrawable(0)));
@@ -225,7 +227,15 @@ public class MainActivity extends Activity {
         }
         root.addView(bar);
         setContentView(root);
-        showTab(b == null ? 0 : b.getInt("tab", 0));
+        showTab(b == null ? getIntent().getIntExtra("tab", 0) : b.getInt("tab", 0));
+    }
+
+    /** 자막 화면의 '홈' 버튼처럼 이미 열린 앱으로 돌아올 때: 부탁받은 탭(홈)을 연다 */
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        if (intent.hasExtra("tab")) showTab(intent.getIntExtra("tab", 0));
     }
 
     @Override
@@ -444,7 +454,7 @@ public class MainActivity extends Activity {
         out.putInt("tab", tab);
     }
 
-    /** 아래 탭 막대의 그림: 0 뉴스클리핑(재생 원), 1 자막(말풍선), 2 제품공부(책), 3 뉴스설정(신문), 4 설정(톱니) */
+    /** 아래 탭 막대의 그림: 0 뉴스클리핑(가로 신문), 1 자막실행(말풍선), 2 제품공부(책), 3 뉴스설정(조절 막대), 4 설정(톱니) */
     private static final class TabIcon extends Drawable {
         private final int kind, size;
         private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -462,14 +472,16 @@ public class MainActivity extends Activity {
             paint.setStyle(Paint.Style.STROKE);
             paint.setStrokeWidth(s * 0.09f);
             if (kind == 0) {
-                c.drawCircle(cx, cy, s * 0.42f, paint);
+                paint.setStrokeWidth(s * 0.08f);
+                c.drawRoundRect(new RectF(x + s * 0.04f, y + s * 0.2f, x + s * 0.96f, y + s * 0.8f), s * 0.08f, s * 0.08f, paint);
+                c.drawLine(x + s * 0.16f, y + s * 0.33f, x + s * 0.84f, y + s * 0.33f, paint);
                 paint.setStyle(Paint.Style.FILL);
-                Path p = new Path();
-                p.moveTo(cx - s * 0.12f, cy - s * 0.18f);
-                p.lineTo(cx + s * 0.2f, cy);
-                p.lineTo(cx - s * 0.12f, cy + s * 0.18f);
-                p.close();
-                c.drawPath(p, paint);
+                c.drawRect(new RectF(x + s * 0.16f, y + s * 0.43f, x + s * 0.44f, y + s * 0.68f), paint);
+                paint.setStyle(Paint.Style.STROKE);
+                paint.setStrokeWidth(s * 0.06f);
+                c.drawLine(x + s * 0.53f, y + s * 0.46f, x + s * 0.84f, y + s * 0.46f, paint);
+                c.drawLine(x + s * 0.53f, y + s * 0.56f, x + s * 0.84f, y + s * 0.56f, paint);
+                c.drawLine(x + s * 0.53f, y + s * 0.66f, x + s * 0.76f, y + s * 0.66f, paint);
             } else if (kind == 1) {
                 Path p = new Path();
                 p.addRoundRect(new RectF(x + s * 0.08f, y + s * 0.14f, x + s * 0.92f, y + s * 0.7f), s * 0.14f, s * 0.14f, Path.Direction.CW);
@@ -498,11 +510,15 @@ public class MainActivity extends Activity {
                 c.drawPath(p, paint);
                 c.drawLine(cx, y + s * 0.26f, cx, y + s * 0.86f, paint);
             } else if (kind == 3) {
-                c.drawRoundRect(new RectF(x + s * 0.1f, y + s * 0.14f, x + s * 0.9f, y + s * 0.86f), s * 0.1f, s * 0.1f, paint);
-                paint.setStrokeWidth(s * 0.08f);
-                c.drawLine(x + s * 0.26f, y + s * 0.36f, x + s * 0.74f, y + s * 0.36f, paint);
-                c.drawLine(x + s * 0.26f, y + s * 0.52f, x + s * 0.74f, y + s * 0.52f, paint);
-                c.drawLine(x + s * 0.26f, y + s * 0.68f, x + s * 0.56f, y + s * 0.68f, paint);
+                paint.setStrokeWidth(s * 0.08f); // 조절 막대 셋
+                float[] knob = {0.34f, 0.66f, 0.46f};
+                for (int i = 0; i < 3; i++) {
+                    float ly = y + s * (0.22f + i * 0.28f), kx = x + s * knob[i];
+                    c.drawLine(x + s * 0.08f, ly, x + s * 0.92f, ly, paint);
+                    paint.setStyle(Paint.Style.FILL);
+                    c.drawCircle(kx, ly, s * 0.11f, paint);
+                    paint.setStyle(Paint.Style.STROKE);
+                }
             } else {
                 paint.setStyle(Paint.Style.FILL);
                 for (int i = 0; i < 8; i++) {

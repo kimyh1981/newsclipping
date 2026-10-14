@@ -43,19 +43,19 @@ public class CaptionActivity extends Activity {
         col.setBackgroundColor(0xFF000000);
         col.setPadding(dp(24), dp(32), dp(24), dp(24));
 
-        // 맨 위 줄: 언론사(왼쪽) · 앱 설정 화면으로 가는 버튼(오른쪽). 설정 화면으로 가도 읽기는 이어진다
+        // 맨 위 줄: 언론사(왼쪽) · 앱 홈으로 가는 버튼(오른쪽). 홈으로 가도 읽기는 이어진다
         LinearLayout top = new LinearLayout(this);
         top.setGravity(Gravity.CENTER_VERTICAL);
         head = text(20, 0xFF8E8E93);
         top.addView(head, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
         Button settings = new Button(this);
-        settings.setText("⚙ 설정");
+        settings.setText("🏠 홈");
         settings.setTextSize(TypedValue.COMPLEX_UNIT_SP, 17);
         settings.setTextColor(0xFFFFFFFF);
         settings.setAllCaps(false);
         settings.setBackgroundColor(0xFF2C2C2E);
         settings.setOnClickListener(v -> {
-            startActivity(new Intent(this, MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+            startActivity(new Intent(this, MainActivity.class).putExtra("tab", 0).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
             finish();
         });
         top.addView(settings, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, dp(48)));
