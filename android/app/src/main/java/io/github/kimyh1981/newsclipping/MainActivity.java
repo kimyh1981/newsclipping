@@ -64,6 +64,10 @@ public class MainActivity extends Activity {
     private TextView[] tabs;
     private int tab;
     private Updater.Release update;
+    /** 홈 화면 언론사 로고와, 로고를 고르려고 받아 둔 오늘 뉴스 목록 */
+    private LogoWall logos;
+    private String briefJson;
+    private boolean loadingLogos;
     private boolean updating;
     private long updateChecked;
 
@@ -89,27 +93,11 @@ public class MainActivity extends Activity {
         getWindow().setNavigationBarColor(bg);
         if (!dark) getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR | View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR);
 
-        // ── 뉴스클리핑 탭: 맨 위 아이콘 카드와 재생 버튼만 ──
+        // ── 뉴스클리핑 탭: 맨 위 재생 버튼, 그 아래는 고른 언론사 로고로 채운다 ──
         LinearLayout col = new LinearLayout(this);
         col.setOrientation(LinearLayout.VERTICAL);
         col.setGravity(Gravity.CENTER_HORIZONTAL);
-        col.setPadding(dp(16), dp(32), dp(16), dp(32));
-        // 맨 위 가운데: 앱 아이콘 카드
-        LinearLayout badge = new LinearLayout(this);
-        badge.setOrientation(LinearLayout.VERTICAL);
-        badge.setGravity(Gravity.CENTER);
-        badge.setPadding(dp(28), dp(20), dp(28), dp(16));
-        badge.setBackground(rounded(card, dp(24)));
-        ImageView icon = new ImageView(this);
-        icon.setImageResource(R.mipmap.ic_launcher);
-        badge.addView(icon, new LinearLayout.LayoutParams(dp(72), dp(72)));
-        TextView name = text("뉴스클리핑", 18, label);
-        name.setTypeface(Typeface.DEFAULT_BOLD);
-        name.setPadding(0, dp(10), 0, 0);
-        badge.addView(name);
-        LinearLayout.LayoutParams bl = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-        bl.bottomMargin = dp(36);
-        col.addView(badge, bl);
+        col.setPadding(dp(16), dp(16), dp(16), dp(8));
         updateBar = text("", 16, 0xFFFFFFFF);
         updateBar.setTypeface(Typeface.DEFAULT_BOLD);
         updateBar.setGravity(Gravity.CENTER);
@@ -156,6 +144,10 @@ public class MainActivity extends Activity {
         nav.addView(new View(this), new LinearLayout.LayoutParams(dp(10), 1));
         nav.addView(iconPill(Glyph.NEXT, "다음 기사", card, tint, v -> NewsService.control(NewsService.ACTION_NEXT)), new LinearLayout.LayoutParams(0, dp(64), 1f));
         col.addView(nav, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
+        logos = new LogoWall(this, dark, separator);
+        LinearLayout.LayoutParams ll = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f);
+        ll.topMargin = dp(16);
+        col.addView(logos, ll);
 
         // ── 뉴스설정 탭 ──
         LinearLayout newsPage = page("뉴스 설정");
@@ -251,6 +243,42 @@ public class MainActivity extends Activity {
         showPlayState();
         refresh();
         checkUpdate();
+        loadLogos();
+    }
+
+    /** 고른 언론사 로고: 받아 둔 주소로 바로 보여 주고, 오늘 뉴스 목록을 받아 새로 고친다 */
+    private void loadLogos() {
+        logos.setSites(prefs.logoSites());
+        if (loadingLogos) return;
+        loadingLogos = true;
+        new Thread(() -> {
+            String json;
+            try {
+                json = NewsService.fetch(BuildConfig.NEWS_URL);
+            } catch (Exception e) {
+                json = null;
+            }
+            final String got = json;
+            runOnUiThread(() -> {
+                loadingLogos = false;
+                if (got != null) { briefJson = got; showLogos(); }
+            });
+        }, "logos").start();
+    }
+
+    /** 언론사를 고르거나 직접 넣은 곳을 바꾸면 refresh()에서 다시 불린다 */
+    private void showLogos() {
+        if (briefJson == null) return;
+        Brief b;
+        try {
+            b = Brief.parse(briefJson);
+        } catch (Exception e) {
+            return;
+        }
+        for (Extras.Custom c : prefs.custom()) b.addSource(c.section, new Brief.Source(c.id, c.name, "ko", true, Extras.TAKE, new ArrayList<>()).site(Extras.siteOf(c.url)));
+        List<String> sites = b.sites(prefs.sources(), prefs.order());
+        prefs.setLogoSites(sites);
+        logos.setSites(sites);
     }
 
     /** 깃허브에 새 버전이 있으면 맨 위에 '업데이트' 띠를 띄운다 (30분에 한 번만 확인) */
@@ -309,6 +337,7 @@ public class MainActivity extends Activity {
     }
 
     private void refresh() {
+        showLogos();
         status(permVal, hasBluetoothPermission() && hasNotifyPermission());
         status(batteryVal, batteryOk());
         carVal.setText(prefs.carAddress().isEmpty() ? "모든 오디오 기기" : prefs.carName());
@@ -682,7 +711,7 @@ public class MainActivity extends Activity {
             Brief b;
             try {
                 b = Brief.parse(NewsService.fetch(BuildConfig.NEWS_URL));
-                for (Extras.Custom c : prefs.custom()) b.addSource(c.section, new Brief.Source(c.id, c.name, "ko", true, Extras.TAKE, new ArrayList<>()));
+                for (Extras.Custom c : prefs.custom()) b.addSource(c.section, new Brief.Source(c.id, c.name, "ko", true, Extras.TAKE, new ArrayList<>()).site(Extras.siteOf(c.url)));
             } catch (Exception e) {
                 b = null;
             }

@@ -52,6 +52,14 @@ const ENGINES = [
 const blocked = new Set(); // 이번 수집에서 429로 막힌 번역기
 const used = {}; // 번역기별 성공 횟수 (수집 기록용)
 
+/** 언론사 누리집 주소(앱 홈 화면의 로고용). site가 있으면 그것, 아니면 구글 검색어의 site:. 여러 언론사 모음(mix)은 빈칸 */
+function siteOf(source) {
+  if (source.site) return source.site;
+  if (source.mix) return '';
+  const m = /site:([^\s)]+)/.exec(source.google || '');
+  return m ? m[1] : '';
+}
+
 async function translateWith(engine, text, sl, tl) {
   for (let i = 0; ; i++) {
     const res = await fetch(engine.url(text, sl, tl), { headers: { 'User-Agent': UA }, signal: AbortSignal.timeout(10e3) });
@@ -292,7 +300,7 @@ async function collect(config, now = Date.now(), key = '', opts = {}) {
         const isPromo = (it) => promo.some((p) => p.test(it.title));
         repeated += picked.slice(0, take + SPARE).filter(isOld).length;
         const items = picked.filter((it) => !isOld(it) && !isPromo(it)).slice(0, take + SPARE);
-        return { id: source.id, name: source.name, lang, default: source.default !== false, take, items, country: source.country || sec.country || '' };
+        return { id: source.id, name: source.name, lang, default: source.default !== false, take, items, country: source.country || sec.country || '', site: siteOf(source) };
       })),
     };
   }));

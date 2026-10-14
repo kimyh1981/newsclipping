@@ -107,4 +107,19 @@ public final class Rules {
         for (int i = 0; i < RATES.length; i++) if (RATES[i] == rate) return RATE_LABELS[i];
         return rate + "%";
     }
+
+    /**
+     * 홈 화면 로고 n개를 w×h 칸에 같은 크기 정사각형으로 늘어놓을 때의 {한 칸 크기, 한 줄 개수}.
+     * 가장 큰 크기(max)부터 줄여 가며 모두 들어가는 첫 크기를 고른다. min까지 줄여도 넘치면 min으로 (가장 작은 크기)
+     */
+    public static int[] logoGrid(int n, int w, int h, int gap, int max, int min) {
+        if (n <= 0 || w <= 0 || h <= 0) return new int[] {0, 0};
+        for (int s = max; s >= min; s--) {
+            int cols = Math.max(1, Math.min(n, (w + gap) / (s + gap)));
+            if (cols * s + (cols - 1) * gap > w) continue;
+            int rows = (n + cols - 1) / cols;
+            if (rows * s + (rows - 1) * gap <= h) return new int[] {s, cols};
+        }
+        return new int[] {min, Math.max(1, Math.min(n, (w + gap) / (min + gap)))};
+    }
 }

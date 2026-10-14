@@ -99,6 +99,20 @@ public class ExtrasTest {
         for (Brief.Line l : b.lines(new HashSet<>(Arrays.asList("a")))) assertFalse(l.item == mine);
     }
 
+    @Test public void logoSites() throws Exception {
+        assertEquals("nongmin.com", Extras.siteOf("https://www.nongmin.com/rss/all.xml"));
+        assertEquals("donga.com", Extras.siteOf("https://rss.donga.com/total.xml"));
+        assertEquals("news.kbs.co.kr", Extras.siteOf("news.kbs.co.kr"));
+        assertEquals("", Extras.siteOf("주소 아님 ::"));
+        Brief b = Brief.parse(read("briefing.json"));
+        String sec = b.ordered(null).get(0).id;
+        b.addSource(sec, new Brief.Source("c-1", "가", "ko", true, 2, new ArrayList<>()).site("a.com"));
+        b.addSource(sec, new Brief.Source("c-2", "나", "ko", true, 2, new ArrayList<>()).site("a.com"));
+        b.addSource(sec, new Brief.Source("c-3", "다", "ko", true, 2, new ArrayList<>()).site("c.com"));
+        assertEquals(Arrays.asList("a.com", "c.com"), b.sites(null, null)); // 같은 누리집은 한 번, 주소 없는 곳은 뺀다
+        assertEquals(Collections.singletonList("c.com"), b.sites(new HashSet<>(Arrays.asList("c-3")), null));
+    }
+
     @Test public void keywordMentionLooksAtHeadlinesAndSummaries() {
         Brief.Picked farm = new Brief.Picked(Extras.FARM, "농업 신문 헤드라인", true);
         farm.items.add(new Brief.Item("벼 수확 한창", "벼 수확 한창", "농민신문", "g", "미생물 비료를 쓴 논", ""));

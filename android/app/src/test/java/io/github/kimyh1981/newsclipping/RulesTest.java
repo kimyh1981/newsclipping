@@ -1,5 +1,6 @@
 package io.github.kimyh1981.newsclipping;
 
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -74,5 +75,17 @@ public class RulesTest {
         assertEquals(6, Rules.skipLesson(k, 3)); // 제품 → 영어
         assertEquals(9, Rules.skipLesson(k, 6)); // 영어 → 맺음말
         assertEquals(5, Rules.skipLesson(new int[] {0, -1, 1, 1, -1, 0}, 2)); // 영어가 없으면 맺음말
+    }
+
+    @Test public void logoGridShrinksToFit() {
+        // 넓은 칸에 몇 개면 가장 큰 크기
+        assertArrayEquals(new int[] {90, 3}, Rules.logoGrid(3, 400, 400, 10, 90, 30));
+        // 많아지면 줄어서 모두 들어간다
+        int[] g = Rules.logoGrid(30, 330, 400, 10, 90, 30);
+        int rows = (30 + g[1] - 1) / g[1];
+        assertTrue(g[0] < 90);
+        assertTrue(g[1] * g[0] + (g[1] - 1) * 10 <= 330);
+        assertTrue(rows * g[0] + (rows - 1) * 10 <= 400);
+        assertArrayEquals(new int[] {0, 0}, Rules.logoGrid(0, 300, 300, 10, 90, 30));
     }
 }
