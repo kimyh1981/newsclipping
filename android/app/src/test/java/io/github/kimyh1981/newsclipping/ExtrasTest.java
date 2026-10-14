@@ -181,4 +181,22 @@ public class ExtrasTest {
         Abroad.addCountryNews(b, picked, Collections.singletonList("미국"), Collections.<String>emptyList(), 0);
         assertEquals(n, picked.size());
     }
+
+    @Test public void googleSourceUrlIsRead() {
+        String xml = "<rss><channel><item><title>Urea prices climb - The Star</title><link>https://news.google.com/a</link>"
+                + "<source url=\"https://www.thestar.com.my\">The Star</source></item></channel></rss>";
+        assertEquals("https://www.thestar.com.my", Extras.entries(xml).get(0).sourceUrl);
+    }
+
+    @Test public void abroadPrefersLocalArticles() {
+        Countries.Country my = Countries.byName("말레이시아");
+        Extras.Entry wire = new Extras.Entry("Fertilizer prices jump on supply worries", "l1", "Reuters", "", 0, "https://www.reuters.com");
+        Extras.Entry star = new Extras.Entry("Padi farmers get fertiliser aid", "l2", "The Star", "", 0, "https://www.thestar.com.my");
+        Extras.Entry named = new Extras.Entry("Malaysia to cut urea imports", "l3", "Bloomberg", "", 0, "https://www.bloomberg.com");
+        assertFalse(Abroad.local(my, wire, "공급 우려에 비료 가격 급등"));
+        assertTrue(Abroad.local(my, star, "논 농가에 비료 지원"));
+        assertTrue(Abroad.local(my, named, "말레이시아, 요소 수입 줄인다"));
+        // 나라 이름을 붙인 것과 안 붙인 것, 띄어쓰기가 달라도 같은 기사
+        assertEquals(Abroad.sameKey("공급 우려에 비료 가격 급등"), Abroad.sameKey("미국, 공급 우려에 비료가격 급등!"));
+    }
 }

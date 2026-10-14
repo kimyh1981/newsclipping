@@ -131,4 +131,20 @@ public final class Rules {
             return before;
         }
     }
+
+    /** 음성 비서(제미나이 등)가 소리를 가져간 뒤 1초마다 보는 판단 */
+    static final int ASSIST_WAIT = 0, ASSIST_QUIET = 1, ASSIST_GIVE_UP = 2;
+    /** 마이크를 쓰는 앱이 이 안에 안 보이면 음성 비서가 아니라 음악 앱 같은 것: 이어 듣기를 누를 때까지 기다린다 */
+    static final long ASSIST_MIC_MS = 15000;
+
+    /**
+     * 멈춘 뒤 마이크를 쓰는 앱이 보였고(음성 비서), 이제 마이크도 다른 소리도 멎었으면 QUIET (두 번 이어지면 이어 읽는다).
+     * 통화가 끼었거나, 오래 지났거나, 마이크를 쓰는 앱이 끝내 안 보이면 GIVE_UP
+     */
+    static int afterAssistant(boolean sawMic, boolean micNow, boolean otherSound, boolean call, long sincePauseMs, long limitMs) {
+        if (call || sincePauseMs > limitMs) return ASSIST_GIVE_UP;
+        if (!sawMic && !micNow && sincePauseMs > ASSIST_MIC_MS) return ASSIST_GIVE_UP;
+        if (micNow || otherSound || !sawMic) return ASSIST_WAIT;
+        return ASSIST_QUIET;
+    }
 }

@@ -116,6 +116,13 @@ public class NewsService extends Service {
     private boolean inCall;
     private Object modeWatch; // AudioManager.OnModeChangedListener (안드로이드 12부터)
     private static final long AFTER_CALL_MS = 5000;
+    /** 멈춘 뒤 통화가 끼었다 (그러면 음성 비서 뒤처럼 저절로 이어 읽지 않는다) */
+    private boolean callSincePause;
+    /** 제미나이 같은 음성 비서가 소리를 가져갔을 때: 마이크·다른 소리가 멎기를 지켜본다 */
+    private boolean assistWatch;
+    private boolean sawMic;
+    private int quietTicks;
+    private final Runnable assistCheck = this::checkAssistant;
     private final Bundle speakParams = new Bundle();
     private AudioTrack hold;
     private final Runnable pauseLimit = this::finish;
@@ -670,9 +677,11 @@ public class NewsService extends Service {
     private void onFocus(int change) {
         if (change == AudioManager.AUDIOFOCUS_GAIN) {
             // 통화가 끝나면 이어 읽는 건 차(블루투스 오디오)에서만: 폰 스피커로 듣다 받은 통화 뒤에는 멈춘 채 기다린다
-            if (paused && resumeOnGain && System.currentTimeMillis() - pausedAt < AUTO_RESUME_MS && bluetoothOut()) resume();
+            // 음성 비서(마이크를 쓴 앱)가 잠깐 가져간 것이면 스피커로 듣고 있었어도 이어 읽는다
+            boolean assistant = sawMic && !callSincePause && !callNow();
+            if (paused && resumeOnGain && System.currentTimeMillis() - pausedAt < AUTO_RESUME_MS && (bluetoothOut() || assistant)) { stopAssistantWatch(); resume(); }
             else if (paused) keepPaused(); // 손으로 멈췄거나 오래 멈춤: 이어 듣기를 누를 때까지 기다린다
-        } else if (change == AudioManager.AUDIOFOCUS_LOSS && autoStart && retakes < 3 && System.currentTimeMillis() - startedAt < RETAKE_WINDOW_MS) {
+        } else if (change == AudioManager.AUDIOFOCUS_LOSS && autoStart && retakes < 3 && System.currentTimeMillis() - startedAt < RETAKE_WINDOW_MS && !micBusy()) {
             // 차에 연결되자마자 애플 뮤직·삼성 뮤직 같은 앱이 저절로 재생을 시작함: 소리를 되찾고 자막 화면을 다시 맨 위로
             retakes++;
             Log.i(TAG, "다른 앱이 소리를 가져가서 되찾음 " + retakes);
@@ -683,9 +692,15 @@ public class NewsService extends Service {
                 openCaptions();
             }, 700);
         } else if (change == AudioManager.AUDIOFOCUS_LOSS) {
-            pause(false); // 다른 앱이 소리를 가져감: 이어 듣기(앱·알림·핸들 재생 버튼)를 기다린다
+            // 다른 앱이 소리를 가져감: 음악 앱이면 이어 듣기(앱·알림·핸들 재생 버튼)를 기다리고,
+            // 제미나이 같은 음성 비서(마이크를 씀)면 그것이 닫힌 뒤 저절로 이어 읽는다
+            boolean was = paused;
+            pause(false);
+            if (!was && paused) { watchAssistant(); startInForeground("잠깐 멈춤 · 음성 비서가 끝나면 이어 읽습니다"); }
         } else if (change == AudioManager.AUDIOFOCUS_LOSS_TRANSIENT || change == AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK) {
-            pause(true); // 통화·내비 안내: 끝나면 저절로 이어 읽는다
+            boolean was = paused;
+            pause(true); // 통화·내비 안내·음성 비서: 끝나면 저절로 이어 읽는다
+            if (!was && paused) watchAssistant();
         }
     }
 
@@ -713,12 +728,15 @@ public class NewsService extends Service {
 
     private void pause(boolean autoResume) {
         if (tts == null || stopped) return;
+        stopAssistantWatch();
         if (paused) { // 이미 멈춤: 손으로 멈춘 것을 통화가 '잠깐 멈춤'으로 바꾸면 통화 뒤 저절로 켜진다
             if (!autoResume) keepPaused();
             return;
         }
         resumeOnGain = autoResume;
         pausedAt = System.currentTimeMillis();
+        callSincePause = callNow();
+        sawMic = false;
         if (!autoResume && audio != null && focus != null) audio.abandonAudioFocusRequest(focus); // 손으로 멈추면 소리 차례를 내준다: 통화·음악이 끝나도 다시 켜지지 않게
         paused = true;
         stateChanged();
@@ -740,8 +758,57 @@ public class NewsService extends Service {
         return false;
     }
 
+    /** 마이크를 쓰는 앱(음성 비서·통화)이 있는지 */
+    private boolean micBusy() {
+        return audio != null && !audio.getActiveRecordingConfigurations().isEmpty();
+    }
+
+    /** 전화 통화 중인지 (음성 비서가 쓸 수도 있는 인터넷 통화 모드는 빼고 본다) */
+    private boolean callNow() {
+        int mode = audio == null ? AudioManager.MODE_NORMAL : audio.getMode();
+        return mode == AudioManager.MODE_IN_CALL || mode == AudioManager.MODE_RINGTONE || mode == AudioManager.MODE_CALL_SCREENING;
+    }
+
+    /** 소리를 빼앗긴 직후부터 1초마다: 음성 비서가 듣고 말하는 동안 기다렸다가, 닫히면 멈춘 기사부터 이어 읽는다 */
+    private void watchAssistant() {
+        stopAssistantWatch();
+        assistWatch = true;
+        sawMic = micBusy();
+        quietTicks = 0;
+        main.postDelayed(assistCheck, 1000);
+    }
+
+    private void stopAssistantWatch() {
+        assistWatch = false;
+        main.removeCallbacks(assistCheck);
+    }
+
+    private void checkAssistant() {
+        if (!assistWatch || stopped || !paused || audio == null) { stopAssistantWatch(); return; }
+        boolean mic = micBusy();
+        sawMic |= mic;
+        boolean call = callNow();
+        callSincePause |= call;
+        int r = Rules.afterAssistant(sawMic, mic, audio.isMusicActive(), callSincePause, System.currentTimeMillis() - pausedAt, AUTO_RESUME_MS);
+        if (r == Rules.ASSIST_GIVE_UP) {
+            stopAssistantWatch();
+            if (!resumeOnGain) keepPaused(); // 소리를 아주 가져간 앱(음악 등): 이어 듣기를 기다린다. 잠깐 가져간 것은 돌려받을 때 판단
+            return;
+        }
+        quietTicks = r == Rules.ASSIST_QUIET ? quietTicks + 1 : 0;
+        if (quietTicks >= 2) {
+            stopAssistantWatch();
+            Log.i(TAG, "음성 비서가 끝나 이어 읽음");
+            resume();
+            if (session != null) session.setActive(true); // 핸들·알림의 재생 버튼이 다시 이 앱으로 오게
+            return;
+        }
+        main.postDelayed(assistCheck, 1000);
+    }
+
     /** 저절로 이어 읽지 않는 멈춤으로 바꾼다 */
     private void keepPaused() {
+        stopAssistantWatch();
         resumeOnGain = false;
         navPaused = false;
         main.removeCallbacks(navResume);
@@ -756,6 +823,7 @@ public class NewsService extends Service {
             boolean call = mode == AudioManager.MODE_IN_CALL || mode == AudioManager.MODE_IN_COMMUNICATION || mode == AudioManager.MODE_RINGTONE || mode == AudioManager.MODE_CALL_SCREENING;
             if (inCall && !call) callEndedAt = System.currentTimeMillis();
             inCall = call;
+            if (paused && (mode == AudioManager.MODE_IN_CALL || mode == AudioManager.MODE_RINGTONE)) callSincePause = true;
         };
         audio.addOnModeChangedListener(getMainExecutor(), w);
         modeWatch = w;
@@ -774,6 +842,7 @@ public class NewsService extends Service {
 
     private void resume() {
         if (tts == null || stopped || !paused) return;
+        stopAssistantWatch();
         unpause();
         jump(Math.min(current, lines.size() - 1));
     }
@@ -919,6 +988,7 @@ public class NewsService extends Service {
         if (tts != null) { tts.stop(); tts.shutdown(); tts = null; }
         if (session != null) { session.setActive(false); session.release(); session = null; }
         main.removeCallbacks(navResume);
+        stopAssistantWatch();
         if (audio != null && playbackWatch != null) audio.unregisterAudioPlaybackCallback(playbackWatch);
         if (audio != null && modeWatch != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) audio.removeOnModeChangedListener((AudioManager.OnModeChangedListener) modeWatch);
         if (audio != null && focus != null) audio.abandonAudioFocusRequest(focus);

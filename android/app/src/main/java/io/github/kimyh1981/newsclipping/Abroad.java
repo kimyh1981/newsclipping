@@ -87,23 +87,59 @@ final class Abroad {
         return topic(country) + " 오늘자 '" + keyword + "' 검색된 기사가 없습니다";
     }
 
-    /** 한 나라에서 키워드 기사 한 건. 검색은 됐는데 기사가 없으면 빈 목록, 검색이 안 되면 예외 */
+    /** 같은 기사인지 볼 열쇠: 나라 이름을 떼고 띄어쓰기·문장부호를 뺀 제목 */
+    static String sameKey(String title) {
+        return title.replaceFirst("^[가-힣]{1,10}, ", "").toLowerCase(java.util.Locale.ROOT).replaceAll("[\\s\\p{P}\\p{S}]+", "");
+    }
+
+    /**
+     * 그 나라 기사인지: 언론사 주소가 그 나라 도메인(.my, .com.my …)이거나 제목에 그 나라 이름이 있다.
+     * 영어판 구글 뉴스(말레이시아·싱가포르·인도 …)에는 로이터 같은 국제 기사가 미국판과 똑같이 올라와서, 그 나라 기사를 먼저 고른다
+     */
+    static boolean local(Countries.Country c, Extras.Entry e, String ko) {
+        String host = Extras.host(e.sourceUrl);
+        if (!c.gl.isEmpty() && !c.gl.equals("US") && host.endsWith("." + c.gl.toLowerCase(java.util.Locale.ROOT))) return true;
+        if (c.gl.equals("US") && (host.endsWith(".us") || host.endsWith(".gov"))) return true;
+        String t = e.title.toLowerCase(java.util.Locale.ROOT);
+        return t.contains(c.en.toLowerCase(java.util.Locale.ROOT)) || (ko != null && ko.contains(c.ko));
+    }
+
+    /**
+     * 한 나라에서 키워드 기사 한 건. 검색은 됐는데 기사가 없으면 빈 목록, 검색이 안 되면 예외.
+     * 그 나라 기사를 먼저 고르고, 없으면 다른 나라에서 아직 안 고른 기사. 같은 기사를 두 나라에서 읽지 않는다 (seen은 나라들이 함께 쓴다)
+     */
     static List<Brief.Item> search(Countries.Country c, String keyword, long now, Set<String> seen) throws Exception {
         String word = translate(keyword, c.searchLang());
         if (word == null) word = keyword;
         List<Extras.Entry> entries = Extras.latestFirst(Extras.entries(Extras.get(Countries.searchUrl(c, word, "1d"))));
+        Extras.Entry pick = null;
+        String pickKo = null;
+        int checked = 0;
         for (Extras.Entry e : entries) {
             if (e.time > 0 && now - e.time > Extras.MAX_AGE) continue;
             String title = Extras.spoken(e.title, e.source);
             if (title.isEmpty()) continue;
+            if (seen.contains(sameKey(title)) || seen.contains(e.link)) continue;
+            if (++checked > 8) break; // 번역을 너무 많이 부르지 않게
             String ko = c.searchLang().startsWith("ko") ? title : translate(title, "ko");
             if (ko == null) continue;
-            String spoken = c.ko + ", " + Extras.spoken(ko, "");
-            String key = spoken.replaceAll("\\s+", "");
-            if (!seen.add(key)) continue;
-            return Collections.singletonList(new Brief.Item(spoken, spoken, e.source.isEmpty() ? c.ko + " 뉴스" : e.source, "x-" + key, "", "", Collections.<String>emptyList(), true));
+            if (seen.contains(sameKey(Extras.spoken(ko, "")))) continue;
+            boolean here = local(c, e, ko);
+            if (pick == null || here) { pick = e; pickKo = ko; }
+            if (here) break;
         }
-        return Collections.emptyList();
+        if (pick == null) return Collections.emptyList();
+        String bare = Extras.spoken(pickKo, "");
+        String spoken = c.ko + ", " + bare;
+        synchronized (seen) {
+            String raw = sameKey(Extras.spoken(pick.title, pick.source));
+            if (seen.contains(raw) || seen.contains(sameKey(bare))) return Collections.emptyList(); // 다른 나라가 방금 같은 기사를 골랐다
+            seen.add(raw);
+            seen.add(sameKey(bare));
+            if (!pick.link.isEmpty()) seen.add(pick.link);
+        }
+        String key = spoken.replaceAll("\\s+", "");
+        return Collections.singletonList(new Brief.Item(spoken, spoken, pick.source.isEmpty() ? c.ko + " 뉴스" : pick.source, "x-" + key, "", "", Collections.<String>emptyList(), true));
     }
 
     /**
@@ -114,7 +150,9 @@ final class Abroad {
         if (countries.isEmpty() || keywords.isEmpty()) return;
         Map<Brief.Item, String> countryOf = new IdentityHashMap<>();
         for (Brief.Section sec : b.sections) for (Brief.Source src : sec.sources) for (Brief.Item it : src.items) if (!src.country.isEmpty()) countryOf.put(it, src.country);
-        Set<String> seen = Extras.titles(b);
+        Set<String> seen = Collections.synchronizedSet(new HashSet<String>());
+        for (String t : Extras.titles(b)) seen.add(sameKey(t));
+        for (Brief.Picked p : picked) for (Brief.Item it : p.items) seen.add(sameKey(it.spoken));
         Map<String, List<String>> formsOf = new HashMap<>();
         for (String k : keywords) formsOf.put(k, forms(k));
 

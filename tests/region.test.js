@@ -13,3 +13,14 @@ test('해외 뉴스: 제목에서 어느 나라 이야기인지 찾아 첫머리
   assert.strictEqual(withRegion('미국 연준이 금리를 동결했다', '미국'), '미국 연준이 금리를 동결했다');
   assert.strictEqual(withRegion('주목할 6가지', ''), '주목할 6가지');
 });
+
+test('해외 언론 기사는 제목에 나라가 없어도 언론사 나라로, 우리나라 이야기면 한국으로 시작한다', () => {
+  assert.strictEqual(regionOf('비료 가격, 공급 우려에 급등', '영국'), '영국'); // 로이터
+  assert.strictEqual(regionOf('삼성전자 3분기 이익 급증', '영국'), '한국'); // 로이터의 우리나라 기사
+  assert.strictEqual(regionOf('트럼프, 한국산 철강에 관세', '영국'), '미국'); // 먼저 나오는 나라
+  // 해외 섹션의 해외 언론사는 모두 나라가 정해져 있다 (구글 뉴스 한국판은 우리 언론이라 빼고)
+  const feeds = require('../feeds.json');
+  const missing = feeds.sections.filter((s) => s.region && !s.country)
+    .flatMap((s) => s.sources).filter((x) => !x.country && !/hl=ko/.test(x.url || '')).map((x) => x.id);
+  assert.deepStrictEqual(missing, []);
+});
