@@ -323,8 +323,9 @@ public class NewsService extends Service {
             }
         }
         if (!manual && lessonOnly == 0) new Prefs(this).markPlayed();
-        if (brief != null) fetchClips(brief, script);
-        main.post(() -> speak(script));
+        List<Brief.Line> ready = script;
+        if (brief != null) fetchClips(brief, ready);
+        main.post(() -> speak(ready));
     }
 
     /** 원고 줄(과 요약·본문) 가운데 서버가 녹음해 둔 것을 원고 순서대로 받는다. 앞 몇 줄만 기다리고(최대 8초) 나머지는 읽는 동안 받는다.
