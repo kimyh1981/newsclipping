@@ -19,7 +19,9 @@
   }
 
   // 아나운서처럼: 요일에 맞춘 인사, 섹션마다 다른 연결 말, 언론사 소개, 맺음말 (안드로이드 Brief.java와 같은 문장)
-  function opening(date) {
+  // evening: 오후 원고 (퇴근길). 앱은 듣는 시각(낮 12시 이후)으로 고른다
+  function opening(date, evening) {
+    if (evening) return `안녕하세요. ${date} 저녁, 퇴근길 뉴스 브리핑입니다.${date.endsWith('금요일') ? ' 한 주 동안 수고 많으셨습니다.' : ''}`;
     const extra = date.endsWith('월요일') ? ' 새로운 한 주, 힘차게 시작해 보시죠.' : date.endsWith('금요일') ? ' 한 주의 마무리, 오늘도 힘내세요.' : '';
     return `좋은 아침입니다. ${date}, 출근길 뉴스 브리핑입니다.${extra}`;
   }
@@ -32,15 +34,19 @@
 
   const EMPTY = '오늘은 새로 들어온 소식이 없습니다.';
   // 서버가 오늘 원고를 아직 못 만들어 앱이 어제 원고를 읽을 때 인사 뒤에 붙인다 (Brief.STALE과 같은 문장)
-  const STALE = '오늘 아침 소식은 아직 정리되지 않아, 어제 모은 뉴스로 전해 드립니다.';
+  const STALE = '오늘 소식은 아직 정리되지 않아, 어제 모은 뉴스로 전해 드립니다.';
+  // 뉴스가 하나도 없을 때 (Brief.noNews와 같은 문장)
+  const noNews = (date, evening) => `${evening ? '안녕하세요' : '좋은 아침입니다'}. ${date}입니다. 오늘은 뉴스를 가져오지 못했습니다. 안전 운전하세요.`;
   // 뉴스 뒤 제품 공부 한 회의 첫 줄 (Brief.lessonIntro와 같은 문장)
   const lessonIntro = (n, title) => `이어서 바이오플랜 제품 공부 시간입니다. 오늘은 ${n}회, ${sentence(title)}`;
-  const closing = (date) => `지금까지 ${date} 아침 뉴스였습니다. 오늘도 안전 운전하시고, 좋은 하루 보내세요.`;
+  const closing = (date, evening) => (evening
+    ? `지금까지 ${date} 저녁 뉴스였습니다. 오늘 하루도 수고 많으셨습니다. 안전 운전하세요.`
+    : `지금까지 ${date} 아침 뉴스였습니다. 오늘도 안전 운전하시고, 좋은 하루 보내세요.`);
 
   // 차에서 들을 원고. 문장 끝마다 마침표를 넣어 음성이 잠깐 쉬게 한다
-  function buildScript(sections, now) {
+  function buildScript(sections, now, evening) {
     const date = koreanDate(now);
-    const lines = [opening(date)];
+    const lines = [opening(date, evening)];
     sections.forEach((sec, i) => {
       lines.push('');
       lines.push(intro(sec.title, i, sections.length));
@@ -56,7 +62,7 @@
       }
     });
     lines.push('');
-    lines.push(closing(date));
+    lines.push(closing(date, evening));
     return lines.join('\n') + '\n';
   }
 
@@ -111,16 +117,17 @@
   function script(b, enabled, order) {
     const now = Date.parse(b.generatedAt);
     const sections = select(b, enabled, order);
-    if (!sections.some((s) => s.items.length)) return `좋은 아침입니다. ${koreanDate(now)}입니다. 오늘은 뉴스를 가져오지 못했습니다. 안전 운전하세요.\n`;
-    return buildScript(sections, now);
+    const evening = b.edition === 'evening';
+    if (!sections.some((s) => s.items.length)) return `${noNews(koreanDate(now), evening)}\n`;
+    return buildScript(sections, now, evening);
   }
 
   // 아이폰 단축어용 조각 원고: 단축어가 고른 언론사 조각을 차례로 받아 읽는다 (ios/<id>.txt, 앞뒤에 open·close)
   // 조각마다 따로 만들어서, 같은 사건이 두 언론사에 다 나오면 두 번 읽힐 수 있다
   function piece(b, id) {
     const date = koreanDate(Date.parse(b.generatedAt));
-    if (id === 'open') return opening(date) + '\n';
-    if (id === 'close') return closing(date) + '\n';
+    if (id === 'open') return opening(date, b.edition === 'evening') + '\n';
+    if (id === 'close') return closing(date, b.edition === 'evening') + '\n';
     for (const sec of b.sections) {
       const src = sec.sources.find((x) => x.id === id);
       if (!src) continue;
@@ -146,5 +153,5 @@
     return ['open', ...ids, 'close'].join(' ');
   }
 
-  return { koreanDate, sentence, lessonIntro, buildScript, defaults, ordered, select, script, piece, iosCode, opening, intro, closing, EMPTY, STALE };
+  return { koreanDate, sentence, lessonIntro, buildScript, defaults, ordered, select, script, piece, iosCode, opening, intro, closing, noNews, EMPTY, STALE };
 });

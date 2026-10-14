@@ -116,8 +116,28 @@ async function summarizeOne(client, it, text) {
   return out.replace(/\s*\n+\s*/g, ' ');
 }
 
+// 기사 본문 받기: 원래 기사에서, 막히면(유료·로그인·차단·빈 페이지) 같은 소식을 쓴 다른 언론사 기사에서 (elsewhere가 주는 주소들)
+async function articleOf(it, get, decodeEntities, elsewhere) {
+  let first;
+  try {
+    const text = articleText(await get(await resolveGoogle(it.link, get)), decodeEntities);
+    if (text.length >= 120) return text;
+    first = new Error('본문 없음');
+  } catch (err) {
+    first = err;
+  }
+  for (const link of (elsewhere ? await elsewhere(it).catch(() => []) : []).slice(0, 4)) {
+    try {
+      const text = articleText(await get(await resolveGoogle(link, get)), decodeEntities);
+      if (text.length >= 120) { it.bodyElsewhere = true; return text; }
+    } catch { /* 다음 기사 */ }
+  }
+  throw first;
+}
+
 // items: 요약할 기사(같은 객체에 summary를 채운다). get: (url) => 텍스트 (문자 코드를 맞춰 푼다), translate: (text, lang) => 우리말
-async function summarize(items, { mode = 'lead', get, translate, decodeEntities, log, run, key = '', limit = 40 }) {
+// elsewhere: (기사) => 같은 소식을 쓴 다른 기사 주소들 (원래 기사 본문을 못 받을 때)
+async function summarize(items, { mode = 'lead', get, translate, decodeEntities, log, run, key = '', limit = 40, elsewhere = null }) {
   const useClaude = mode === 'claude';
   if (useClaude && !key) { log.push('요약: claude로 정했지만 ANTHROPIC_API_KEY가 없어 리드로 대신함'); }
   const client = useClaude && key ? new Anthropic({ apiKey: key, maxRetries: 3 }) : null;
@@ -125,9 +145,7 @@ async function summarize(items, { mode = 'lead', get, translate, decodeEntities,
   let badKey = false;
   await Promise.all(items.slice(0, limit).map((it) => run(async () => {
     try {
-      const url = await resolveGoogle(it.link, get);
-      const text = articleText(await get(url), decodeEntities);
-      if (text.length < 120) throw new Error('본문 없음');
+      const text = await articleOf(it, get, decodeEntities, elsewhere);
       let s = null;
       if (client && !badKey) s = await summarizeOne(client, it, text);
       else {
@@ -152,7 +170,8 @@ async function summarize(items, { mode = 'lead', get, translate, decodeEntities,
       log.push(`요약 실패 (${err.cause?.code || err.message}) ${it.source} ${it.title}`);
     }
   })));
-  log.push(`요약(${client ? 'claude' : 'lead'}): ${Math.min(items.length, limit)}건 중 ${ok}건`);
+  const other = items.filter((it) => it.summary && it.bodyElsewhere).length;
+  log.push(`요약(${client ? 'claude' : 'lead'}): ${Math.min(items.length, limit)}건 중 ${ok}건${other ? ` (다른 언론사 기사로 ${other}건)` : ''}`);
 }
 
 module.exports = { summarize, resolveGoogle, articleText, lead, body, MODEL };

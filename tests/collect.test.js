@@ -203,6 +203,13 @@ test('지난 원고 넘겨받기: 같은 날 다시 배포하면 그날 것은 �
   const prevDay = { generatedAt: '2026-10-05T00:30:00Z', earlier: { 20261004: ['t:b'] }, sections: [{ sources: [{ items: [{ title: 'Hello', original: 'Hello!', link: 'x' }] }] }] };
   assert.deepEqual(earlierKeys(prevDay, NOW), { 20261004: ['t:b'], 20261005: ['l:x', 't:hello'] });
   assert.deepEqual(earlierKeys(null, NOW), {});
+  // 오후 원고: 그날 아침 원고의 기사도 뺀다 (<날짜>am). 다음 날 아침에는 전날 아침·오후 것을 모두 뺀다
+  const noon = Date.parse('2026-10-05T07:30:00Z'); // 서울 10월 5일 오후 4시 30분
+  const morning = { generatedAt: '2026-10-04T20:40:00Z', earlier: { 20261004: ['t:b'] }, sections: [{ sources: [{ items: [{ title: '아침 것', link: 'm' }] }] }] };
+  assert.deepEqual(earlierKeys(morning, noon), { 20261004: ['t:b'], '20261005am': ['l:m', 't:아침것'] });
+  const evening = { generatedAt: '2026-10-05T08:00:00Z', edition: 'evening', earlier: { 20261004: ['t:b'], '20261005am': ['t:m'] }, sections: [{ sources: [{ items: [{ title: '저녁 것', link: 'e' }] }] }] };
+  assert.deepEqual(earlierKeys(evening, noon), { 20261004: ['t:b'], '20261005am': ['t:m'] });
+  assert.deepEqual(earlierKeys(evening, Date.parse('2026-10-05T20:40:00Z')), { 20261004: ['t:b'], 20261005: ['l:e', 't:저녁것'], '20261005am': ['t:m'] });
   assert.deepEqual(itemKeys({}), []);
 });
 
@@ -268,4 +275,29 @@ test('국가별 비료 섹션: 같은 말을 쓰는 다른 나라판(edition)에
   });
   const b = await collect({ sections: [{ id: 'fert-world', title: '국가별 비료 시장 뉴스', limit: 5, latest: true, sources: [{ id: 'fw-kr', name: '한국', google: '비료값', when: '2d', take: 2, mix: true }] }] }, NOW);
   assert.deepEqual(b.sections[0].sources[0].items.map((it) => it.title), ['비료값 내린다', '비료값 오른다']);
+});
+
+test('본문을 못 받은 기사는 뒤로 보내고 예비 기사로 채워, 원고에 든 기사는 모두 전체 듣기 본문이 있다', async (t) => {
+  t.mock.method(globalThis, 'fetch', async () => new Response(feed('막힌 기사 하나', '읽히는 기사 둘', '예비 기사 셋', '예비 기사 넷')));
+  const ok = '<article><p>정부가 내년부터 화학비료 사용을 줄이는 농가에 직불금을 더 주기로 했다. 농림축산식품부는 6일 이런 내용의 계획을 발표했다.</p><p>지원 대상은 미생물 비료와 유기질 비료를 함께 쓰는 농가로, 면적당 지원 단가가 30% 오른다고 밝혔다.</p></article>';
+  const getPage = async (url) => { if (url.includes(encodeURIComponent('막힌'))) { const e = new Error('HTTP 403'); e.status = 403; throw e; } return ok; };
+  const b = await collect({ sections: [{ id: 's', title: '농업', limit: 2, sources: [{ id: 'a', name: '가', url: 'https://a', take: 2 }] }] }, NOW, '', { summaryLimit: 50, getPage, elsewhere: null });
+  const picked = brief.select(b)[0].items;
+  assert.deepEqual(picked.map((i) => i.title), ['읽히는 기사 둘', '예비 기사 셋']);
+  assert.ok(picked.every((i) => i.say && i.say.length));
+  assert.match(b.log.join('\n'), /본문을 못 받은 기사 1건을 뒤로 보내고 예비 기사로 채움/);
+});
+
+test('오후 원고(서울 낮 12시 이후): 네이버 언론사는 많이 본 뉴스로, 섹션 이름·인사도 저녁으로', async (t) => {
+  const pm = Date.parse('2026-10-06T07:30:00Z'); // 서울 10월 6일 오후 4시 30분
+  const ranking = '<title>한겨레 :: 네이버뉴스</title><ul class="press_ranking_list"><li><a href="https://n.news.naver.com/article/028/1"><strong class="list_title">오후에 가장 많이 본 기사입니다</strong></a></li></ul>';
+  const seen = [];
+  t.mock.method(globalThis, 'fetch', async (url) => { seen.push(url); return new Response(ranking); });
+  const b = await collect({ sections: [{ id: 'papers', title: '주요 신문 헤드라인', limit: 3, sources: [{ id: 'hani', name: '한겨레', naver: '028', front: true }] }] }, pm);
+  assert.equal(b.edition, 'evening');
+  assert.ok(seen.includes('https://media.naver.com/press/028/ranking?type=popular'));
+  assert.equal(b.sections[0].title, '주요 신문 많이 본 뉴스');
+  assert.deepEqual(b.sections[0].sources[0].items.map((i) => i.title), ['오후에 가장 많이 본 기사입니다']);
+  assert.match(b.script, /^안녕하세요\. 10월 6일 화요일 저녁, 퇴근길 뉴스 브리핑입니다\.\n/);
+  assert.match(b.script, /지금까지 10월 6일 화요일 저녁 뉴스였습니다\./);
 });

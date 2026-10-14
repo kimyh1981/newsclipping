@@ -2,6 +2,7 @@
  * 네이버 뉴스에서 언론사가 직접 고른 헤드라인을 읽는다 (순위·검색이 아니다).
  *  - 신문: '신문보기'의 그날 지면 1면(A1면) 기사
  *  - 지면이 없는 곳(통신사·방송): 언론사 홈의 '주요 뉴스'(언론사가 편집한 맨 위 묶음)
+ *  - 오후 원고(ranking): 언론사 홈의 '많이 본 뉴스' 순위 (주인 요청 2026-10-14: 오후에는 조회수 높은 기사로)
  * 페이지 모양이 바뀌면 빈 목록을 돌려주고, 수집은 RSS·구글 뉴스로 넘어간다.
  */
 const { decodeEntities } = require('./rss.js');
@@ -50,6 +51,14 @@ function mainNews(html) {
   return links(html.slice(i, end < 0 ? i + 20000 : end), /n\.news\.naver\.com\/article\//);
 }
 
+// 언론사 '많이 본 뉴스' 순위 페이지(media.naver.com/press/<번호>/ranking): 순위 목록(press_ranking_list)의 기사들, 1위부터
+function ranking(html, oid) {
+  const i = html.search(/class="press_ranking_list/);
+  const scope = i < 0 ? html : html.slice(i, i + 60000);
+  const re = oid ? new RegExp(`n\\.news\\.naver\\.com/article/${oid}/`) : /n\.news\.naver\.com\/article\//;
+  return links(scope, re).map((it) => ({ ...it, title: it.title.replace(/^\d{1,2}\s+/, '') })).filter((it) => it.title.length >= 8);
+}
+
 // 서울 날짜 20261007
 function seoulDate(now) {
   return new Date(now + 9 * 3600e3).toISOString().slice(0, 10).replace(/-/g, '');
@@ -57,8 +66,16 @@ function seoulDate(now) {
 
 // src.naver: 네이버 언론사 번호, src.front: 신문이면 true (1면), 아니면 주요 뉴스.
 // 돌려주는 기사: { title, link }. 실패하면 이유를 담은 Error
-async function read(src, get, now = Date.now()) {
+async function read(src, get, now = Date.now(), opts = {}) {
   const base = `https://media.naver.com/press/${src.naver}`;
+  if (opts.ranking) {
+    const html = await get(`${base}/ranking?type=popular`);
+    const name = pressName(html);
+    if (!samePress(name, src.name)) throw new Error(`언론사 이름이 다름 (${name || '없음'})`);
+    const items = ranking(html, src.naver);
+    if (items.length) return items;
+    throw new Error('많이 본 뉴스 없음');
+  }
   const tries = src.front ? [`${base}/newspaper?date=${seoulDate(now)}`, `${base}/newspaper`] : [base];
   let why = '비어 있음';
   for (const url of tries) {
@@ -72,4 +89,4 @@ async function read(src, get, now = Date.now()) {
   throw new Error(why);
 }
 
-module.exports = { read, frontPage, mainNews, pressName, samePress, seoulDate };
+module.exports = { read, frontPage, mainNews, ranking, pressName, samePress, seoulDate };

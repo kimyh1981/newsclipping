@@ -146,14 +146,53 @@ function decode(buf, contentType = '') {
   }
 }
 
-async function get(url) {
-  const res = await fetch(url, { headers: { 'User-Agent': UA, Accept: 'application/rss+xml, application/xml, text/xml, */*' }, signal: AbortSignal.timeout(15e3), redirect: 'follow' });
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+async function get(url, { ua = UA, timeout = 15e3 } = {}) {
+  const res = await fetch(url, { headers: { 'User-Agent': ua, Accept: 'application/rss+xml, application/xml, text/xml, text/html, */*' }, signal: AbortSignal.timeout(timeout), redirect: 'follow' });
+  if (!res.ok) { const e = new Error(`HTTP ${res.status}`); e.status = res.status; throw e; }
   return decode(new Uint8Array(await res.arrayBuffer()), res.headers.get('content-type') || '');
 }
 
+// 기사 본문 페이지: 브라우저처럼 받고, 시간 초과·연결 끊김·5xx·429면 쉬었다가 두 번 더 (2026-10-14: 네이버 기사 17건이 시간 초과)
+const BROWSER = 'Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126 Mobile Safari/537.36';
+const PAGE_WAITS = [2e3, 6e3];
+async function getPage(url) {
+  for (let i = 0; ; i++) {
+    try {
+      return await get(url, { ua: i === 2 ? UA : BROWSER, timeout: 25e3 });
+    } catch (err) {
+      const again = !err.status || err.status >= 500 || err.status === 429 || (i === 0 && err.status === 403);
+      if (!again || i >= PAGE_WAITS.length) throw err;
+      await sleep(PAGE_WAITS[i]);
+    }
+  }
+}
+
+// 같은 소식을 쓴 다른 언론사 기사: 원래 제목으로 구글 뉴스(그 기사 말의 판)를 찾아 제목이 비슷한 기사 주소들
+async function elsewhere(it) {
+  const title = it.original || it.title;
+  const words = title.replace(/["“”'‘’\[\]()]/g, ' ').replace(/\s+/g, ' ').trim();
+  const found = rss.parseFeed(await get(googleUrl(words, '3d', it.lang || 'ko')));
+  return found.map((f) => ({ ...f, title: f.title.replace(/\s+-\s+[^-]+$/, '') }))
+    .filter((f) => f.link && f.link !== it.link && rss.similar(f.title, title)).map((f) => f.link);
+}
+
 // 네이버의 1면·주요 뉴스(언론사가 고른 헤드라인)를 먼저, 안 되면 언론사 RSS, 그것도 막히거나 비었으면 구글 뉴스 검색으로 대신한다
-async function readSource(src, log, lang, now = Date.now()) {
+// 오후 원고: 서울 시각 낮 12시부터는 오후 원고 (하루 두 번 수집, 주인 요청 2026-10-14)
+function editionOf(now) {
+  return new Date(now + 9 * 3600e3).getUTCHours() >= 12 ? 'evening' : 'morning';
+}
+
+async function readSource(src, log, lang, now = Date.now(), edition = 'morning') {
+  // 오후에는 언론사가 고른 1면·주요 뉴스 대신 그 언론사에서 가장 많이 본 뉴스. 안 되면 아침처럼 1면·주요 뉴스로
+  if (src.naver && edition === 'evening') {
+    try {
+      const items = await naver.read(src, get, now, { ranking: true });
+      log.push(`${src.name}: 네이버 많이 본 뉴스 ${items.length}건`);
+      return items;
+    } catch (err) {
+      log.push(`${src.name}: 네이버 많이 본 뉴스 실패 (${err.cause?.code || err.message})`);
+    }
+  }
   if (src.naver) {
     const kind = src.front ? '네이버 1면' : '네이버 주요 뉴스';
     try {
@@ -197,21 +236,27 @@ function itemKeys(b) {
 }
 
 // 지금 사이트에 올라가 있는 원고(live)에서 오늘 이전 날들의 기사 열쇠를 이어 받는다 (최근 days일).
-// 같은 날 두 번째 배포라면 그날 것은 넣지 않는다: 새벽 첫 배포와 같은 기사를 다시 빼면 안 되니까
+// 같은 날 두 번째 배포라면 그날 것은 넣지 않는다: 새벽 첫 배포와 같은 기사를 다시 빼면 안 되니까.
+// 다만 오후 원고는 그날 아침 원고에 나온 기사를 빼고 새 기사로 채운다 (열쇠 이름 <날짜>am)
 function earlierKeys(live, now, days = 2) {
   const today = naver.seoulDate(now);
+  const evening = editionOf(now) === 'evening';
   const out = { ...(live && live.earlier) };
   if (live && live.generatedAt) {
     const d = naver.seoulDate(Date.parse(live.generatedAt));
     if (d !== today) out[d] = itemKeys(live);
+    else if (evening && live.edition !== 'evening') out[`${d}am`] = itemKeys(live);
   }
-  const keep = Object.keys(out).filter((d) => d < today).sort().slice(-days);
+  const past = Object.keys(out).filter((d) => d < today);
+  const dates = [...new Set(past.map((d) => d.slice(0, 8)))].sort().slice(-days); // 지난 이틀 (그날 아침·오후 원고 모두)
+  const keep = past.filter((d) => dates.includes(d.slice(0, 8)));
+  if (evening && out[`${today}am`]) keep.push(`${today}am`);
   return Object.fromEntries(keep.map((d) => [d, out[d]]));
 }
 
 // 지난 원고 보관: archive/<서울 날짜>.json을 최근 ARCHIVE_DAYS일치 남기고 archive/index.json에 날짜 목록을 둔다.
 // 사이트는 배포마다 통째로 바뀌므로, 지금 사이트에 있는 지난 날짜 파일을 받아 다시 올린다 (웹 화면에서 날짜를 골라 본다)
-const ARCHIVE_DAYS = 7;
+const ARCHIVE_DAYS = 7; // 아침·오후 원고를 따로 남긴다 (오후 원고는 archive/<날짜>pm.json)
 const slim = (b) => { const { audio, earlier, lessons: _, ...rest } = b; return rest; }; // 녹음은 그날 것만 남으니 빼고, 겹침 열쇠와 제품 공부 원고(날마다 같음)도 뺀다
 
 // 제품 공부(product)와 같은 회의 농업영어(english) 원고
@@ -228,23 +273,24 @@ function lessons() {
 }
 
 async function archive(out, b, live, now, getText) {
-  const today = naver.seoulDate(now);
+  const today = naver.seoulDate(now) + (b.edition === 'evening' ? 'pm' : '');
   const days = { [today]: slim(b) };
   const index = await getText(`${SITE}archive/index.json`).then(JSON.parse).catch(() => null);
-  const past = ((index && index.days) || []).map((d) => d.ymd).filter((d) => d < today).sort().reverse().slice(0, ARCHIVE_DAYS - 1);
+  const past = ((index && index.days) || []).map((d) => d.ymd).filter((d) => d < today).sort().reverse().slice(0, ARCHIVE_DAYS * 2);
   for (const d of past) {
     const old = await getText(`${SITE}archive/${d}.json`).then(JSON.parse).catch(() => null);
     if (old) days[d] = old;
   }
   // 보관을 처음 시작할 때: 지금 사이트의 원고가 지난 날 것이면 그것부터 남긴다
   if (live && live.generatedAt) {
-    const d = naver.seoulDate(Date.parse(live.generatedAt));
+    const d = naver.seoulDate(Date.parse(live.generatedAt)) + (live.edition === 'evening' ? 'pm' : '');
     if (d < today && !days[d]) days[d] = slim(live);
   }
-  const keep = Object.keys(days).sort().reverse().slice(0, ARCHIVE_DAYS);
+  const dates = [...new Set(Object.keys(days).map((d) => d.slice(0, 8)))].sort().reverse().slice(0, ARCHIVE_DAYS);
+  const keep = Object.keys(days).filter((d) => dates.includes(d.slice(0, 8))).sort().reverse();
   fs.mkdirSync(path.join(out, 'archive'), { recursive: true });
   for (const d of keep) fs.writeFileSync(path.join(out, 'archive', `${d}.json`), JSON.stringify(days[d]));
-  const list = keep.map((d) => ({ ymd: d, label: days[d].dateLabel }));
+  const list = keep.map((d) => ({ ymd: d, label: days[d].dateLabel + (days[d].edition === 'evening' ? ' 오후' : '') }));
   fs.writeFileSync(path.join(out, 'archive', 'index.json'), JSON.stringify({ days: list }));
   return list;
 }
@@ -285,19 +331,22 @@ async function collect(config, now = Date.now(), key = '', opts = {}) {
   const old = new Set(Object.values(earlier).flat());
   let repeated = 0;
   const autoPlay = await holidays.playDay(now, key);
+  const edition = opts.edition || editionOf(now);
   const sections = await Promise.all(config.sections.map(async (sec) => {
     const boost = (sec.boost || []).map((p) => new RegExp(p, 'i'));
     // promo: 행사·대회·기부·협약식 같은 홍보성 기사는 아예 뺀다 (주인 요청 2026-10-12)
     const promo = (sec.promo || []).map((p) => new RegExp(p, 'i'));
+    // 오후에는 네이버 언론사 섹션(주요 신문·경제 신문 헤드라인)이 많이 본 뉴스가 된다
+    const ranked = edition === 'evening' && sec.sources.some((x) => x.naver);
     return {
       id: sec.id,
-      title: sec.title,
+      title: ranked ? sec.title.replace(/헤드라인$/, '많이 본 뉴스') : sec.title,
       perSourceLabel: !!sec.perSourceLabel,
       limit: sec.limit,
       sources: await Promise.all(sec.sources.map(async (source) => {
         const lang = source.lang || sec.lang || 'ko';
         const take = source.take || 3;
-        const read = await readSource(source, log, lang, now);
+        const read = await readSource(source, log, lang, now, edition);
         // latest: 검색 결과(관련도 순)를 최신 기사부터
         if (source.latest || sec.latest) read.sort((a, b) => (Date.parse(b.publishedAt) || 0) - (Date.parse(a.publishedAt) || 0));
         const picked = boosted(boost, rss.pick({ ...sec, limit: 99 }, [{ source: { ...source, lang, take: take + SPARE + 10 }, items: read }], now, []));
@@ -332,13 +381,29 @@ async function collect(config, now = Date.now(), key = '', opts = {}) {
   if (old.size) log.push(`전날과 겹친 기사 ${repeated}건을 빼고 다음 기사로 채움`);
   if (foreign.length) log.push(`번역기: ${Object.entries(used).map(([k, n]) => `${k} ${n}번`).join(', ') || '없음'}${blocked.size ? ` (429로 막힘: ${[...blocked].join(', ')})` : ''}`);
   group(sections);
-  const b = { version: 2, generatedAt: new Date(now).toISOString(), dateLabel: rss.koreanDate(now), autoPlay, sections, log, earlier };
+  const b = { version: 2, generatedAt: new Date(now).toISOString(), dateLabel: rss.koreanDate(now), edition, autoPlay, sections, log, earlier };
   // 기본 언론사 원고에 든 기사부터, 그다음 언론사를 다 골랐을 때 원고에 들 기사까지 요약·본문을 붙인다 (같은 기사 객체에 summary가 붙는다).
   // 예전에는 기본 언론사 기사만 해서, 언론사를 많이 고르면 '전체 듣기'에서 본문을 못 가져왔다고 나왔다 (2026-10-12)
   const run = limiter(6);
   const all = sections.flatMap((s) => s.sources.map((x) => x.id));
-  const toRead = [...new Set([...brief.select(b), ...brief.select(b, all)].flatMap((s) => s.items))];
-  if (opts.summaryLimit) await summarize(toRead, { mode: opts.summaryMode, get, translate, decodeEntities: rss.decodeEntities, log, run, key: opts.summaryKey, limit: opts.summaryLimit });
+  // 본문을 끝내 못 받은 기사는 그 언론사의 뒤로 보내고, 대신 앞으로 온 예비 기사의 본문을 받는다 (세 번까지).
+  // 원고에 드는 기사는 모두 '전체 듣기' 본문이 있게 (주인 요청 2026-10-14)
+  const tried = new Set();
+  for (let round = 0; opts.summaryLimit && round < 3; round++) {
+    const toRead = [...new Set([...brief.select(b), ...brief.select(b, all)].flatMap((s) => s.items))].filter((it) => !tried.has(it));
+    if (!toRead.length) break;
+    toRead.forEach((it) => tried.add(it));
+    await summarize(toRead, { mode: opts.summaryMode, get: opts.getPage || getPage, translate, decodeEntities: rss.decodeEntities, log, run, key: opts.summaryKey, limit: opts.summaryLimit, elsewhere: opts.elsewhere === undefined ? elsewhere : opts.elsewhere });
+    let moved = 0;
+    for (const sec of sections) for (const src of sec.sources) {
+      const bad = src.items.filter((it) => tried.has(it) && !it.summary);
+      if (!bad.length || !src.items.some((it) => !tried.has(it))) continue;
+      src.items = [...src.items.filter((it) => !bad.includes(it)), ...bad];
+      moved += bad.length;
+    }
+    if (!moved) break;
+    log.push(`본문을 못 받은 기사 ${moved}건을 뒤로 보내고 예비 기사로 채움`);
+  }
   // '전체 듣기'로 읽을 문장들: 소리 내어 읽기 좋게 다듬어 문장마다 나눈다 (앱 자막·녹음 단위)
   for (const sec of sections) for (const src of sec.sources) for (const it of src.items) {
     const say = rss.speechSentences(it.body || it.summary);
@@ -389,4 +454,4 @@ if (require.main === module) {
   })();
 }
 
-module.exports = { EDITIONS, collect, archive, lessons, boosted, earlierKeys, itemKeys, titleKey, decode, googleUrl, translate, speechText, iosPieces, iosHours, RETRY };
+module.exports = { EDITIONS, editionOf, collect, archive, lessons, boosted, earlierKeys, itemKeys, titleKey, decode, googleUrl, translate, speechText, iosPieces, iosHours, RETRY };

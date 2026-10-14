@@ -85,6 +85,10 @@ public class BriefTest {
         assertTrue(Brief.opening("10월 5일 월요일").endsWith("새로운 한 주, 힘차게 시작해 보시죠."));
         assertTrue(Brief.opening("10월 9일 금요일").endsWith("한 주의 마무리, 오늘도 힘내세요."));
         assertEquals("좋은 아침입니다. 10월 6일 화요일, 출근길 뉴스 브리핑입니다.", Brief.opening("10월 6일 화요일"));
+        assertEquals("안녕하세요. 10월 9일 금요일 저녁, 퇴근길 뉴스 브리핑입니다. 한 주 동안 수고 많으셨습니다.", Brief.opening("10월 9일 금요일", true));
+        assertEquals("지금까지 10월 6일 화요일 저녁 뉴스였습니다. 오늘 하루도 수고 많으셨습니다. 안전 운전하세요.", Brief.closing("10월 6일 화요일", true));
+        assertEquals(false, Brief.evening(java.time.Instant.parse("2026-10-06T02:59:00Z").toEpochMilli())); // 서울 오전 11시 59분
+        assertEquals(true, Brief.evening(java.time.Instant.parse("2026-10-06T03:00:00Z").toEpochMilli())); // 서울 낮 12시
         assertEquals("다음은 가입니다.", Brief.intro("가", 1, 4));
         assertEquals("이어서 가입니다.", Brief.intro("가", 2, 4));
         assertEquals("끝으로 가입니다.", Brief.intro("가", 3, 4));

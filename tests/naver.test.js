@@ -45,3 +45,16 @@ test('언론사 이름이 다르면 쓰지 않고, 오늘 지면이 없으면 �
   await assert.rejects(naver.read({ naver: '023', front: true, name: '중앙일보' }, async () => paper(), NOW), /언론사 이름이 다름 \(조선일보\)/);
   assert.equal((await naver.read({ naver: '001', name: '연합뉴스' }, async () => home, NOW)).length, 2);
 });
+
+test('오후 원고: 언론사 많이 본 뉴스 순위를 1위부터 고른다 (다른 언론사 기사·메뉴는 뺀다)', async () => {
+  const html = '<title>한겨레 :: 네이버뉴스</title><a href="https://n.news.naver.com/article/028/0000000009">메뉴에 걸린 다른 기사 제목입니다</a>'
+    + '<ul class="press_ranking_list"><li><a href="https://n.news.naver.com/article/028/0000000001"><em class="list_ranking_num">1</em><strong class="list_title">가장 많이 본 기사 제목입니다</strong></a></li>'
+    + '<li><a href="https://n.news.naver.com/article/001/0000000002"><strong class="list_title">다른 언론사 기사 제목입니다</strong></a></li>'
+    + '<li><a href="https://n.news.naver.com/article/028/0000000003"><strong class="list_title">두 번째로 많이 본 기사입니다</strong></a></li></ul>';
+  assert.deepEqual(naver.ranking(html, '028').map((x) => x.title), ['가장 많이 본 기사 제목입니다', '두 번째로 많이 본 기사입니다']);
+  const seen = [];
+  const items = await naver.read({ naver: '028', front: true, name: '한겨레' }, async (url) => { seen.push(url); return html; }, Date.now(), { ranking: true });
+  assert.equal(items.length, 2);
+  assert.deepEqual(seen, ['https://media.naver.com/press/028/ranking?type=popular']);
+  await assert.rejects(naver.read({ naver: '028', name: '한겨레' }, async () => '<title>한겨레 :: 네이버뉴스</title>', Date.now(), { ranking: true }), /많이 본 뉴스 없음/);
+});

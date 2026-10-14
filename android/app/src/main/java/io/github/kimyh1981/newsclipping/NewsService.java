@@ -336,9 +336,10 @@ public class NewsService extends Service {
             List<Brief.Picked> picked = brief.select(prefs.sources(), prefs.order());
             Extras.addKeywords(brief, picked, prefs.keywords(), now);
             Abroad.addCountryNews(brief, picked, countries, abroad, now);
-            script = brief.linesOf(picked, Brief.koreanDate(now));
-            // 평일이면 뉴스 뒤에 제품 공부 한 회 (주말·공휴일은 진도를 넘기지 않는다)
-            if (brief.playToday && (prefs.lessonOn() || prefs.englishOn()) && !brief.lessons.isEmpty()) {
+            boolean evening = Brief.evening(now);
+            script = brief.linesOf(picked, Brief.koreanDate(now), evening);
+            // 평일 아침이면 뉴스 뒤에 제품 공부 한 회 (주말·공휴일은 진도를 넘기지 않는다. 오후 원고에는 붙이지 않는다, 주인 요청 2026-10-14)
+            if (brief.playToday && !evening && (prefs.lessonOn() || prefs.englishOn()) && !brief.lessons.isEmpty()) {
                 script = Brief.withLesson(script, brief.lesson(prefs.lessonForToday(Lessons.numbers(brief.lessons), true)), prefs.lessonOn(), prefs.englishOn());
             }
         }
