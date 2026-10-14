@@ -324,7 +324,7 @@ public class NewsService extends Service {
             Prefs prefs = new Prefs(this);
             long now = System.currentTimeMillis();
             Extras.addCustom(brief, prefs.custom(), now);
-            // 국가별 비료 시장 뉴스: 고른 기사 수, 우리말 키워드 기사
+            // 해외 농업·비료 시장 뉴스: 고른 기사 수, 우리말 키워드 기사
             brief.setLimit(Extras.FERT_WORLD, prefs.fertCount());
             java.util.Set<String> on = prefs.sources();
             List<String> kw = Extras.addFertKeywords(brief, prefs.fertKeywords(), now);

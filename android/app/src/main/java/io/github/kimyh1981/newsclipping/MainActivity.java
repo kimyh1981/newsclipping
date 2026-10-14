@@ -157,7 +157,7 @@ public class MainActivity extends Activity {
         orderVal = row(today, "섹션 순서", v -> withBrief(this::showOrder), true);
         customVal = row(today, "언론사 직접 넣기 (주소)", v -> withBrief(this::showCustom), true);
         keywordsVal = row(today, "농업 키워드", v -> showKeywords(), true);
-        fertVal = row(today, "국가별 비료 시장 뉴스", v -> withBrief(this::showFertWorld), false);
+        fertVal = row(today, "해외 농업·비료 시장 뉴스", v -> withBrief(this::showFertWorld), false);
         LinearLayout study = section(newsPage, "뉴스 뒤에 듣기", "평일 아침 뉴스가 끝나면 제품 공부 한 회와 같은 회의 농업영어를 읽습니다.");
         lessonVal = row(study, "제품 공부·농업영어 진도", v -> withBrief(this::showLessons), false);
 
@@ -984,12 +984,12 @@ public class MainActivity extends Activity {
         return v;
     }
 
-    /** 국가별 비료 시장 뉴스: 나라 고르기(그 섹션의 언론사 체크), 기사 수, 우리말로 더 찾을 키워드 */
+    /** 해외 농업·비료 시장 뉴스 (바이오플랜 해외 영업용): 나라 고르기(그 섹션의 언론사 체크), 기사 수, 우리말로 더 찾을 키워드 */
     private void showFertWorld(Brief b) {
         List<Brief.Source> countries = new ArrayList<>();
         for (Brief.Source src : b.sourcesOf(Extras.FERT_WORLD)) if (!src.id.startsWith("kw-")) countries.add(src);
         if (countries.isEmpty()) {
-            new Sheet(this).setMessage("서버에 아직 국가별 비료 뉴스가 없습니다. 오늘 뉴스 목록이 새로 만들어진 뒤 다시 열어 주세요.").setPositiveButton("확인", null).show();
+            new Sheet(this).setMessage("서버에 아직 해외 농업·비료 시장 뉴스가 없습니다. 오늘 뉴스 목록이 새로 만들어진 뒤 다시 열어 주세요.").setPositiveButton("확인", null).show();
             return;
         }
         Set<String> chosen = prefs.sources() == null ? b.defaults() : prefs.sources();
@@ -1013,7 +1013,7 @@ public class MainActivity extends Activity {
         });
         android.widget.EditText words = new android.widget.EditText(this);
         words.setText(String.join(", ", prefs.fertKeywords()));
-        words.setHint("더 찾을 키워드 (예: 요소수, 인도 요소 입찰)");
+        words.setHint("더 찾을 키워드 (예: 바이오스티뮬런트, 베트남 두리안 수출)");
         words.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
         LinearLayout wrap = new LinearLayout(this);
         wrap.setPadding(dp(12), 0, dp(12), dp(4));
@@ -1023,8 +1023,8 @@ public class MainActivity extends Activity {
         head.setPadding(dp(16), dp(16), dp(16), dp(6));
         box.addView(head);
         new Sheet(this)
-                .setTitle("국가별 비료 시장 뉴스")
-                .setMessage("고른 나라마다 그 나라 말로 비료·요소·칼륨 같은 낱말을 검색해 최신 기사부터 우리말로 옮겨 읽습니다. 키워드는 우리말 뉴스에서 더 찾습니다. 기사 수를 누르면 5·7·10·15건으로 바뀝니다.")
+                .setTitle("해외 농업·비료 시장 뉴스")
+                .setMessage("해외 영업에 쓰도록, 고른 나라마다 그 나라 말로 비료·미생물·바이오스티뮬런트·작물 시장 낱말을 검색해 최신 기사부터 우리말로 옮겨 읽습니다. 키워드는 우리말 뉴스에서 더 찾습니다. 기사 수를 누르면 5·7·10·15건으로 바뀝니다.")
                 .setView(box)
                 .setMultiChoiceItems(labels, checked, (d, i, on) -> checked[i] = on)
                 .setPositiveButton("저장", (d, w) -> {

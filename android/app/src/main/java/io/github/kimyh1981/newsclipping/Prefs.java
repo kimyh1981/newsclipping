@@ -44,7 +44,7 @@ final class Prefs {
     /** 섹션 재생 순서(섹션 id). 비어 있으면 서버 순서 */
     List<String> order() { return split(p.getString("order", "")); }
 
-    /** 국가별 비료 시장 뉴스: 기사 수 (기본 5)와 우리말로 더 찾을 키워드 */
+    /** 해외 농업·비료 시장 뉴스: 기사 수 (기본 5)와 우리말로 더 찾을 키워드 */
     int fertCount() { return p.getInt("fertCount", 5); }
     void setFertCount(int n) { p.edit().putInt("fertCount", n).apply(); }
     List<String> fertKeywords() { return split(p.getString("fertKeywords", "")); }

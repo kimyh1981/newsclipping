@@ -371,8 +371,8 @@
     },
     {
       "id": "fert-world",
-      "title": "국가별 비료 시장 뉴스",
-      "_설명": "나라마다 그 나라 말 비료 키워드로 구글 뉴스를 검색해 최신 기사부터 읽는다. 앱에서 나라·기사 수·추가 키워드를 고른다",
+      "title": "해외 농업·비료 시장 뉴스",
+      "_설명": "바이오플랜 해외 영업용: 나라마다 그 나라 말로 비료·바이오자재(미생물·바이오스티뮬런트)·작물 시장 낱말을 구글 뉴스에서 찾아 최신 기사부터 읽는다. 앱에서 나라·기사 수·추가 키워드를 고른다",
       "limit": 5,
       "hours": 72,
       "latest": true,
@@ -381,95 +381,119 @@
         {
           "id": "fw-us",
           "name": "미국",
-          "google": "fertilizer OR urea OR potash OR phosphate OR ammonia",
+          "google": "fertilizer OR biostimulant OR biofertilizer OR \"microbial fertilizer\" OR \"soil health\" OR \"crop prices\" OR agribusiness",
           "lang": "en",
           "country": "미국",
           "when": "2d",
           "take": 3,
           "mix": true,
-          "must": "fertili[sz]er|urea|potash|phosphate|ammonia|nitrogen|DAP|NPK"
+          "must": "fertili[sz]er|urea|potash|phosphate|biostimulant|bio-?fertili|microb|soil|crop|farm|agri|harvest|grain"
         },
         {
           "id": "fw-in",
           "name": "인도",
-          "google": "fertiliser OR fertilizer OR urea OR DAP",
+          "google": "fertiliser OR fertilizer OR biostimulant OR biofertiliser OR \"soil health\" OR kharif OR rabi OR agriculture",
           "lang": "en",
           "edition": "IN",
           "country": "인도",
           "when": "2d",
           "take": 3,
           "mix": true,
-          "must": "fertili[sz]er|urea|potash|phosphate|ammonia|nitrogen|DAP|NPK"
+          "must": "fertili[sz]er|urea|potash|phosphate|biostimulant|bio-?fertili|microb|soil|crop|farm|agri|harvest|grain|kharif|rabi"
         },
         {
           "id": "fw-cn",
           "name": "중국",
-          "google": "化肥 OR 尿素 OR 钾肥 OR 磷肥",
+          "google": "化肥 OR 生物肥料 OR 微生物肥料 OR 生物刺激素 OR 土壤改良 OR 农业 市场",
           "lang": "zh",
           "country": "중국",
           "when": "2d",
           "take": 3,
           "mix": true,
-          "must": "化肥|尿素|钾肥|磷肥|肥料"
+          "must": "肥|农|土壤|作物|粮|种植"
         },
         {
           "id": "fw-vn",
           "name": "베트남",
-          "google": "\"phân bón\" OR urê OR NPK",
+          "google": "\"phân bón\" OR \"phân bón vi sinh\" OR \"phân bón hữu cơ\" OR \"nông nghiệp\" OR \"nông sản\"",
           "lang": "vi",
           "country": "베트남",
           "when": "2d",
           "take": 3,
           "mix": true,
-          "must": "phân bón|urê|NPK|DAP|kali"
+          "must": "phân bón|vi sinh|hữu cơ|nông nghiệp|nông sản|cây trồng|lúa|cà phê|sầu riêng"
         },
         {
           "id": "fw-br",
           "name": "브라질",
-          "google": "fertilizante OR fertilizantes OR ureia OR potássio",
+          "google": "fertilizante OR bioinsumos OR biológicos OR agronegócio OR safra",
           "lang": "pt",
           "edition": "BR",
           "country": "브라질",
           "when": "2d",
           "take": 3,
           "mix": true,
-          "must": "fertilizante|ureia|potássio|fosfat"
+          "must": "fertiliz|bioinsum|biológic|agro|safra|soja|milho|lavoura"
         },
         {
           "id": "fw-jp",
           "name": "일본",
-          "google": "肥料 OR 尿素",
+          "google": "肥料 OR 微生物資材 OR バイオスティミュラント OR 土壌改良 OR 農業",
           "lang": "ja",
           "country": "일본",
           "when": "2d",
           "take": 3,
           "mix": true,
-          "must": "肥料|尿素",
+          "must": "肥料|微生物|バイオスティミュラント|土壌|農",
           "default": false
         },
         {
           "id": "fw-gb",
           "name": "영국·유럽",
-          "google": "fertiliser OR fertilizer OR urea",
+          "google": "fertiliser OR biostimulant OR biofertiliser OR \"soil health\" OR \"regenerative agriculture\" OR agriculture",
           "lang": "en",
           "edition": "GB",
           "country": "유럽",
           "when": "2d",
           "take": 3,
           "mix": true,
-          "must": "fertili[sz]er|urea|potash|phosphate|ammonia|nitrogen|DAP|NPK",
+          "must": "fertili[sz]er|urea|potash|phosphate|biostimulant|bio-?fertili|microb|soil|crop|farm|agri|harvest|grain|regenerative",
           "default": false
         },
         {
           "id": "fw-ru",
           "name": "러시아",
-          "google": "удобрения OR карбамид OR калий",
+          "google": "удобрения OR биоудобрения OR агрохимия OR урожай OR АПК",
           "lang": "ru",
           "country": "러시아",
           "when": "2d",
           "take": 3,
           "mix": true,
-          "must": "удобр|карбамид|калий|аммиа",
+          "must": "удобр|агро|урожа|сельск|АПК",
+          "default": false
+        },
+        {
+          "id": "fw-id",
+          "name": "인도네시아",
+          "google": "pupuk OR \"pupuk hayati\" OR biostimulan OR pertanian OR \"harga komoditas\"",
+          "lang": "id",
+          "country": "인도네시아",
+          "when": "2d",
+          "take": 3,
+          "mix": true,
+          "must": "pupuk|hayati|biostimulan|pertanian|petani|panen|sawit",
+          "default": false
+        },
+        {
+          "id": "fw-th",
+          "name": "태국",
+          "google": "ปุ๋ย OR \"ปุ๋ยชีวภาพ\" OR เกษตร",
+          "lang": "th",
+          "country": "태국",
+          "when": "2d",
+          "take": 3,
+          "mix": true,
+          "must": "ปุ๋ย|ชีวภาพ|เกษตร|ข้าว",
           "default": false
         }
       ]

@@ -90,7 +90,7 @@ final class Brief {
     static final class Section {
         final String id, title;
         final boolean perSourceLabel;
-        int limit; // 국가별 비료 뉴스는 앱에서 기사 수를 고른다
+        int limit; // 해외 농업·비료 시장 뉴스는 앱에서 기사 수를 고른다
         final List<Source> sources;
         Section(String id, String title, boolean perSourceLabel, int limit, List<Source> sources) {
             this.id = id; this.title = title; this.perSourceLabel = perSourceLabel; this.limit = limit; this.sources = sources;

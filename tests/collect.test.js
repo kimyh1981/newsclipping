@@ -167,7 +167,7 @@ test('feeds.json: 언론사 id가 모두 있고 겹치지 않으며, 외국 언�
   for (const s of cfg.sections) for (const x of s.sources) {
     assert.ok(x.url || x.google, x.id);
     const lang = x.lang || s.lang || 'ko';
-    assert.ok(['ko', 'en', 'vi', 'zh', 'ja', 'pt', 'ru'].includes(lang), x.id);
+    assert.ok(['ko', 'en', 'vi', 'zh', 'ja', 'pt', 'ru', 'id', 'th'].includes(lang), x.id);
     assert.ok(EDITIONS[x.edition || lang], x.id); // 구글 뉴스 나라판이 있어야 한다
   }
   assert.equal(cfg.sections.at(-1).id, 'vietnam', '베트남 농업·비료는 맨 마지막');

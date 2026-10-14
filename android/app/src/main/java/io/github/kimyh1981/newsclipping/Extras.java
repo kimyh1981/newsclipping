@@ -32,7 +32,7 @@ final class Extras {
     static final int TAKE = 2;
     static final long MAX_AGE = 36L * 3600 * 1000;
     static final String FARM = "farm";
-    /** 국가별 비료 시장 뉴스 섹션 (feeds.json) */
+    /** 해외 농업·비료 시장 뉴스 섹션 (feeds.json, id는 처음 이름 그대로) */
     static final String FERT_WORLD = "fert-world";
 
     /** 사람이 넣은 언론사. feed는 확인해 둔 RSS 주소(없으면 매번 찾는다) */
@@ -279,7 +279,7 @@ final class Extras {
     }
 
     /**
-     * 국가별 비료 시장 뉴스에 사람이 넣은 키워드: 우리말 구글 뉴스에서 최근 이틀 기사를 최신순으로 찾아 그 섹션의 출처로 붙인다.
+     * 해외 농업·비료 시장 뉴스에 사람이 넣은 키워드: 우리말 구글 뉴스에서 최근 이틀 기사를 최신순으로 찾아 그 섹션의 출처로 붙인다.
      * 붙인 출처 id를 돌려준다 (고른 언론사에 더해야 읽는다)
      */
     static List<String> addFertKeywords(Brief b, List<String> keywords, long now) {
