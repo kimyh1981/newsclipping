@@ -23,6 +23,8 @@ import android.widget.TextView;
  */
 public class CaptionActivity extends Activity {
     private TextView head, body, hint;
+    /** 제품 공부 중: 농업영어로 넘기기, 농업영어 중: 이 회 마치기 */
+    private Button skip;
     private final Runnable redraw = this::show;
     /** 읽는 중인 것을 한 번이라도 보여 줬다: 읽기가 끝나면 닫는다 */
     private boolean seen;
@@ -64,6 +66,16 @@ public class CaptionActivity extends Activity {
         body.setLineSpacing(0, 1.15f);
         body.setAutoSizeTextTypeUniformWithConfiguration(18, 40, 1, TypedValue.COMPLEX_UNIT_SP);
         col.addView(body, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f));
+        skip = new Button(this);
+        skip.setTextSize(TypedValue.COMPLEX_UNIT_SP, 18);
+        skip.setTextColor(0xFFFFFFFF);
+        skip.setAllCaps(false);
+        skip.setBackgroundColor(0xFF0A84FF);
+        skip.setVisibility(View.GONE);
+        skip.setOnClickListener(v -> NewsService.control(NewsService.ACTION_SKIP_LESSON));
+        LinearLayout.LayoutParams sp = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(56));
+        sp.bottomMargin = dp(12);
+        col.addView(skip, sp);
         hint = text(17, 0xFF8E8E93);
         hint.setGravity(Gravity.CENTER);
         col.addView(hint);
@@ -72,7 +84,9 @@ public class CaptionActivity extends Activity {
         GestureDetector gestures = new GestureDetector(this, new GestureDetector.SimpleOnGestureListener() {
             @Override public boolean onDown(MotionEvent e) { return true; }
             @Override public boolean onSingleTapUp(MotionEvent e) {
-                if (NewsService.isRunning()) NewsService.control(NewsService.ACTION_MORE);
+                NewsService.Caption c = NewsService.caption();
+                if (c != null && c.lesson > 0) NewsService.control(NewsService.state() == NewsService.PAUSED ? NewsService.ACTION_RESUME : NewsService.ACTION_PAUSE);
+                else if (NewsService.isRunning()) NewsService.control(NewsService.ACTION_MORE);
                 else NewsService.start(CaptionActivity.this, true);
                 return true;
             }
@@ -120,6 +134,7 @@ public class CaptionActivity extends Activity {
     }
 
     private void show() {
+        skip.setVisibility(View.GONE);
         if (!NewsService.isRunning()) {
             if (seen) { finish(); return; }
             head.setText("뉴스클리핑");
@@ -136,6 +151,14 @@ public class CaptionActivity extends Activity {
             return;
         }
         boolean paused = NewsService.state() == NewsService.PAUSED;
+        if (c.lesson > 0) { // 제품 공부·농업영어: 쓸어서 문단을 빠르게 넘기고, 버튼으로 다음 코너로
+            head.setText(c.source + " · " + c.title);
+            body.setText(c.text);
+            skip.setText(c.english ? "이 회 마치기 ⏭" : "농업영어로 넘어가기 ⏭");
+            skip.setVisibility(View.VISIBLE);
+            hint.setText(paused ? "멈춤 · 누르면 이어 듣기" : "왼쪽으로 넘기면 다음 문단 · 오른쪽은 이전 문단 · 누르면 멈춤");
+            return;
+        }
         head.setText(c.full ? c.source + " · 전체 듣기 · " + c.title : c.source);
         // 헤드라인은 읽는 글 그대로, 전체 듣기는 지금 읽는 문장. 너무 긴 글(옛 원고의 본문 통째)은 기사 제목
         body.setText(c.text.length() > 240 ? c.title : c.text);

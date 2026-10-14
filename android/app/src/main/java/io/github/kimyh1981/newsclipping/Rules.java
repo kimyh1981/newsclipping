@@ -70,6 +70,35 @@ public final class Rules {
         return 0;
     }
 
+    // 제품 공부·농업영어 안에서 넘기기. kind[i]: 1 제품 공부, 2 농업영어, 0 그 밖, -1 빈 줄
+
+    /** 다음 문단(빈 줄이 아닌 줄). 코너 끝이면 코너 다음 줄 */
+    public static int nextParagraph(int[] kind, int cur) {
+        for (int i = cur + 1; i < kind.length; i++) if (kind[i] != -1) return i;
+        return Math.max(0, kind.length - 1);
+    }
+
+    /** 같은 코너 안의 이전 문단. 코너 첫 줄이면 그 자리 */
+    public static int prevParagraph(int[] kind, int cur) {
+        int k = kind[cur];
+        for (int i = cur - 1; i >= 0; i--) {
+            if (kind[i] == -1) continue;
+            return kind[i] == k ? i : cur;
+        }
+        return cur;
+    }
+
+    /** 제품 공부 중이면 이어지는 농업영어 첫 줄, 농업영어 중이거나 영어가 없으면 코너가 끝난 뒤 첫 줄 */
+    public static int skipLesson(int[] kind, int cur) {
+        int i = cur + 1;
+        if (kind[cur] == 1) {
+            while (i < kind.length && (kind[i] == 1 || kind[i] == -1)) i++;
+            if (i < kind.length && kind[i] == 2) return i;
+        }
+        while (i < kind.length && (kind[i] == 2 || kind[i] == -1)) i++;
+        return Math.min(i, Math.max(0, kind.length - 1));
+    }
+
     /** 말 빠르기(보통 = 100) */
     public static final int[] RATES = {85, 100, 115, 130};
     public static final String[] RATE_LABELS = {"조금 느리게", "보통", "조금 빠르게", "빠르게"};

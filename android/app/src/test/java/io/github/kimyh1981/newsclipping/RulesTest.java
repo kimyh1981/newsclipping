@@ -63,4 +63,16 @@ public class RulesTest {
         assertEquals(5, Rules.prevItem(f, 9));
     }
 
+
+    @Test public void lessonParagraphsAndSkipToEnglish() {
+        // 뉴스(0) 빈줄 제품(1)x3 빈줄 영어(2)x2 빈줄 맺음말(0)
+        int[] k = {0, -1, 1, 1, 1, -1, 2, 2, -1, 0};
+        assertEquals(3, Rules.nextParagraph(k, 2));
+        assertEquals(6, Rules.nextParagraph(k, 4)); // 제품 끝 → 영어 첫 줄
+        assertEquals(2, Rules.prevParagraph(k, 2)); // 코너 첫 줄이면 그대로
+        assertEquals(3, Rules.prevParagraph(k, 4));
+        assertEquals(6, Rules.skipLesson(k, 3)); // 제품 → 영어
+        assertEquals(9, Rules.skipLesson(k, 6)); // 영어 → 맺음말
+        assertEquals(5, Rules.skipLesson(new int[] {0, -1, 1, 1, -1, 0}, 2)); // 영어가 없으면 맺음말
+    }
 }

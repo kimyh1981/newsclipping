@@ -121,6 +121,9 @@ final class Prefs {
 
     /** 차에서 자동으로 읽기 시작하면 자막 화면(지금 읽는 헤드라인, 터치하면 전체 듣기)을 띄운다 */
     boolean captions() { return p.getBoolean("captions", true); }
+    /** 새 버전 알림을 띄운 빌드 번호 (같은 버전은 한 번만 알린다) */
+    int updateNotified() { return p.getInt("updateNotified", 0); }
+    void setUpdateNotified(int code) { p.edit().putInt("updateNotified", code).apply(); }
     void setCaptions(boolean v) { p.edit().putBoolean("captions", v).apply(); }
 
     static String today() { return new SimpleDateFormat("yyyy-MM-dd", Locale.ROOT).format(new Date()); }
