@@ -203,13 +203,17 @@ function earlierKeys(live, now, days = 2) {
 const ARCHIVE_DAYS = 7;
 const slim = (b) => { const { audio, earlier, lessons: _, ...rest } = b; return rest; }; // 녹음은 그날 것만 남으니 빼고, 겹침 열쇠와 제품 공부 원고(날마다 같음)도 뺀다
 
+// 제품 공부(product)와 같은 회의 농업영어(english) 원고
 function lessons() {
-  try {
-    return { product: JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'lessons', 'product.json'), 'utf8')) };
-  } catch (err) {
-    console.log(`제품 공부 원고를 못 읽음: ${err.message}`);
-    return undefined;
+  const out = {};
+  for (const name of ['product', 'english']) {
+    try {
+      out[name] = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'lessons', `${name}.json`), 'utf8'));
+    } catch (err) {
+      console.log(`${name} 원고를 못 읽음: ${err.message}`);
+    }
   }
+  return out.product ? out : undefined;
 }
 
 async function archive(out, b, live, now, getText) {

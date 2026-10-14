@@ -49,18 +49,28 @@ final class Brief {
         final Item item;
         /** 폰이 직접 가져온 기사의 줄(헤드라인과 그 언론사 소개): 서버 녹음을 찾지 않는다 */
         final boolean local;
-        /** 제품 공부 줄이면 그 회 번호, 아니면 0 */
+        /** 제품 공부·농업영어 줄이면 그 회 번호, 아니면 0 */
         final int lesson;
+        /** 농업영어 코너의 줄 (한국어 풀이 줄 포함) */
+        final boolean english;
+        /** 영어 목소리로 읽는 줄: 한국어 읽기 규칙을 거치지 않는다 */
+        final boolean en;
+        /** 이 줄 뒤에 쉬는 시간(밀리초): 따라 말할 틈 */
+        final int pause;
         Line(String text, Item item) { this(text, item, item != null && item.local); }
         Line(String text, Item item, boolean local) { this(text, item, local, 0); }
-        Line(String text, Item item, boolean local, int lesson) { this.text = text; this.item = item; this.local = local; this.lesson = lesson; }
+        Line(String text, Item item, boolean local, int lesson) { this(text, item, local, lesson, false, false, 0); }
+        Line(String text, Item item, boolean local, int lesson, boolean english, boolean en, int pause) {
+            this.text = text; this.item = item; this.local = local; this.lesson = lesson; this.english = english; this.en = en; this.pause = pause;
+        }
     }
 
-    /** 제품 공부 한 회 (서버 lessons/product.json) */
+    /** 제품 공부 한 회 (서버 lessons/product.json)와 같은 회의 농업영어 (lessons/english.json, 없으면 빈 목록) */
     static final class Lesson {
         final int n;
         final String title;
         final List<String> lines;
+        final List<Line> english = new ArrayList<>();
         Lesson(int n, String title, List<String> lines) { this.n = n; this.title = title; this.lines = lines; }
     }
 
@@ -184,6 +194,22 @@ final class Brief {
             JSONObject e = eps.getJSONObject(i);
             lessons.add(new Lesson(e.getInt("n"), e.getString("title"), strings(e.optJSONArray("lines"))));
         }
+        JSONObject english = ls == null ? null : ls.optJSONObject("english");
+        JSONArray eng = english == null ? null : english.optJSONArray("episodes");
+        if (eng != null) for (int i = 0; i < eng.length(); i++) {
+            JSONObject e = eng.getJSONObject(i);
+            int n = e.getInt("n");
+            Lesson l = null;
+            for (Lesson x : lessons) if (x.n == n) l = x;
+            JSONArray ls2 = e.optJSONArray("lines");
+            if (l == null || ls2 == null) continue;
+            for (int k = 0; k < ls2.length(); k++) {
+                JSONObject o = ls2.getJSONObject(k);
+                boolean en = o.has("en");
+                String t = (en ? o.optString("en") : o.optString("ko")).trim();
+                if (!t.isEmpty()) l.english.add(new Line(t, null, false, n, true, en, (int) Math.round(o.optDouble("pause", 0) * 1000)));
+            }
+        }
         return new Brief(b.getString("dateLabel"), auto == null || auto.optBoolean("play", true), sections, audioIds, audio == null ? "audio/" : audio.optString("base", "audio/"), lessons);
     }
 
@@ -297,19 +323,32 @@ final class Brief {
     }
 
     /** 제품 공부 한 회의 줄들 (첫 줄은 소개) */
-    static List<Line> lessonLines(Lesson l) {
+    static List<Line> lessonLines(Lesson l) { return lessonLines(l, true, true); }
+
+    /** 제품 공부(product)와 이어지는 농업영어(english) 가운데 켠 것만 */
+    static List<Line> lessonLines(Lesson l, boolean product, boolean english) {
         List<Line> out = new ArrayList<>();
-        out.add(new Line(lessonIntro(l.n, l.title), null, false, l.n));
-        for (String t : l.lines) out.add(new Line(t, null, false, l.n));
+        if (product) {
+            out.add(new Line(lessonIntro(l.n, l.title), null, false, l.n));
+            for (String t : l.lines) out.add(new Line(t, null, false, l.n));
+        }
+        if (english && !l.english.isEmpty()) {
+            if (!out.isEmpty()) out.add(new Line("", null, false, l.n));
+            out.addAll(l.english);
+        }
         return out;
     }
 
-    /** 뉴스 원고의 맺음말 앞에 제품 공부 한 회를 넣는다 */
-    static List<Line> withLesson(List<Line> news, Lesson l) {
+    static List<Line> withLesson(List<Line> news, Lesson l) { return withLesson(news, l, true, true); }
+
+    /** 뉴스 원고의 맺음말 앞에 제품 공부 한 회(와 농업영어)를 넣는다 */
+    static List<Line> withLesson(List<Line> news, Lesson l, boolean product, boolean english) {
         if (l == null || news.size() < 3) return news;
+        List<Line> lesson = lessonLines(l, product, english);
+        if (lesson.isEmpty()) return news;
         List<Line> out = new ArrayList<>(news.subList(0, news.size() - 2)); // 맨 끝은 빈 줄과 맺음말
         out.add(new Line("", null));
-        out.addAll(lessonLines(l));
+        out.addAll(lesson);
         out.addAll(news.subList(news.size() - 2, news.size()));
         return out;
     }

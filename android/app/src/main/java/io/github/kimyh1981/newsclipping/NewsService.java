@@ -304,7 +304,7 @@ public class NewsService extends Service {
             script.add(new Brief.Line("뉴스를 가져오지 못했습니다. 인터넷 연결을 확인해 주세요.", null));
         } else if (lessonOnly > 0) {
             Brief.Lesson l = brief.lesson(lessonOnly);
-            script = l == null ? new ArrayList<>() : Brief.lessonLines(l);
+            script = l == null ? new ArrayList<>() : Brief.lessonLines(l, true, true);
             if (script.isEmpty()) script.add(new Brief.Line("이 회차 원고를 찾지 못했습니다.", null));
         } else if (!brief.playToday && !manual) {
             main.post(this::finish); // 주말·공휴일: 자동으로는 읽지 않는다
@@ -318,8 +318,8 @@ public class NewsService extends Service {
             Extras.addKeywords(brief, picked, prefs.keywords(), now);
             script = brief.linesOf(picked, Brief.koreanDate(now));
             // 평일이면 뉴스 뒤에 제품 공부 한 회 (주말·공휴일은 진도를 넘기지 않는다)
-            if (brief.playToday && prefs.lessonOn() && !brief.lessons.isEmpty()) {
-                script = Brief.withLesson(script, brief.lesson(prefs.lessonForToday(Lessons.numbers(brief.lessons), true)));
+            if (brief.playToday && (prefs.lessonOn() || prefs.englishOn()) && !brief.lessons.isEmpty()) {
+                script = Brief.withLesson(script, brief.lesson(prefs.lessonForToday(Lessons.numbers(brief.lessons), true)), prefs.lessonOn(), prefs.englishOn());
             }
         }
         if (!manual && lessonOnly == 0) new Prefs(this).markPlayed();
@@ -486,7 +486,22 @@ public class NewsService extends Service {
         showCaption(s);
         File f = clips.get(s.text);
         if (f != null && playClip(f)) return;
-        tts.speak(Pron.say(s.text), TextToSpeech.QUEUE_FLUSH, speakParams, gen + ":" + s.id); // 자막은 쓴 글, 소리는 들리는 대로
+        boolean en = isEnglish(s);
+        if (en != phoneEnglish) { // 농업영어의 영어 줄은 폰 음성도 영어로 (녹음이 없을 때)
+            phoneEnglish = en;
+            if (en) tts.setLanguage(Locale.US);
+            else { tts.setLanguage(Locale.KOREAN); Voices.apply(tts, new Prefs(this)); }
+        }
+        tts.speak(en ? s.text : Pron.say(s.text), TextToSpeech.QUEUE_FLUSH, speakParams, gen + ":" + s.id); // 자막은 쓴 글, 소리는 들리는 대로
+    }
+
+    /** 폰 음성이 지금 영어로 맞춰져 있나 */
+    private boolean phoneEnglish;
+
+    private boolean isEnglish(Step s) {
+        if (!s.id.startsWith("L")) return false;
+        int i = Integer.parseInt(s.id.substring(1, s.id.indexOf('.')));
+        return i < lines.size() && lines.get(i).en;
     }
 
     private void showCaption(Step s) {
@@ -494,7 +509,8 @@ public class NewsService extends Service {
         int i = Integer.parseInt(s.id.substring(1, s.id.indexOf('.')));
         Brief.Item it = i < lines.size() ? lines.get(i).item : null;
         int lesson = i < lines.size() ? lines.get(i).lesson : 0;
-        caption = lesson > 0 ? new Caption("바이오플랜 제품 공부", lesson + "회", s.text, false)
+        boolean english = i < lines.size() && lines.get(i).english;
+        caption = lesson > 0 ? new Caption(english ? "농업영어" : "바이오플랜 제품 공부", lesson + "회", s.text, false)
                 : it == null ? new Caption("뉴스클리핑", "", s.text, false) : new Caption(it.source, it.title, s.text, full);
         Runnable c = onCaption;
         if (c != null) c.run();
@@ -551,6 +567,7 @@ public class NewsService extends Service {
                 List<String> parts = Rules.chunks(line.text, max);
                 for (int k = 0; k < parts.size(); k++) out.add(new Step("L" + i + "." + k, parts.get(k), 0));
                 if (line.item != null) out.add(new Step("P" + i + ".h", "", 450)); // 헤드라인 뒤에 숨 한 번: 기사끼리 붙어 들리지 않게
+                if (line.pause > 0) out.add(new Step("P" + i + ".r", "", line.pause)); // 농업영어: 따라 말할 틈
                 // 제품 공부 회의 마지막 줄까지 읽으면 완료 (중간에 끄면 완료가 아니다)
                 if (line.lesson > 0 && (i + 1 >= lines.size() || lines.get(i + 1).lesson != line.lesson)) out.add(new Step("Q" + line.lesson + ".", "", 300));
             }

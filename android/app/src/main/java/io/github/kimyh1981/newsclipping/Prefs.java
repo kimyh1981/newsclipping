@@ -58,6 +58,9 @@ final class Prefs {
     /** 평일 뉴스 뒤에 제품 공부 한 회를 읽는다 */
     boolean lessonOn() { return p.getBoolean("lessonOn", true); }
     void setLessonOn(boolean v) { p.edit().putBoolean("lessonOn", v).apply(); }
+    /** 제품 공부 뒤에 같은 회의 농업영어 */
+    boolean englishOn() { return p.getBoolean("englishOn", true); }
+    void setEnglishOn(boolean v) { p.edit().putBoolean("englishOn", v).apply(); }
 
     /** 이번 바퀴에서 끝까지 들은 회 → 들은 날 */
     java.util.Map<Integer, String> lessonDone() { return Lessons.parseDone(p.getString("lessonDone", "")); }

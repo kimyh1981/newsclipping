@@ -196,7 +196,7 @@ public class MainActivity extends Activity {
         orderVal.setText(prefs.order().isEmpty() ? "기본" : "직접 정함");
         customVal.setText(prefs.custom().isEmpty() ? "없음" : prefs.custom().size() + "곳");
         keywordsVal.setText(prefs.keywords().isEmpty() ? "없음" : String.join(", ", prefs.keywords()));
-        lessonVal.setText(!prefs.lessonOn() ? "끔" : (prefs.lessonRound() > 1 ? prefs.lessonRound() + "바퀴 · " : "") + prefs.lessonDone().size() + "회 완료");
+        lessonVal.setText(!prefs.lessonOn() && !prefs.englishOn() ? "끔" : (prefs.lessonRound() > 1 ? prefs.lessonRound() + "바퀴 · " : "") + prefs.lessonDone().size() + "회 완료");
         voiceVal.setText(prefs.voice().isEmpty() ? "자동" : "직접 고름");
         rateVal.setText(Rules.rateLabel(prefs.rate()));
         enabledSw.setChecked(prefs.enabled());
@@ -642,6 +642,12 @@ public class MainActivity extends Activity {
         on.setChecked(prefs.lessonOn());
         on.setOnCheckedChangeListener((v, c) -> { prefs.setLessonOn(c); refresh(); });
         list.addView(on);
+        Switch eng = new Switch(this);
+        eng.setText("이어서 같은 회의 농업영어 듣기");
+        eng.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
+        eng.setChecked(prefs.englishOn());
+        eng.setOnCheckedChangeListener((v, c) -> { prefs.setEnglishOn(c); refresh(); });
+        list.addView(eng);
 
         Brief.Lesson t = b.lesson(todayN);
         if (t != null) {
@@ -672,7 +678,7 @@ public class MainActivity extends Activity {
         ScrollView sv = new ScrollView(this);
         sv.addView(list);
         dlg[0] = new AlertDialog.Builder(this)
-                .setTitle("바이오플랜 제품 공부" + (round > 1 ? " · " + round + "바퀴째" : "") + " · " + done.size() + "/" + all.size())
+                .setTitle("제품 공부·농업영어" + (round > 1 ? " · " + round + "바퀴째" : "") + " · " + done.size() + "/" + all.size())
                 .setView(sv)
                 .setPositiveButton("닫기", null)
                 .show();

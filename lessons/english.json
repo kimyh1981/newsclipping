@@ -1,0 +1,2657 @@
+{
+ "_설명": "농업영어 원고. tools/make_english.py가 만든다 (직접 고치지 말고 그 파일을 고친 뒤 다시 실행). 줄마다 ko(한국어 목소리) 또는 en(영어 목소리), pause는 줄 뒤에 쉬는 초(따라 말할 틈).",
+ "title": "농업영어",
+ "voice": "en-US-AndrewNeural",
+ "episodes": [
+  {
+   "n": 1,
+   "title": "우리 제품을 영어로 소개하는 첫 문장",
+   "lines": [
+    {
+     "ko": "이어서 농업영어 1회, 우리 제품을 영어로 소개하는 첫 문장입니다."
+    },
+    {
+     "ko": "오늘의 표현 다섯 개입니다. 영어를 듣고, 뜻을 듣고, 한 번 더 따라 해 보세요."
+    },
+    {
+     "en": "fertilizer."
+    },
+    {
+     "ko": "비료."
+    },
+    {
+     "en": "fertilizer.",
+     "pause": 2
+    },
+    {
+     "en": "organic input material."
+    },
+    {
+     "ko": "유기농업자재."
+    },
+    {
+     "en": "organic input material.",
+     "pause": 2
+    },
+    {
+     "en": "pesticide."
+    },
+    {
+     "ko": "농약."
+    },
+    {
+     "en": "pesticide.",
+     "pause": 2
+    },
+    {
+     "en": "plant vigor."
+    },
+    {
+     "ko": "수세, 작물의 활력."
+    },
+    {
+     "en": "plant vigor.",
+     "pause": 2
+    },
+    {
+     "en": "trial result."
+    },
+    {
+     "ko": "시험 결과."
+    },
+    {
+     "en": "trial result.",
+     "pause": 2
+    },
+    {
+     "ko": "이제 제품을 영어로 소개해 보겠습니다. 문장마다 따라 말해 보세요."
+    },
+    {
+     "en": "Our products are not pesticides."
+    },
+    {
+     "ko": "우리 제품은 농약이 아닙니다."
+    },
+    {
+     "en": "Our products are not pesticides.",
+     "pause": 3
+    },
+    {
+     "en": "They are fertilizers or organic input materials."
+    },
+    {
+     "ko": "비료이거나 유기농업자재입니다."
+    },
+    {
+     "en": "They are fertilizers or organic input materials.",
+     "pause": 3
+    },
+    {
+     "en": "We talk about the crop, not the disease."
+    },
+    {
+     "ko": "병이 아니라 작물을 이야기합니다."
+    },
+    {
+     "en": "We talk about the crop, not the disease.",
+     "pause": 3
+    },
+    {
+     "ko": "마지막으로, 이렇게 말하지 마세요."
+    },
+    {
+     "en": "It cures plant diseases."
+    },
+    {
+     "ko": "이렇게 말하세요."
+    },
+    {
+     "en": "It helps the crop recover its vigor.",
+     "pause": 3
+    },
+    {
+     "ko": "병을 고친다 대신, 작물이 활력을 되찾도록 돕는다."
+    },
+    {
+     "ko": "오늘 소개 문장을 영어로만 한 번 더 듣겠습니다."
+    },
+    {
+     "en": "Our products are not pesticides.",
+     "pause": 3
+    },
+    {
+     "en": "They are fertilizers or organic input materials.",
+     "pause": 3
+    },
+    {
+     "en": "We talk about the crop, not the disease.",
+     "pause": 3
+    },
+    {
+     "ko": "오늘 농업영어는 여기까지입니다."
+    }
+   ]
+  },
+  {
+   "n": 2,
+   "title": "바꿔 말하기를 영어로",
+   "lines": [
+    {
+     "ko": "이어서 농업영어 2회, 바꿔 말하기를 영어로입니다."
+    },
+    {
+     "ko": "먼저 지난 시간 복습입니다. 한국어 뜻을 듣고 영어로 말해 보세요."
+    },
+    {
+     "ko": "비료.",
+     "pause": 3
+    },
+    {
+     "en": "fertilizer."
+    },
+    {
+     "ko": "유기농업자재.",
+     "pause": 3
+    },
+    {
+     "en": "organic input material."
+    },
+    {
+     "ko": "농약.",
+     "pause": 3
+    },
+    {
+     "en": "pesticide."
+    },
+    {
+     "ko": "오늘의 표현 다섯 개입니다. 영어를 듣고, 뜻을 듣고, 한 번 더 따라 해 보세요."
+    },
+    {
+     "en": "growth stress."
+    },
+    {
+     "ko": "생육 스트레스."
+    },
+    {
+     "en": "growth stress.",
+     "pause": 2
+    },
+    {
+     "en": "tissue."
+    },
+    {
+     "ko": "조직."
+    },
+    {
+     "en": "tissue.",
+     "pause": 2
+    },
+    {
+     "en": "patent pending."
+    },
+    {
+     "ko": "특허 출원 중."
+    },
+    {
+     "en": "patent pending.",
+     "pause": 2
+    },
+    {
+     "en": "registered patent."
+    },
+    {
+     "ko": "등록 특허."
+    },
+    {
+     "en": "registered patent.",
+     "pause": 2
+    },
+    {
+     "en": "mixing compatibility."
+    },
+    {
+     "ko": "혼용성."
+    },
+    {
+     "en": "mixing compatibility.",
+     "pause": 2
+    },
+    {
+     "ko": "이제 제품을 영어로 소개해 보겠습니다. 문장마다 따라 말해 보세요."
+    },
+    {
+     "en": "It reduces growth stress and keeps plant tissue firm."
+    },
+    {
+     "ko": "생육 스트레스를 줄이고 작물 조직을 단단하게 관리합니다."
+    },
+    {
+     "en": "It reduces growth stress and keeps plant tissue firm.",
+     "pause": 3
+    },
+    {
+     "en": "It mixes well with pesticides, but please check the mixing chart first."
+    },
+    {
+     "ko": "농약과 혼용성이 좋지만, 먼저 혼용표를 확인하세요."
+    },
+    {
+     "en": "It mixes well with pesticides, but please check the mixing chart first.",
+     "pause": 3
+    },
+    {
+     "en": "The patent is pending."
+    },
+    {
+     "ko": "특허 출원 중입니다."
+    },
+    {
+     "en": "The patent is pending.",
+     "pause": 3
+    },
+    {
+     "ko": "마지막으로, 이렇게 말하지 마세요."
+    },
+    {
+     "en": "It makes pesticides work better."
+    },
+    {
+     "ko": "이렇게 말하세요."
+    },
+    {
+     "en": "It mixes well with pesticides.",
+     "pause": 3
+    },
+    {
+     "ko": "농약 효과를 올린다 대신, 농약과 혼용성이 좋다."
+    },
+    {
+     "ko": "오늘 소개 문장을 영어로만 한 번 더 듣겠습니다."
+    },
+    {
+     "en": "It reduces growth stress and keeps plant tissue firm.",
+     "pause": 3
+    },
+    {
+     "en": "It mixes well with pesticides, but please check the mixing chart first.",
+     "pause": 3
+    },
+    {
+     "en": "The patent is pending.",
+     "pause": 3
+    },
+    {
+     "ko": "오늘 농업영어는 여기까지입니다."
+    }
+   ]
+  },
+  {
+   "n": 3,
+   "title": "생육 단계와 여덟 제품",
+   "lines": [
+    {
+     "ko": "이어서 농업영어 3회, 생육 단계와 여덟 제품입니다."
+    },
+    {
+     "ko": "먼저 지난 시간 복습입니다. 한국어 뜻을 듣고 영어로 말해 보세요."
+    },
+    {
+     "ko": "생육 스트레스.",
+     "pause": 3
+    },
+    {
+     "en": "growth stress."
+    },
+    {
+     "ko": "조직.",
+     "pause": 3
+    },
+    {
+     "en": "tissue."
+    },
+    {
+     "ko": "특허 출원 중.",
+     "pause": 3
+    },
+    {
+     "en": "patent pending."
+    },
+    {
+     "ko": "오늘의 표현 다섯 개입니다. 영어를 듣고, 뜻을 듣고, 한 번 더 따라 해 보세요."
+    },
+    {
+     "en": "seedling."
+    },
+    {
+     "ko": "모, 어린 묘."
+    },
+    {
+     "en": "seedling.",
+     "pause": 2
+    },
+    {
+     "en": "tillering."
+    },
+    {
+     "ko": "분얼, 새끼치기."
+    },
+    {
+     "en": "tillering.",
+     "pause": 2
+    },
+    {
+     "en": "heading."
+    },
+    {
+     "ko": "출수, 이삭이 나옴."
+    },
+    {
+     "en": "heading.",
+     "pause": 2
+    },
+    {
+     "en": "grain filling."
+    },
+    {
+     "ko": "등숙, 알이 여묾."
+    },
+    {
+     "en": "grain filling.",
+     "pause": 2
+    },
+    {
+     "en": "foliar spray."
+    },
+    {
+     "ko": "엽면 살포."
+    },
+    {
+     "en": "foliar spray.",
+     "pause": 2
+    },
+    {
+     "ko": "이제 제품을 영어로 소개해 보겠습니다. 문장마다 따라 말해 보세요."
+    },
+    {
+     "en": "For rice, Eeoh-day is for seedlings, and Boon-ul Bahk-sah is for tillering."
+    },
+    {
+     "ko": "벼에는 모 키울 때 이오데이, 새끼칠 때 분얼박사."
+    },
+    {
+     "en": "For rice, Eeoh-day is for seedlings, and Boon-ul Bahk-sah is for tillering.",
+     "pause": 3
+    },
+    {
+     "en": "Ek-toh-sheen supports flowering, and Tuh-guh supports grain filling."
+    },
+    {
+     "ko": "엑토신은 꽃, 터거는 알 여물기를 돕습니다."
+    },
+    {
+     "en": "Ek-toh-sheen supports flowering, and Tuh-guh supports grain filling.",
+     "pause": 3
+    },
+    {
+     "en": "Three granule products care for the soil, and the liquid products are sprayed on the leaves."
+    },
+    {
+     "ko": "알갱이 세 제품은 땅을, 액상 제품은 잎에 뿌립니다."
+    },
+    {
+     "en": "Three granule products care for the soil, and the liquid products are sprayed on the leaves.",
+     "pause": 3
+    },
+    {
+     "ko": "마지막으로, 이렇게 말하지 마세요."
+    },
+    {
+     "en": "This product is good for every crop."
+    },
+    {
+     "ko": "이렇게 말하세요."
+    },
+    {
+     "en": "Which crop do you grow, and what stage is it in now?",
+     "pause": 3
+    },
+    {
+     "ko": "아무 작물에나 좋다 대신, 작물과 생육 단계부터 묻는다."
+    },
+    {
+     "ko": "오늘 소개 문장을 영어로만 한 번 더 듣겠습니다."
+    },
+    {
+     "en": "For rice, Eeoh-day is for seedlings, and Boon-ul Bahk-sah is for tillering.",
+     "pause": 3
+    },
+    {
+     "en": "Ek-toh-sheen supports flowering, and Tuh-guh supports grain filling.",
+     "pause": 3
+    },
+    {
+     "en": "Three granule products care for the soil, and the liquid products are sprayed on the leaves.",
+     "pause": 3
+    },
+    {
+     "ko": "오늘 농업영어는 여기까지입니다."
+    }
+   ]
+  },
+  {
+   "n": 4,
+   "title": "바이어 질문, 엑토신",
+   "lines": [
+    {
+     "ko": "이어서 농업영어 4회, 바이어 질문, 엑토신입니다."
+    },
+    {
+     "ko": "먼저 지난 시간 복습입니다. 한국어 뜻을 듣고 영어로 말해 보세요."
+    },
+    {
+     "ko": "모, 어린 묘.",
+     "pause": 3
+    },
+    {
+     "en": "seedling."
+    },
+    {
+     "ko": "분얼, 새끼치기.",
+     "pause": 3
+    },
+    {
+     "en": "tillering."
+    },
+    {
+     "ko": "출수, 이삭이 나옴.",
+     "pause": 3
+    },
+    {
+     "en": "heading."
+    },
+    {
+     "ko": "오늘은 바이어 질문에 영어로 답하는 연습입니다. 질문을 듣고, 잠깐 답을 떠올려 본 뒤 모범 답을 들어 보세요."
+    },
+    {
+     "ko": "첫 번째 질문입니다."
+    },
+    {
+     "en": "What is Ek-toh-sheen made of?",
+     "pause": 3
+    },
+    {
+     "en": "It is a liquid foliar fertilizer with more than thirty percent amino acids."
+    },
+    {
+     "ko": "아미노산 삼십 퍼센트 이상인 액상 엽면시비제입니다."
+    },
+    {
+     "en": "It is a liquid foliar fertilizer with more than thirty percent amino acids.",
+     "pause": 3
+    },
+    {
+     "ko": "두 번째 질문입니다."
+    },
+    {
+     "en": "How does it work?",
+     "pause": 3
+    },
+    {
+     "en": "It increases glycolysis in the plant, so flowers become stronger and pollination improves."
+    },
+    {
+     "ko": "해당작용을 늘려 꽃을 강하게 하고 수분과 수정을 돕습니다."
+    },
+    {
+     "en": "It increases glycolysis in the plant, so flowers become stronger and pollination improves.",
+     "pause": 3
+    },
+    {
+     "ko": "세 번째 질문입니다."
+    },
+    {
+     "en": "How much area does one bottle cover?",
+     "pause": 3
+    },
+    {
+     "en": "It depends on the sprayer. Just keep the dilution ratio of one thousand times."
+    },
+    {
+     "ko": "살포기마다 다르니, 천 배 희석만 지키시면 됩니다."
+    },
+    {
+     "en": "It depends on the sprayer. Just keep the dilution ratio of one thousand times.",
+     "pause": 3
+    },
+    {
+     "ko": "오늘 질문을 한 번 더 듣겠습니다. 이번에는 영어로 먼저 답해 보세요."
+    },
+    {
+     "en": "What is Ek-toh-sheen made of?",
+     "pause": 5
+    },
+    {
+     "en": "It is a liquid foliar fertilizer with more than thirty percent amino acids.",
+     "pause": 2
+    },
+    {
+     "en": "How does it work?",
+     "pause": 5
+    },
+    {
+     "en": "It increases glycolysis in the plant, so flowers become stronger and pollination improves.",
+     "pause": 2
+    },
+    {
+     "en": "How much area does one bottle cover?",
+     "pause": 5
+    },
+    {
+     "en": "It depends on the sprayer. Just keep the dilution ratio of one thousand times.",
+     "pause": 2
+    },
+    {
+     "ko": "오늘 농업영어는 여기까지입니다."
+    }
+   ]
+  },
+  {
+   "n": 5,
+   "title": "바이어 질문, 엑토신을 벼에",
+   "lines": [
+    {
+     "ko": "이어서 농업영어 5회, 바이어 질문, 엑토신을 벼에입니다."
+    },
+    {
+     "ko": "먼저 지난 시간 복습입니다. 이 질문에 영어로 답해 보세요."
+    },
+    {
+     "en": "What is Ek-toh-sheen made of?",
+     "pause": 3
+    },
+    {
+     "en": "It is a liquid foliar fertilizer with more than thirty percent amino acids."
+    },
+    {
+     "ko": "오늘은 바이어 질문에 영어로 답하는 연습입니다. 질문을 듣고, 잠깐 답을 떠올려 본 뒤 모범 답을 들어 보세요."
+    },
+    {
+     "ko": "첫 번째 질문입니다."
+    },
+    {
+     "en": "When should farmers spray it on rice?",
+     "pause": 3
+    },
+    {
+     "en": "Twice: thirty days before heading, and again at heading."
+    },
+    {
+     "ko": "출수 삼십 일 전에 한 번, 출수 때 한 번입니다."
+    },
+    {
+     "en": "Twice: thirty days before heading, and again at heading.",
+     "pause": 3
+    },
+    {
+     "ko": "두 번째 질문입니다."
+    },
+    {
+     "en": "What if the rice may fall over?",
+     "pause": 3
+    },
+    {
+     "en": "If lodging is a concern, spray it stronger, at five hundred times."
+    },
+    {
+     "ko": "도복이 걱정되면 오백 배로 진하게 뿌립니다."
+    },
+    {
+     "en": "If lodging is a concern, spray it stronger, at five hundred times.",
+     "pause": 3
+    },
+    {
+     "ko": "세 번째 질문입니다."
+    },
+    {
+     "en": "What is the best time of day?",
+     "pause": 3
+    },
+    {
+     "en": "Early morning is best. In the evening, spray within about an hour after sunset."
+    },
+    {
+     "ko": "새벽이 가장 좋고, 저녁이면 해 지고 한 시간 안팎입니다."
+    },
+    {
+     "en": "Early morning is best. In the evening, spray within about an hour after sunset.",
+     "pause": 3
+    },
+    {
+     "ko": "오늘 질문을 한 번 더 듣겠습니다. 이번에는 영어로 먼저 답해 보세요."
+    },
+    {
+     "en": "When should farmers spray it on rice?",
+     "pause": 5
+    },
+    {
+     "en": "Twice: thirty days before heading, and again at heading.",
+     "pause": 2
+    },
+    {
+     "en": "What if the rice may fall over?",
+     "pause": 5
+    },
+    {
+     "en": "If lodging is a concern, spray it stronger, at five hundred times.",
+     "pause": 2
+    },
+    {
+     "en": "What is the best time of day?",
+     "pause": 5
+    },
+    {
+     "en": "Early morning is best. In the evening, spray within about an hour after sunset.",
+     "pause": 2
+    },
+    {
+     "ko": "오늘 농업영어는 여기까지입니다."
+    }
+   ]
+  },
+  {
+   "n": 6,
+   "title": "엑토신, 밭과 과수와 근거",
+   "lines": [
+    {
+     "ko": "이어서 농업영어 6회, 엑토신, 밭과 과수와 근거입니다."
+    },
+    {
+     "ko": "먼저 지난 시간 복습입니다. 이 질문에 영어로 답해 보세요."
+    },
+    {
+     "en": "When should farmers spray it on rice?",
+     "pause": 3
+    },
+    {
+     "en": "Twice: thirty days before heading, and again at heading."
+    },
+    {
+     "ko": "오늘의 표현 다섯 개입니다. 영어를 듣고, 뜻을 듣고, 한 번 더 따라 해 보세요."
+    },
+    {
+     "en": "bud break."
+    },
+    {
+     "ko": "발아, 싹 틈."
+    },
+    {
+     "en": "bud break.",
+     "pause": 2
+    },
+    {
+     "en": "flowering."
+    },
+    {
+     "ko": "개화."
+    },
+    {
+     "en": "flowering.",
+     "pause": 2
+    },
+    {
+     "en": "pollination."
+    },
+    {
+     "ko": "수분."
+    },
+    {
+     "en": "pollination.",
+     "pause": 2
+    },
+    {
+     "en": "fruit set."
+    },
+    {
+     "ko": "착과."
+    },
+    {
+     "en": "fruit set.",
+     "pause": 2
+    },
+    {
+     "en": "control plot."
+    },
+    {
+     "ko": "대조구."
+    },
+    {
+     "en": "control plot.",
+     "pause": 2
+    },
+    {
+     "ko": "이제 제품을 영어로 소개해 보겠습니다. 문장마다 따라 말해 보세요."
+    },
+    {
+     "en": "In orchards, spray it on the trunk and branches before bud break, at five hundred times."
+    },
+    {
+     "ko": "과수는 싹 트기 전, 오백 배로 줄기와 가지에 뿌립니다."
+    },
+    {
+     "en": "In orchards, spray it on the trunk and branches before bud break, at five hundred times.",
+     "pause": 3
+    },
+    {
+     "en": "In a 2020 trial by the Apple Research Institute, cold damage to flower buds was reduced by 24.8 percent."
+    },
+    {
+     "ko": "사과연구소 이천이십 년 시험에서 저온기 꽃눈 피해가 이십사 점 팔 퍼센트 줄었습니다."
+    },
+    {
+     "en": "In a 2020 trial by the Apple Research Institute, cold damage to flower buds was reduced by 24.8 percent.",
+     "pause": 3
+    },
+    {
+     "en": "Do not mix it with lime sulfur, machine oil or copper products."
+    },
+    {
+     "ko": "석회유황합제, 기계유, 구리제와는 섞지 않습니다."
+    },
+    {
+     "en": "Do not mix it with lime sulfur, machine oil or copper products.",
+     "pause": 3
+    },
+    {
+     "ko": "마지막으로, 이렇게 말하지 마세요."
+    },
+    {
+     "en": "It prevents cold damage."
+    },
+    {
+     "ko": "이렇게 말하세요."
+    },
+    {
+     "en": "A trial showed less cold damage. Let me tell you the source.",
+     "pause": 3
+    },
+    {
+     "ko": "냉해를 예방한다 대신, 시험에서 저온 피해가 줄었다며 출처를 댄다."
+    },
+    {
+     "ko": "오늘 소개 문장을 영어로만 한 번 더 듣겠습니다."
+    },
+    {
+     "en": "In orchards, spray it on the trunk and branches before bud break, at five hundred times.",
+     "pause": 3
+    },
+    {
+     "en": "In a 2020 trial by the Apple Research Institute, cold damage to flower buds was reduced by 24.8 percent.",
+     "pause": 3
+    },
+    {
+     "en": "Do not mix it with lime sulfur, machine oil or copper products.",
+     "pause": 3
+    },
+    {
+     "ko": "오늘 농업영어는 여기까지입니다."
+    }
+   ]
+  },
+  {
+   "n": 7,
+   "title": "터거, 정체와 벼",
+   "lines": [
+    {
+     "ko": "이어서 농업영어 7회, 터거, 정체와 벼입니다."
+    },
+    {
+     "ko": "먼저 지난 시간 복습입니다. 한국어 뜻을 듣고 영어로 말해 보세요."
+    },
+    {
+     "ko": "발아, 싹 틈.",
+     "pause": 3
+    },
+    {
+     "en": "bud break."
+    },
+    {
+     "ko": "개화.",
+     "pause": 3
+    },
+    {
+     "en": "flowering."
+    },
+    {
+     "ko": "수분.",
+     "pause": 3
+    },
+    {
+     "en": "pollination."
+    },
+    {
+     "ko": "오늘의 표현 다섯 개입니다. 영어를 듣고, 뜻을 듣고, 한 번 더 따라 해 보세요."
+    },
+    {
+     "en": "transpiration."
+    },
+    {
+     "ko": "증산작용."
+    },
+    {
+     "en": "transpiration.",
+     "pause": 2
+    },
+    {
+     "en": "osmotic pressure."
+    },
+    {
+     "ko": "삼투압."
+    },
+    {
+     "en": "osmotic pressure.",
+     "pause": 2
+    },
+    {
+     "en": "brown seaweed extract."
+    },
+    {
+     "ko": "갈조류 해조추출물."
+    },
+    {
+     "en": "brown seaweed extract.",
+     "pause": 2
+    },
+    {
+     "en": "fulvic acid."
+    },
+    {
+     "ko": "풀빅산."
+    },
+    {
+     "en": "fulvic acid.",
+     "pause": 2
+    },
+    {
+     "en": "thousand-grain weight."
+    },
+    {
+     "ko": "천립중."
+    },
+    {
+     "en": "thousand-grain weight.",
+     "pause": 2
+    },
+    {
+     "ko": "이제 제품을 영어로 소개해 보겠습니다. 문장마다 따라 말해 보세요."
+    },
+    {
+     "en": "Tuh-guh is a liquid foliar fertilizer made from fermented brown seaweed extract and fulvic acid."
+    },
+    {
+     "ko": "터거는 갈조류 해조추출물을 발효하고 풀빅산을 더한 액상 엽면시비제입니다."
+    },
+    {
+     "en": "Tuh-guh is a liquid foliar fertilizer made from fermented brown seaweed extract and fulvic acid.",
+     "pause": 3
+    },
+    {
+     "en": "It helps regulate transpiration and supports grain filling."
+    },
+    {
+     "ko": "증산작용 조절을 도와 알 여물기를 돕습니다."
+    },
+    {
+     "en": "It helps regulate transpiration and supports grain filling.",
+     "pause": 3
+    },
+    {
+     "en": "Spray it fifteen to thirty days after heading, at one thousand times."
+    },
+    {
+     "ko": "출수 후 십오 일에서 삼십 일 사이, 천 배로 뿌립니다."
+    },
+    {
+     "en": "Spray it fifteen to thirty days after heading, at one thousand times.",
+     "pause": 3
+    },
+    {
+     "ko": "마지막으로, 이렇게 말하지 마세요."
+    },
+    {
+     "en": "It's a patented technology."
+    },
+    {
+     "ko": "이렇게 말하세요."
+    },
+    {
+     "en": "The patent is pending.",
+     "pause": 3
+    },
+    {
+     "ko": "특허 기술이다 대신, 특허 출원 중이다."
+    },
+    {
+     "ko": "오늘 소개 문장을 영어로만 한 번 더 듣겠습니다."
+    },
+    {
+     "en": "Tuh-guh is a liquid foliar fertilizer made from fermented brown seaweed extract and fulvic acid.",
+     "pause": 3
+    },
+    {
+     "en": "It helps regulate transpiration and supports grain filling.",
+     "pause": 3
+    },
+    {
+     "en": "Spray it fifteen to thirty days after heading, at one thousand times.",
+     "pause": 3
+    },
+    {
+     "ko": "오늘 농업영어는 여기까지입니다."
+    }
+   ]
+  },
+  {
+   "n": 8,
+   "title": "터거, 열매를 영어로",
+   "lines": [
+    {
+     "ko": "이어서 농업영어 8회, 터거, 열매를 영어로입니다."
+    },
+    {
+     "ko": "먼저 지난 시간 복습입니다. 한국어 뜻을 듣고 영어로 말해 보세요."
+    },
+    {
+     "ko": "증산작용.",
+     "pause": 3
+    },
+    {
+     "en": "transpiration."
+    },
+    {
+     "ko": "삼투압.",
+     "pause": 3
+    },
+    {
+     "en": "osmotic pressure."
+    },
+    {
+     "ko": "갈조류 해조추출물.",
+     "pause": 3
+    },
+    {
+     "en": "brown seaweed extract."
+    },
+    {
+     "ko": "오늘의 표현 다섯 개입니다. 영어를 듣고, 뜻을 듣고, 한 번 더 따라 해 보세요."
+    },
+    {
+     "en": "fruit enlargement."
+    },
+    {
+     "ko": "과실 비대."
+    },
+    {
+     "en": "fruit enlargement.",
+     "pause": 2
+    },
+    {
+     "en": "firmness."
+    },
+    {
+     "ko": "경도, 단단함."
+    },
+    {
+     "en": "firmness.",
+     "pause": 2
+    },
+    {
+     "en": "coloration."
+    },
+    {
+     "ko": "착색."
+    },
+    {
+     "en": "coloration.",
+     "pause": 2
+    },
+    {
+     "en": "fruit cracking."
+    },
+    {
+     "ko": "열과."
+    },
+    {
+     "en": "fruit cracking.",
+     "pause": 2
+    },
+    {
+     "en": "early harvest."
+    },
+    {
+     "ko": "조기 수확."
+    },
+    {
+     "en": "early harvest.",
+     "pause": 2
+    },
+    {
+     "ko": "이제 제품을 영어로 소개해 보겠습니다. 문장마다 따라 말해 보세요."
+    },
+    {
+     "en": "It supports fruit size, firmness and coloration before harvest."
+    },
+    {
+     "ko": "수확 전 과실 크기와 경도, 착색을 돕습니다."
+    },
+    {
+     "en": "It supports fruit size, firmness and coloration before harvest.",
+     "pause": 3
+    },
+    {
+     "en": "For apples and pears, spray from late May to early July, and again from mid August to early September."
+    },
+    {
+     "ko": "사과와 배는 오월 말에서 칠월 초, 그리고 팔월 중순에서 구월 초입니다."
+    },
+    {
+     "en": "For apples and pears, spray from late May to early July, and again from mid August to early September.",
+     "pause": 3
+    },
+    {
+     "en": "For grapes, we follow the growth stage, not the calendar."
+    },
+    {
+     "ko": "포도는 날짜가 아니라 생육 상태를 기준으로 합니다."
+    },
+    {
+     "en": "For grapes, we follow the growth stage, not the calendar.",
+     "pause": 3
+    },
+    {
+     "ko": "마지막으로, 이렇게 말하지 마세요."
+    },
+    {
+     "en": "It improves coloration by thirty percent."
+    },
+    {
+     "ko": "이렇게 말하세요."
+    },
+    {
+     "en": "It helps coloration. We do not have measured numbers yet.",
+     "pause": 3
+    },
+    {
+     "ko": "착색이 몇 퍼센트 좋아진다 대신, 착색을 돕고 정량 수치는 아직 없다."
+    },
+    {
+     "ko": "오늘 소개 문장을 영어로만 한 번 더 듣겠습니다."
+    },
+    {
+     "en": "It supports fruit size, firmness and coloration before harvest.",
+     "pause": 3
+    },
+    {
+     "en": "For apples and pears, spray from late May to early July, and again from mid August to early September.",
+     "pause": 3
+    },
+    {
+     "en": "For grapes, we follow the growth stage, not the calendar.",
+     "pause": 3
+    },
+    {
+     "ko": "오늘 농업영어는 여기까지입니다."
+    }
+   ]
+  },
+  {
+   "n": 9,
+   "title": "바이어 질문, 이오데이",
+   "lines": [
+    {
+     "ko": "이어서 농업영어 9회, 바이어 질문, 이오데이입니다."
+    },
+    {
+     "ko": "먼저 지난 시간 복습입니다. 한국어 뜻을 듣고 영어로 말해 보세요."
+    },
+    {
+     "ko": "과실 비대.",
+     "pause": 3
+    },
+    {
+     "en": "fruit enlargement."
+    },
+    {
+     "ko": "경도, 단단함.",
+     "pause": 3
+    },
+    {
+     "en": "firmness."
+    },
+    {
+     "ko": "착색.",
+     "pause": 3
+    },
+    {
+     "en": "coloration."
+    },
+    {
+     "ko": "오늘은 바이어 질문에 영어로 답하는 연습입니다. 질문을 듣고, 잠깐 답을 떠올려 본 뒤 모범 답을 들어 보세요."
+    },
+    {
+     "ko": "첫 번째 질문입니다."
+    },
+    {
+     "en": "What is Eeoh-day for?",
+     "pause": 3
+    },
+    {
+     "en": "It is for soaking rice seeds and growing healthy seedlings."
+    },
+    {
+     "ko": "볍씨 침종과 건강한 모 키우기 전용입니다."
+    },
+    {
+     "en": "It is for soaking rice seeds and growing healthy seedlings.",
+     "pause": 3
+    },
+    {
+     "ko": "두 번째 질문입니다."
+    },
+    {
+     "en": "What dilution do you use for seed soaking?",
+     "pause": 3
+    },
+    {
+     "en": "Two thousand times, for forty-eight hours. For the nursery, one thousand times."
+    },
+    {
+     "ko": "침종은 이천 배, 마흔여덟 시간, 모판은 천 배입니다."
+    },
+    {
+     "en": "Two thousand times, for forty-eight hours. For the nursery, one thousand times.",
+     "pause": 3
+    },
+    {
+     "ko": "세 번째 질문입니다."
+    },
+    {
+     "en": "Can I mix it with pesticides?",
+     "pause": 3
+    },
+    {
+     "en": "It mixes well, but never with alkaline products, because it is strongly acidic."
+    },
+    {
+     "ko": "혼용성은 좋지만 강산성이라 알칼리성 약제와는 절대 안 됩니다."
+    },
+    {
+     "en": "It mixes well, but never with alkaline products, because it is strongly acidic.",
+     "pause": 3
+    },
+    {
+     "ko": "오늘 질문을 한 번 더 듣겠습니다. 이번에는 영어로 먼저 답해 보세요."
+    },
+    {
+     "en": "What is Eeoh-day for?",
+     "pause": 5
+    },
+    {
+     "en": "It is for soaking rice seeds and growing healthy seedlings.",
+     "pause": 2
+    },
+    {
+     "en": "What dilution do you use for seed soaking?",
+     "pause": 5
+    },
+    {
+     "en": "Two thousand times, for forty-eight hours. For the nursery, one thousand times.",
+     "pause": 2
+    },
+    {
+     "en": "Can I mix it with pesticides?",
+     "pause": 5
+    },
+    {
+     "en": "It mixes well, but never with alkaline products, because it is strongly acidic.",
+     "pause": 2
+    },
+    {
+     "ko": "오늘 농업영어는 여기까지입니다."
+    }
+   ]
+  },
+  {
+   "n": 10,
+   "title": "바이어 질문, 분얼박사",
+   "lines": [
+    {
+     "ko": "이어서 농업영어 10회, 바이어 질문, 분얼박사입니다."
+    },
+    {
+     "ko": "먼저 지난 시간 복습입니다. 이 질문에 영어로 답해 보세요."
+    },
+    {
+     "en": "What is Eeoh-day for?",
+     "pause": 3
+    },
+    {
+     "en": "It is for soaking rice seeds and growing healthy seedlings."
+    },
+    {
+     "ko": "오늘은 바이어 질문에 영어로 답하는 연습입니다. 질문을 듣고, 잠깐 답을 떠올려 본 뒤 모범 답을 들어 보세요."
+    },
+    {
+     "ko": "첫 번째 질문입니다."
+    },
+    {
+     "en": "How do I apply Boon-ul Bahk-sah?",
+     "pause": 3
+    },
+    {
+     "en": "Spread it on the seedling trays up to three days before transplanting."
+    },
+    {
+     "ko": "이앙 사흘 전부터 당일 사이에 모판에 뿌립니다."
+    },
+    {
+     "en": "Spread it on the seedling trays up to three days before transplanting.",
+     "pause": 3
+    },
+    {
+     "ko": "두 번째 질문입니다."
+    },
+    {
+     "en": "What if I missed that timing?",
+     "pause": 3
+    },
+    {
+     "en": "You can spread it on the paddy within seven days after transplanting."
+    },
+    {
+     "ko": "이앙 뒤 칠 일 안에 논에 뿌릴 수 있습니다."
+    },
+    {
+     "en": "You can spread it on the paddy within seven days after transplanting.",
+     "pause": 3
+    },
+    {
+     "ko": "세 번째 질문입니다."
+    },
+    {
+     "en": "How many more tillers will I get?",
+     "pause": 3
+    },
+    {
+     "en": "Usually ten to twenty percent more, depending on the variety and the field."
+    },
+    {
+     "ko": "보통 십에서 이십 퍼센트, 품종과 환경에 따라 다릅니다."
+    },
+    {
+     "en": "Usually ten to twenty percent more, depending on the variety and the field.",
+     "pause": 3
+    },
+    {
+     "ko": "오늘 질문을 한 번 더 듣겠습니다. 이번에는 영어로 먼저 답해 보세요."
+    },
+    {
+     "en": "How do I apply Boon-ul Bahk-sah?",
+     "pause": 5
+    },
+    {
+     "en": "Spread it on the seedling trays up to three days before transplanting.",
+     "pause": 2
+    },
+    {
+     "en": "What if I missed that timing?",
+     "pause": 5
+    },
+    {
+     "en": "You can spread it on the paddy within seven days after transplanting.",
+     "pause": 2
+    },
+    {
+     "en": "How many more tillers will I get?",
+     "pause": 5
+    },
+    {
+     "en": "Usually ten to twenty percent more, depending on the variety and the field.",
+     "pause": 2
+    },
+    {
+     "ko": "오늘 농업영어는 여기까지입니다."
+    }
+   ]
+  },
+  {
+   "n": 11,
+   "title": "분얼박사와 저탄소 벼농사",
+   "lines": [
+    {
+     "ko": "이어서 농업영어 11회, 분얼박사와 저탄소 벼농사입니다."
+    },
+    {
+     "ko": "먼저 지난 시간 복습입니다. 이 질문에 영어로 답해 보세요."
+    },
+    {
+     "en": "How do I apply Boon-ul Bahk-sah?",
+     "pause": 3
+    },
+    {
+     "en": "Spread it on the seedling trays up to three days before transplanting."
+    },
+    {
+     "ko": "오늘의 표현 다섯 개입니다. 영어를 듣고, 뜻을 듣고, 한 번 더 따라 해 보세요."
+    },
+    {
+     "en": "effective tillers."
+    },
+    {
+     "ko": "유효분얼."
+    },
+    {
+     "en": "effective tillers.",
+     "pause": 2
+    },
+    {
+     "en": "lodging."
+    },
+    {
+     "ko": "도복, 쓰러짐."
+    },
+    {
+     "en": "lodging.",
+     "pause": 2
+    },
+    {
+     "en": "early drainage."
+    },
+    {
+     "ko": "조기 물떼기."
+    },
+    {
+     "en": "early drainage.",
+     "pause": 2
+    },
+    {
+     "en": "methane emissions."
+    },
+    {
+     "ko": "메탄 배출."
+    },
+    {
+     "en": "methane emissions.",
+     "pause": 2
+    },
+    {
+     "en": "reduction target."
+    },
+    {
+     "ko": "감축 목표."
+    },
+    {
+     "en": "reduction target.",
+     "pause": 2
+    },
+    {
+     "ko": "이제 제품을 영어로 소개해 보겠습니다. 문장마다 따라 말해 보세요."
+    },
+    {
+     "en": "Boon-ul Bahk-sah helps rice form effective tillers in a short period."
+    },
+    {
+     "ko": "분얼박사는 짧은 기간에 유효분얼이 생기도록 돕습니다."
+    },
+    {
+     "en": "Boon-ul Bahk-sah helps rice form effective tillers in a short period.",
+     "pause": 3
+    },
+    {
+     "en": "The lower stem gets shorter and thicker, so the plant resists lodging."
+    },
+    {
+     "ko": "아래 마디가 짧고 굵어져 쓰러짐에 강해집니다."
+    },
+    {
+     "en": "The lower stem gets shorter and thicker, so the plant resists lodging.",
+     "pause": 3
+    },
+    {
+     "en": "Early drainage contributes to the government target for lower methane emissions."
+    },
+    {
+     "ko": "조기 물떼기로 정부의 메탄 감축 목표에 기여합니다."
+    },
+    {
+     "en": "Early drainage contributes to the government target for lower methane emissions.",
+     "pause": 3
+    },
+    {
+     "ko": "마지막으로, 이렇게 말하지 마세요."
+    },
+    {
+     "en": "It cuts methane by 20.9 percent."
+    },
+    {
+     "ko": "이렇게 말하세요."
+    },
+    {
+     "en": "The government target is 20.9 percent, and our method contributes to it.",
+     "pause": 3
+    },
+    {
+     "ko": "메탄을 이십 점 구 퍼센트 줄인다 대신, 그것은 정부 목표이고 우리는 기여한다."
+    },
+    {
+     "ko": "오늘 소개 문장을 영어로만 한 번 더 듣겠습니다."
+    },
+    {
+     "en": "Boon-ul Bahk-sah helps rice form effective tillers in a short period.",
+     "pause": 3
+    },
+    {
+     "en": "The lower stem gets shorter and thicker, so the plant resists lodging.",
+     "pause": 3
+    },
+    {
+     "en": "Early drainage contributes to the government target for lower methane emissions.",
+     "pause": 3
+    },
+    {
+     "ko": "오늘 농업영어는 여기까지입니다."
+    }
+   ]
+  },
+  {
+   "n": 12,
+   "title": "규산골드",
+   "lines": [
+    {
+     "ko": "이어서 농업영어 12회, 규산골드입니다."
+    },
+    {
+     "ko": "먼저 지난 시간 복습입니다. 한국어 뜻을 듣고 영어로 말해 보세요."
+    },
+    {
+     "ko": "유효분얼.",
+     "pause": 3
+    },
+    {
+     "en": "effective tillers."
+    },
+    {
+     "ko": "도복, 쓰러짐.",
+     "pause": 3
+    },
+    {
+     "en": "lodging."
+    },
+    {
+     "ko": "조기 물떼기.",
+     "pause": 3
+    },
+    {
+     "en": "early drainage."
+    },
+    {
+     "ko": "오늘의 표현 다섯 개입니다. 영어를 듣고, 뜻을 듣고, 한 번 더 따라 해 보세요."
+    },
+    {
+     "en": "soluble silicate."
+    },
+    {
+     "ko": "수용성 규산."
+    },
+    {
+     "en": "soluble silicate.",
+     "pause": 2
+    },
+    {
+     "en": "cell wall."
+    },
+    {
+     "ko": "세포벽."
+    },
+    {
+     "en": "cell wall.",
+     "pause": 2
+    },
+    {
+     "en": "alkaline."
+    },
+    {
+     "ko": "알칼리성."
+    },
+    {
+     "en": "alkaline.",
+     "pause": 2
+    },
+    {
+     "en": "acidic."
+    },
+    {
+     "ko": "산성."
+    },
+    {
+     "en": "acidic.",
+     "pause": 2
+    },
+    {
+     "en": "shake well."
+    },
+    {
+     "ko": "잘 흔들다."
+    },
+    {
+     "en": "shake well.",
+     "pause": 2
+    },
+    {
+     "ko": "이제 제품을 영어로 소개해 보겠습니다. 문장마다 따라 말해 보세요."
+    },
+    {
+     "en": "Kyoo-sahn Gold is a liquid organic input material with twenty percent soluble silicate."
+    },
+    {
+     "ko": "규산골드는 수용성 규산 이십 퍼센트의 액상 유기농업자재입니다."
+    },
+    {
+     "en": "Kyoo-sahn Gold is a liquid organic input material with twenty percent soluble silicate.",
+     "pause": 3
+    },
+    {
+     "en": "Silicate builds up in the tissue, so the cell walls and stems become firm."
+    },
+    {
+     "ko": "규산이 조직에 쌓여 세포벽과 줄기가 단단해집니다."
+    },
+    {
+     "en": "Silicate builds up in the tissue, so the cell walls and stems become firm.",
+     "pause": 3
+    },
+    {
+     "en": "Never mix it with acidic products. Spray it separately."
+    },
+    {
+     "ko": "산성 제품과는 절대 섞지 말고 따로 뿌립니다."
+    },
+    {
+     "en": "Never mix it with acidic products. Spray it separately.",
+     "pause": 3
+    },
+    {
+     "ko": "마지막으로, 이렇게 말하지 마세요."
+    },
+    {
+     "en": "It is registered for disease control."
+    },
+    {
+     "ko": "이렇게 말하세요."
+    },
+    {
+     "en": "It is an organic input material, not a registered pesticide.",
+     "pause": 3
+    },
+    {
+     "ko": "병해 방제용이다 대신, 농약 등록이 아닌 유기농업자재다."
+    },
+    {
+     "ko": "오늘 소개 문장을 영어로만 한 번 더 듣겠습니다."
+    },
+    {
+     "en": "Kyoo-sahn Gold is a liquid organic input material with twenty percent soluble silicate.",
+     "pause": 3
+    },
+    {
+     "en": "Silicate builds up in the tissue, so the cell walls and stems become firm.",
+     "pause": 3
+    },
+    {
+     "en": "Never mix it with acidic products. Spray it separately.",
+     "pause": 3
+    },
+    {
+     "ko": "오늘 농업영어는 여기까지입니다."
+    }
+   ]
+  },
+  {
+   "n": 13,
+   "title": "한번애뿌리",
+   "lines": [
+    {
+     "ko": "이어서 농업영어 13회, 한번애뿌리입니다."
+    },
+    {
+     "ko": "먼저 지난 시간 복습입니다. 한국어 뜻을 듣고 영어로 말해 보세요."
+    },
+    {
+     "ko": "수용성 규산.",
+     "pause": 3
+    },
+    {
+     "en": "soluble silicate."
+    },
+    {
+     "ko": "세포벽.",
+     "pause": 3
+    },
+    {
+     "en": "cell wall."
+    },
+    {
+     "ko": "알칼리성.",
+     "pause": 3
+    },
+    {
+     "en": "alkaline."
+    },
+    {
+     "ko": "오늘의 표현 다섯 개입니다. 영어를 듣고, 뜻을 듣고, 한 번 더 따라 해 보세요."
+    },
+    {
+     "en": "pre-planting soil treatment."
+    },
+    {
+     "ko": "심기 전 토양 처리."
+    },
+    {
+     "en": "pre-planting soil treatment.",
+     "pause": 2
+    },
+    {
+     "en": "rooting."
+    },
+    {
+     "ko": "뿌리 내림."
+    },
+    {
+     "en": "rooting.",
+     "pause": 2
+    },
+    {
+     "en": "soil pH."
+    },
+    {
+     "ko": "토양 산도."
+    },
+    {
+     "en": "soil pH.",
+     "pause": 2
+    },
+    {
+     "en": "salt concentration."
+    },
+    {
+     "ko": "염류 농도."
+    },
+    {
+     "en": "salt concentration.",
+     "pause": 2
+    },
+    {
+     "en": "waterlogging."
+    },
+    {
+     "ko": "습해, 침수."
+    },
+    {
+     "en": "waterlogging.",
+     "pause": 2
+    },
+    {
+     "ko": "이제 제품을 영어로 소개해 보겠습니다. 문장마다 따라 말해 보세요."
+    },
+    {
+     "en": "Hahn-bun-ae Ppoo-ree is applied once to the soil before sowing or transplanting."
+    },
+    {
+     "ko": "한번애뿌리는 파종이나 정식 전에 한 번 땅에 넣습니다."
+    },
+    {
+     "en": "Hahn-bun-ae Ppoo-ree is applied once to the soil before sowing or transplanting.",
+     "pause": 3
+    },
+    {
+     "en": "It prepares the soil so the roots can settle quickly."
+    },
+    {
+     "ko": "흙을 미리 정리해 뿌리가 빨리 자리 잡게 합니다."
+    },
+    {
+     "en": "It prepares the soil so the roots can settle quickly.",
+     "pause": 3
+    },
+    {
+     "en": "One ten-kilogram bag covers about four hundred pyeong of open field."
+    },
+    {
+     "ko": "십 킬로그램 한 포대로 노지 약 사백 평입니다."
+    },
+    {
+     "en": "One ten-kilogram bag covers about four hundred pyeong of open field.",
+     "pause": 3
+    },
+    {
+     "ko": "마지막으로, 이렇게 말하지 마세요."
+    },
+    {
+     "en": "It solves salt build-up in one application."
+    },
+    {
+     "ko": "이렇게 말하세요."
+    },
+    {
+     "en": "It works toward lowering salt concentration.",
+     "pause": 3
+    },
+    {
+     "ko": "염류를 한 번에 해결한다 대신, 염류 농도를 낮추는 방향으로 작용한다."
+    },
+    {
+     "ko": "오늘 소개 문장을 영어로만 한 번 더 듣겠습니다."
+    },
+    {
+     "en": "Hahn-bun-ae Ppoo-ree is applied once to the soil before sowing or transplanting.",
+     "pause": 3
+    },
+    {
+     "en": "It prepares the soil so the roots can settle quickly.",
+     "pause": 3
+    },
+    {
+     "en": "One ten-kilogram bag covers about four hundred pyeong of open field.",
+     "pause": 3
+    },
+    {
+     "ko": "오늘 농업영어는 여기까지입니다."
+    }
+   ]
+  },
+  {
+   "n": 14,
+   "title": "바이어 질문, 녹색탄",
+   "lines": [
+    {
+     "ko": "이어서 농업영어 14회, 바이어 질문, 녹색탄입니다."
+    },
+    {
+     "ko": "먼저 지난 시간 복습입니다. 한국어 뜻을 듣고 영어로 말해 보세요."
+    },
+    {
+     "ko": "심기 전 토양 처리.",
+     "pause": 3
+    },
+    {
+     "en": "pre-planting soil treatment."
+    },
+    {
+     "ko": "뿌리 내림.",
+     "pause": 3
+    },
+    {
+     "en": "rooting."
+    },
+    {
+     "ko": "토양 산도.",
+     "pause": 3
+    },
+    {
+     "en": "soil pH."
+    },
+    {
+     "ko": "오늘은 바이어 질문에 영어로 답하는 연습입니다. 질문을 듣고, 잠깐 답을 떠올려 본 뒤 모범 답을 들어 보세요."
+    },
+    {
+     "ko": "첫 번째 질문입니다."
+    },
+    {
+     "en": "What does Nohk-saek-tahn do?",
+     "pause": 3
+    },
+    {
+     "en": "It helps keep photosynthesis going under low light, low temperature or waterlogging."
+    },
+    {
+     "ko": "빛이 모자라거나 춥거나 습해일 때 광합성이 유지되도록 돕습니다."
+    },
+    {
+     "en": "It helps keep photosynthesis going under low light, low temperature or waterlogging.",
+     "pause": 3
+    },
+    {
+     "ko": "두 번째 질문입니다."
+    },
+    {
+     "en": "There are spots on the leaves. Will this cure them?",
+     "pause": 3
+    },
+    {
+     "en": "It is not a treatment for disease. Please control the disease separately, and use it for leaf vigor."
+    },
+    {
+     "ko": "병 치료제가 아닙니다. 방제는 따로 하시고 잎 활력용으로 쓰세요."
+    },
+    {
+     "en": "It is not a treatment for disease. Please control the disease separately, and use it for leaf vigor.",
+     "pause": 3
+    },
+    {
+     "ko": "세 번째 질문입니다."
+    },
+    {
+     "en": "Can I use it with Ek-toh-sheen?",
+     "pause": 3
+    },
+    {
+     "en": "Yes. Ek-toh-sheen takes care of flowers, and Nohk-saek-tahn takes care of leaves."
+    },
+    {
+     "ko": "네, 엑토신은 꽃을, 녹색탄은 잎을 맡습니다."
+    },
+    {
+     "en": "Yes. Ek-toh-sheen takes care of flowers, and Nohk-saek-tahn takes care of leaves.",
+     "pause": 3
+    },
+    {
+     "ko": "오늘 질문을 한 번 더 듣겠습니다. 이번에는 영어로 먼저 답해 보세요."
+    },
+    {
+     "en": "What does Nohk-saek-tahn do?",
+     "pause": 5
+    },
+    {
+     "en": "It helps keep photosynthesis going under low light, low temperature or waterlogging.",
+     "pause": 2
+    },
+    {
+     "en": "There are spots on the leaves. Will this cure them?",
+     "pause": 5
+    },
+    {
+     "en": "It is not a treatment for disease. Please control the disease separately, and use it for leaf vigor.",
+     "pause": 2
+    },
+    {
+     "en": "Can I use it with Ek-toh-sheen?",
+     "pause": 5
+    },
+    {
+     "en": "Yes. Ek-toh-sheen takes care of flowers, and Nohk-saek-tahn takes care of leaves.",
+     "pause": 2
+    },
+    {
+     "ko": "오늘 농업영어는 여기까지입니다."
+    }
+   ]
+  },
+  {
+   "n": 15,
+   "title": "바이어 질문, 조피박사",
+   "lines": [
+    {
+     "ko": "이어서 농업영어 15회, 바이어 질문, 조피박사입니다."
+    },
+    {
+     "ko": "먼저 지난 시간 복습입니다. 이 질문에 영어로 답해 보세요."
+    },
+    {
+     "en": "What does Nohk-saek-tahn do?",
+     "pause": 3
+    },
+    {
+     "en": "It helps keep photosynthesis going under low light, low temperature or waterlogging."
+    },
+    {
+     "ko": "오늘은 바이어 질문에 영어로 답하는 연습입니다. 질문을 듣고, 잠깐 답을 떠올려 본 뒤 모범 답을 들어 보세요."
+    },
+    {
+     "ko": "첫 번째 질문입니다."
+    },
+    {
+     "en": "When should I apply Joh-pee Bahk-sah?",
+     "pause": 3
+    },
+    {
+     "en": "During dormancy, from November to March. Add one more in summer if the tree is weak."
+    },
+    {
+     "ko": "휴면기인 십일월에서 삼월, 나무가 약하면 여름에 한 번 더."
+    },
+    {
+     "en": "During dormancy, from November to March. Add one more in summer if the tree is weak.",
+     "pause": 3
+    },
+    {
+     "ko": "두 번째 질문입니다."
+    },
+    {
+     "en": "How do I apply it?",
+     "pause": 3
+    },
+    {
+     "en": "Spread it in a circle thirty centimeters away from the trunk."
+    },
+    {
+     "ko": "줄기에서 삼십 센티미터 띄워 둥글게 뿌립니다."
+    },
+    {
+     "en": "Spread it in a circle thirty centimeters away from the trunk.",
+     "pause": 3
+    },
+    {
+     "ko": "세 번째 질문입니다."
+    },
+    {
+     "en": "Will the rough bark really come off? How long does it take?",
+     "pause": 3
+    },
+    {
+     "en": "It improves the tree slowly, so please watch it for about a year."
+    },
+    {
+     "ko": "나무를 천천히 개선하니 일 년 정도 지켜봐 주세요."
+    },
+    {
+     "en": "It improves the tree slowly, so please watch it for about a year.",
+     "pause": 3
+    },
+    {
+     "ko": "오늘 질문을 한 번 더 듣겠습니다. 이번에는 영어로 먼저 답해 보세요."
+    },
+    {
+     "en": "When should I apply Joh-pee Bahk-sah?",
+     "pause": 5
+    },
+    {
+     "en": "During dormancy, from November to March. Add one more in summer if the tree is weak.",
+     "pause": 2
+    },
+    {
+     "en": "How do I apply it?",
+     "pause": 5
+    },
+    {
+     "en": "Spread it in a circle thirty centimeters away from the trunk.",
+     "pause": 2
+    },
+    {
+     "en": "Will the rough bark really come off? How long does it take?",
+     "pause": 5
+    },
+    {
+     "en": "It improves the tree slowly, so please watch it for about a year.",
+     "pause": 2
+    },
+    {
+     "ko": "오늘 농업영어는 여기까지입니다."
+    }
+   ]
+  },
+  {
+   "n": 16,
+   "title": "섞으면 안 되는 조합",
+   "lines": [
+    {
+     "ko": "이어서 농업영어 16회, 섞으면 안 되는 조합입니다."
+    },
+    {
+     "ko": "먼저 지난 시간 복습입니다. 이 질문에 영어로 답해 보세요."
+    },
+    {
+     "en": "When should I apply Joh-pee Bahk-sah?",
+     "pause": 3
+    },
+    {
+     "en": "During dormancy, from November to March. Add one more in summer if the tree is weak."
+    },
+    {
+     "ko": "오늘의 표현 다섯 개입니다. 영어를 듣고, 뜻을 듣고, 한 번 더 따라 해 보세요."
+    },
+    {
+     "en": "tank mix."
+    },
+    {
+     "ko": "한 통에 섞어 뿌리기."
+    },
+    {
+     "en": "tank mix.",
+     "pause": 2
+    },
+    {
+     "en": "strongly acidic."
+    },
+    {
+     "ko": "강산성."
+    },
+    {
+     "en": "strongly acidic.",
+     "pause": 2
+    },
+    {
+     "en": "lime sulfur."
+    },
+    {
+     "ko": "석회유황합제."
+    },
+    {
+     "en": "lime sulfur.",
+     "pause": 2
+    },
+    {
+     "en": "spray immediately."
+    },
+    {
+     "ko": "바로 뿌리다."
+    },
+    {
+     "en": "spray immediately.",
+     "pause": 2
+    },
+    {
+     "en": "leftover solution."
+    },
+    {
+     "ko": "남은 약액."
+    },
+    {
+     "en": "leftover solution.",
+     "pause": 2
+    },
+    {
+     "ko": "이제 제품을 영어로 소개해 보겠습니다. 문장마다 따라 말해 보세요."
+    },
+    {
+     "en": "Eeoh-day and Nohk-saek-tahn are strongly acidic, so never mix them with alkaline products."
+    },
+    {
+     "ko": "이오데이와 녹색탄은 강산성이라 알칼리성 약제와 절대 섞지 않습니다."
+    },
+    {
+     "en": "Eeoh-day and Nohk-saek-tahn are strongly acidic, so never mix them with alkaline products.",
+     "pause": 3
+    },
+    {
+     "en": "Kyoo-sahn Gold is alkaline, so it always goes alone."
+    },
+    {
+     "ko": "규산골드는 알칼리 쪽이라 늘 혼자 뿌립니다."
+    },
+    {
+     "en": "Kyoo-sahn Gold is alkaline, so it always goes alone.",
+     "pause": 3
+    },
+    {
+     "en": "If you must mix, spray immediately and do not reuse the leftover solution."
+    },
+    {
+     "ko": "꼭 섞어야 하면 바로 뿌리고 남은 약액은 다시 쓰지 않습니다."
+    },
+    {
+     "en": "If you must mix, spray immediately and do not reuse the leftover solution.",
+     "pause": 3
+    },
+    {
+     "ko": "마지막으로, 이렇게 말하지 마세요."
+    },
+    {
+     "en": "You can mix it with anything."
+    },
+    {
+     "ko": "이렇게 말하세요."
+    },
+    {
+     "en": "It mixes well, but not with alkaline products. Please check each combination with us.",
+     "pause": 3
+    },
+    {
+     "ko": "다 섞어도 된다 대신, 조건을 붙이고 조합은 확인받게 한다."
+    },
+    {
+     "ko": "오늘 소개 문장을 영어로만 한 번 더 듣겠습니다."
+    },
+    {
+     "en": "Eeoh-day and Nohk-saek-tahn are strongly acidic, so never mix them with alkaline products.",
+     "pause": 3
+    },
+    {
+     "en": "Kyoo-sahn Gold is alkaline, so it always goes alone.",
+     "pause": 3
+    },
+    {
+     "en": "If you must mix, spray immediately and do not reuse the leftover solution.",
+     "pause": 3
+    },
+    {
+     "ko": "오늘 농업영어는 여기까지입니다."
+    }
+   ]
+  },
+  {
+   "n": 17,
+   "title": "친환경 농가와 등록, 특허",
+   "lines": [
+    {
+     "ko": "이어서 농업영어 17회, 친환경 농가와 등록, 특허입니다."
+    },
+    {
+     "ko": "먼저 지난 시간 복습입니다. 한국어 뜻을 듣고 영어로 말해 보세요."
+    },
+    {
+     "ko": "한 통에 섞어 뿌리기.",
+     "pause": 3
+    },
+    {
+     "en": "tank mix."
+    },
+    {
+     "ko": "강산성.",
+     "pause": 3
+    },
+    {
+     "en": "strongly acidic."
+    },
+    {
+     "ko": "석회유황합제.",
+     "pause": 3
+    },
+    {
+     "en": "lime sulfur."
+    },
+    {
+     "ko": "오늘의 표현 다섯 개입니다. 영어를 듣고, 뜻을 듣고, 한 번 더 따라 해 보세요."
+    },
+    {
+     "en": "organic farming."
+    },
+    {
+     "ko": "유기 재배."
+    },
+    {
+     "en": "organic farming.",
+     "pause": 2
+    },
+    {
+     "en": "listed for organic use."
+    },
+    {
+     "ko": "유기농업자재로 공시된."
+    },
+    {
+     "en": "listed for organic use.",
+     "pause": 2
+    },
+    {
+     "en": "efficacy."
+    },
+    {
+     "ko": "효과."
+    },
+    {
+     "en": "efficacy.",
+     "pause": 2
+    },
+    {
+     "en": "certification body."
+    },
+    {
+     "ko": "인증기관."
+    },
+    {
+     "en": "certification body.",
+     "pause": 2
+    },
+    {
+     "en": "list price."
+    },
+    {
+     "ko": "기준 가격."
+    },
+    {
+     "en": "list price.",
+     "pause": 2
+    },
+    {
+     "ko": "이제 제품을 영어로 소개해 보겠습니다. 문장마다 따라 말해 보세요."
+    },
+    {
+     "en": "Being listed for organic use means it can be used in organic farming. It does not certify efficacy."
+    },
+    {
+     "ko": "공시는 유기재배에 쓸 수 있다는 뜻이지 효과 인증이 아닙니다."
+    },
+    {
+     "en": "Being listed for organic use means it can be used in organic farming. It does not certify efficacy.",
+     "pause": 3
+    },
+    {
+     "en": "For organic farms, we offer the Gold versions of Ek-toh-sheen, Tuh-guh and Eeoh-day."
+    },
+    {
+     "ko": "친환경 농가에는 엑토신, 터거, 이오데이의 골드 제품을 안내합니다."
+    },
+    {
+     "en": "For organic farms, we offer the Gold versions of Ek-toh-sheen, Tuh-guh and Eeoh-day.",
+     "pause": 3
+    },
+    {
+     "en": "Tuh-guh is the only product whose patent is still pending."
+    },
+    {
+     "ko": "특허가 아직 출원 중인 제품은 터거 하나입니다."
+    },
+    {
+     "en": "Tuh-guh is the only product whose patent is still pending.",
+     "pause": 3
+    },
+    {
+     "ko": "마지막으로, 이렇게 말하지 마세요."
+    },
+    {
+     "en": "It is certified, so it works."
+    },
+    {
+     "ko": "이렇게 말하세요."
+    },
+    {
+     "en": "It is listed for organic use. That is not a certification of efficacy.",
+     "pause": 3
+    },
+    {
+     "ko": "공시받았으니 효과가 있다 대신, 공시는 효과 인증이 아니다."
+    },
+    {
+     "ko": "오늘 소개 문장을 영어로만 한 번 더 듣겠습니다."
+    },
+    {
+     "en": "Being listed for organic use means it can be used in organic farming. It does not certify efficacy.",
+     "pause": 3
+    },
+    {
+     "en": "For organic farms, we offer the Gold versions of Ek-toh-sheen, Tuh-guh and Eeoh-day.",
+     "pause": 3
+    },
+    {
+     "en": "Tuh-guh is the only product whose patent is still pending.",
+     "pause": 3
+    },
+    {
+     "ko": "오늘 농업영어는 여기까지입니다."
+    }
+   ]
+  },
+  {
+   "n": 18,
+   "title": "숫자를 영어로 말하기",
+   "lines": [
+    {
+     "ko": "이어서 농업영어 18회, 숫자를 영어로 말하기입니다."
+    },
+    {
+     "ko": "먼저 지난 시간 복습입니다. 한국어 뜻을 듣고 영어로 말해 보세요."
+    },
+    {
+     "ko": "유기 재배.",
+     "pause": 3
+    },
+    {
+     "en": "organic farming."
+    },
+    {
+     "ko": "유기농업자재로 공시된.",
+     "pause": 3
+    },
+    {
+     "en": "listed for organic use."
+    },
+    {
+     "ko": "효과.",
+     "pause": 3
+    },
+    {
+     "en": "efficacy."
+    },
+    {
+     "ko": "오늘의 표현 다섯 개입니다. 영어를 듣고, 뜻을 듣고, 한 번 더 따라 해 보세요."
+    },
+    {
+     "en": "reduced by."
+    },
+    {
+     "ko": "만큼 줄었다."
+    },
+    {
+     "en": "reduced by.",
+     "pause": 2
+    },
+    {
+     "en": "increased by."
+    },
+    {
+     "ko": "만큼 늘었다."
+    },
+    {
+     "en": "increased by.",
+     "pause": 2
+    },
+    {
+     "en": "yield."
+    },
+    {
+     "ko": "수확량."
+    },
+    {
+     "en": "yield.",
+     "pause": 2
+    },
+    {
+     "en": "in-house data."
+    },
+    {
+     "ko": "자사 자료."
+    },
+    {
+     "en": "in-house data.",
+     "pause": 2
+    },
+    {
+     "en": "source."
+    },
+    {
+     "ko": "출처."
+    },
+    {
+     "en": "source.",
+     "pause": 2
+    },
+    {
+     "ko": "이제 제품을 영어로 소개해 보겠습니다. 문장마다 따라 말해 보세요."
+    },
+    {
+     "en": "According to a 2016 study in a Heilongjiang agricultural journal, soybean yield increased by 23.5 percent."
+    },
+    {
+     "ko": "흑룡강성 농업과학 학술지 이천십육 년 연구에서 콩 수확량이 이십삼 점 오 퍼센트 늘었습니다."
+    },
+    {
+     "en": "According to a 2016 study in a Heilongjiang agricultural journal, soybean yield increased by 23.5 percent.",
+     "pause": 3
+    },
+    {
+     "en": "This is in-house data from our research institute."
+    },
+    {
+     "ko": "이것은 우리 연구소의 자사 자료입니다."
+    },
+    {
+     "en": "This is in-house data from our research institute.",
+     "pause": 3
+    },
+    {
+     "en": "We do not have measured data for this product yet, so let me explain how it works."
+    },
+    {
+     "ko": "이 제품은 아직 정량 자료가 없으니 원리로 설명드리겠습니다."
+    },
+    {
+     "en": "We do not have measured data for this product yet, so let me explain how it works.",
+     "pause": 3
+    },
+    {
+     "ko": "마지막으로, 이렇게 말하지 마세요."
+    },
+    {
+     "en": "It will raise your rice grade."
+    },
+    {
+     "ko": "이렇게 말하세요."
+    },
+    {
+     "en": "We cannot promise a higher grade.",
+     "pause": 3
+    },
+    {
+     "ko": "쌀 등급이 오른다 대신, 등급 상승은 약속할 수 없다."
+    },
+    {
+     "ko": "오늘 소개 문장을 영어로만 한 번 더 듣겠습니다."
+    },
+    {
+     "en": "According to a 2016 study in a Heilongjiang agricultural journal, soybean yield increased by 23.5 percent.",
+     "pause": 3
+    },
+    {
+     "en": "This is in-house data from our research institute.",
+     "pause": 3
+    },
+    {
+     "en": "We do not have measured data for this product yet, so let me explain how it works.",
+     "pause": 3
+    },
+    {
+     "ko": "오늘 농업영어는 여기까지입니다."
+    }
+   ]
+  },
+  {
+   "n": 19,
+   "title": "바이어 질문, 벼 농가의 한 해",
+   "lines": [
+    {
+     "ko": "이어서 농업영어 19회, 바이어 질문, 벼 농가의 한 해입니다."
+    },
+    {
+     "ko": "먼저 지난 시간 복습입니다. 한국어 뜻을 듣고 영어로 말해 보세요."
+    },
+    {
+     "ko": "만큼 줄었다.",
+     "pause": 3
+    },
+    {
+     "en": "reduced by."
+    },
+    {
+     "ko": "만큼 늘었다.",
+     "pause": 3
+    },
+    {
+     "en": "increased by."
+    },
+    {
+     "ko": "수확량.",
+     "pause": 3
+    },
+    {
+     "en": "yield."
+    },
+    {
+     "ko": "오늘은 바이어 질문에 영어로 답하는 연습입니다. 질문을 듣고, 잠깐 답을 떠올려 본 뒤 모범 답을 들어 보세요."
+    },
+    {
+     "ko": "첫 번째 질문입니다."
+    },
+    {
+     "en": "I transplanted ten days ago. Can I still use Boon-ul Bahk-sah?",
+     "pause": 3
+    },
+    {
+     "en": "It is past the seven-day window, so the effect may be lower. Let me check with our research institute."
+    },
+    {
+     "ko": "칠 일을 넘겨 효과가 떨어질 수 있으니 연구소에 확인하겠습니다."
+    },
+    {
+     "en": "It is past the seven-day window, so the effect may be lower. Let me check with our research institute.",
+     "pause": 3
+    },
+    {
+     "ko": "두 번째 질문입니다."
+    },
+    {
+     "en": "The leaves turned yellow after I sprayed Tuh-guh. Is that a problem?",
+     "pause": 3
+    },
+    {
+     "en": "No. Nutrients are moving from the leaves into the grain. It means the grain is filling well."
+    },
+    {
+     "ko": "잎의 양분이 벼알로 옮겨 가는 것으로, 잘 여물고 있다는 뜻입니다."
+    },
+    {
+     "en": "No. Nutrients are moving from the leaves into the grain. It means the grain is filling well.",
+     "pause": 3
+    },
+    {
+     "ko": "세 번째 질문입니다."
+    },
+    {
+     "en": "Can I put Kyoo-sahn Gold and Ek-toh-sheen in the same tank?",
+     "pause": 3
+    },
+    {
+     "en": "No. Kyoo-sahn Gold is alkaline and Ek-toh-sheen is acidic. Spray them separately."
+    },
+    {
+     "ko": "안 됩니다. 알칼리와 산성이라 따로 뿌립니다."
+    },
+    {
+     "en": "No. Kyoo-sahn Gold is alkaline and Ek-toh-sheen is acidic. Spray them separately.",
+     "pause": 3
+    },
+    {
+     "ko": "오늘 질문을 한 번 더 듣겠습니다. 이번에는 영어로 먼저 답해 보세요."
+    },
+    {
+     "en": "I transplanted ten days ago. Can I still use Boon-ul Bahk-sah?",
+     "pause": 5
+    },
+    {
+     "en": "It is past the seven-day window, so the effect may be lower. Let me check with our research institute.",
+     "pause": 2
+    },
+    {
+     "en": "The leaves turned yellow after I sprayed Tuh-guh. Is that a problem?",
+     "pause": 5
+    },
+    {
+     "en": "No. Nutrients are moving from the leaves into the grain. It means the grain is filling well.",
+     "pause": 2
+    },
+    {
+     "en": "Can I put Kyoo-sahn Gold and Ek-toh-sheen in the same tank?",
+     "pause": 5
+    },
+    {
+     "en": "No. Kyoo-sahn Gold is alkaline and Ek-toh-sheen is acidic. Spray them separately.",
+     "pause": 2
+    },
+    {
+     "ko": "오늘 농업영어는 여기까지입니다."
+    }
+   ]
+  },
+  {
+   "n": 20,
+   "title": "바이어 질문, 과수와 고추 농가, 마무리",
+   "lines": [
+    {
+     "ko": "이어서 농업영어 20회, 바이어 질문, 과수와 고추 농가, 마무리입니다."
+    },
+    {
+     "ko": "먼저 지난 시간 복습입니다. 이 질문에 영어로 답해 보세요."
+    },
+    {
+     "en": "I transplanted ten days ago. Can I still use Boon-ul Bahk-sah?",
+     "pause": 3
+    },
+    {
+     "en": "It is past the seven-day window, so the effect may be lower. Let me check with our research institute."
+    },
+    {
+     "ko": "오늘은 바이어 질문에 영어로 답하는 연습입니다. 질문을 듣고, 잠깐 답을 떠올려 본 뒤 모범 답을 들어 보세요."
+    },
+    {
+     "ko": "첫 번째 질문입니다."
+    },
+    {
+     "en": "Which product do you recommend for my apple orchard?",
+     "pause": 3
+    },
+    {
+     "en": "First, tell me the growth stage now. Then I can recommend the right product."
+    },
+    {
+     "ko": "먼저 지금 생육 단계를 알려 주시면 맞는 제품을 권해 드리겠습니다."
+    },
+    {
+     "en": "First, tell me the growth stage now. Then I can recommend the right product.",
+     "pause": 3
+    },
+    {
+     "ko": "두 번째 질문입니다."
+    },
+    {
+     "en": "What should I use before planting peppers?",
+     "pause": 3
+    },
+    {
+     "en": "Apply Hahn-bun-ae Ppoo-ree to the soil before transplanting, one bag for about four hundred pyeong."
+    },
+    {
+     "ko": "정식 전에 한번애뿌리를, 한 포대에 약 사백 평으로 넣습니다."
+    },
+    {
+     "en": "Apply Hahn-bun-ae Ppoo-ree to the soil before transplanting, one bag for about four hundred pyeong.",
+     "pause": 3
+    },
+    {
+     "ko": "세 번째 질문입니다."
+    },
+    {
+     "en": "Does it prevent disease?",
+     "pause": 3
+    },
+    {
+     "en": "It is not a pesticide. It helps the crop stay vigorous and reduces growth stress."
+    },
+    {
+     "ko": "농약이 아닙니다. 작물 활력을 지키고 생육 스트레스를 줄입니다."
+    },
+    {
+     "en": "It is not a pesticide. It helps the crop stay vigorous and reduces growth stress.",
+     "pause": 3
+    },
+    {
+     "ko": "오늘 질문을 한 번 더 듣겠습니다. 이번에는 영어로 먼저 답해 보세요."
+    },
+    {
+     "en": "Which product do you recommend for my apple orchard?",
+     "pause": 5
+    },
+    {
+     "en": "First, tell me the growth stage now. Then I can recommend the right product.",
+     "pause": 2
+    },
+    {
+     "en": "What should I use before planting peppers?",
+     "pause": 5
+    },
+    {
+     "en": "Apply Hahn-bun-ae Ppoo-ree to the soil before transplanting, one bag for about four hundred pyeong.",
+     "pause": 2
+    },
+    {
+     "en": "Does it prevent disease?",
+     "pause": 5
+    },
+    {
+     "en": "It is not a pesticide. It helps the crop stay vigorous and reduces growth stress.",
+     "pause": 2
+    },
+    {
+     "ko": "사 주 동안의 농업영어를 마칩니다. 다음 주부터는 첫 회로 돌아갑니다. 두 번째에는 한국어 뜻을 듣고 영어가 나오기 전에 먼저 말해 보세요."
+    }
+   ]
+  }
+ ]
+}
