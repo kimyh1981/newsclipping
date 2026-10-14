@@ -63,7 +63,6 @@ public class MainActivity extends Activity {
     private ScrollView[] pages;
     private TextView[] tabs;
     private int tab;
-    private TextView nowPlaying, lessonTile;
     private Updater.Release update;
     private boolean updating;
     private long updateChecked;
@@ -90,13 +89,27 @@ public class MainActivity extends Activity {
         getWindow().setNavigationBarColor(bg);
         if (!dark) getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR | View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR);
 
-        // ── 뉴스클리핑 탭: 재생 버튼과 바로 가기 버튼 ──
-        LinearLayout col = page("뉴스클리핑");
-        nowPlaying = text("", 15, secondary);
-        nowPlaying.setPadding(dp(4), 0, dp(4), dp(16));
-        nowPlaying.setMaxLines(2);
-        nowPlaying.setEllipsize(android.text.TextUtils.TruncateAt.END);
-        col.addView(nowPlaying);
+        // ── 뉴스클리핑 탭: 맨 위 아이콘 카드와 재생 버튼만 ──
+        LinearLayout col = new LinearLayout(this);
+        col.setOrientation(LinearLayout.VERTICAL);
+        col.setGravity(Gravity.CENTER_HORIZONTAL);
+        col.setPadding(dp(16), dp(32), dp(16), dp(32));
+        // 맨 위 가운데: 앱 아이콘 카드
+        LinearLayout badge = new LinearLayout(this);
+        badge.setOrientation(LinearLayout.VERTICAL);
+        badge.setGravity(Gravity.CENTER);
+        badge.setPadding(dp(28), dp(20), dp(28), dp(16));
+        badge.setBackground(rounded(card, dp(24)));
+        ImageView icon = new ImageView(this);
+        icon.setImageResource(R.mipmap.ic_launcher);
+        badge.addView(icon, new LinearLayout.LayoutParams(dp(72), dp(72)));
+        TextView name = text("뉴스클리핑", 18, label);
+        name.setTypeface(Typeface.DEFAULT_BOLD);
+        name.setPadding(0, dp(10), 0, 0);
+        badge.addView(name);
+        LinearLayout.LayoutParams bl = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        bl.bottomMargin = dp(36);
+        col.addView(badge, bl);
         updateBar = text("", 16, 0xFFFFFFFF);
         updateBar.setTypeface(Typeface.DEFAULT_BOLD);
         updateBar.setGravity(Gravity.CENTER);
@@ -118,16 +131,16 @@ public class MainActivity extends Activity {
             else if (st == NewsService.PAUSED) NewsService.control(NewsService.ACTION_RESUME);
             else NewsService.start(this, true);
         });
-        play.addView(playBtn, new LinearLayout.LayoutParams(0, dp(64), 1f));
-        play.addView(new View(this), new LinearLayout.LayoutParams(dp(10), 1));
-        play.addView(iconPill(Glyph.STOP, "멈춤", card, red, v -> NewsService.stopIfRunning()), new LinearLayout.LayoutParams(0, dp(64), 1f));
-        col.addView(play);
+        play.addView(playBtn, new LinearLayout.LayoutParams(0, dp(84), 1f));
+        play.addView(new View(this), new LinearLayout.LayoutParams(dp(12), 1));
+        play.addView(iconPill(Glyph.STOP, "멈춤", card, red, v -> NewsService.stopIfRunning()), new LinearLayout.LayoutParams(0, dp(84), 1f));
+        col.addView(play, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
 
         // 이전 기사 / 듣던 기사 전체 듣기 / 다음 기사 (읽는 중에만 동작)
         LinearLayout nav = new LinearLayout(this);
         nav.setOrientation(LinearLayout.HORIZONTAL);
-        nav.setPadding(0, dp(10), 0, 0);
-        nav.addView(iconPill(Glyph.PREV, "이전 기사", card, tint, v -> NewsService.control(NewsService.ACTION_PREV)), new LinearLayout.LayoutParams(0, dp(52), 1f));
+        nav.setPadding(0, dp(12), 0, 0);
+        nav.addView(iconPill(Glyph.PREV, "이전 기사", card, tint, v -> NewsService.control(NewsService.ACTION_PREV)), new LinearLayout.LayoutParams(0, dp(64), 1f));
         nav.addView(new View(this), new LinearLayout.LayoutParams(dp(10), 1));
         TextView fullBtn = text("전체 듣기", 16, tint);
         fullBtn.setTypeface(Typeface.DEFAULT_BOLD);
@@ -139,22 +152,15 @@ public class MainActivity extends Activity {
             else NewsService.start(this, true);
             startActivity(new Intent(this, CaptionActivity.class));
         });
-        nav.addView(fullBtn, new LinearLayout.LayoutParams(0, dp(52), 1f));
+        nav.addView(fullBtn, new LinearLayout.LayoutParams(0, dp(64), 1f));
         nav.addView(new View(this), new LinearLayout.LayoutParams(dp(10), 1));
-        nav.addView(iconPill(Glyph.NEXT, "다음 기사", card, tint, v -> NewsService.control(NewsService.ACTION_NEXT)), new LinearLayout.LayoutParams(0, dp(52), 1f));
-        col.addView(nav);
-
-        // 바로 가기 버튼 (두 줄 두 칸)
-        LinearLayout tiles1 = tileRow(col);
-        tile(tiles1, "💬", "자막 화면", "듣던 곳에서 이어 보기", v -> startActivity(new Intent(this, CaptionActivity.class)));
-        tile(tiles1, "📰", "오늘 기사 목록", "웹에서 보기", v -> startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(SITE + "?app"))));
-        LinearLayout tiles2 = tileRow(col);
-        lessonTile = tile(tiles2, "🌱", "제품 공부·영어", "", v -> withBrief(this::showLessons));
-        tile(tiles2, "🗞", "뉴스 설정", "언론사·순서·키워드", v -> showTab(1));
+        nav.addView(iconPill(Glyph.NEXT, "다음 기사", card, tint, v -> NewsService.control(NewsService.ACTION_NEXT)), new LinearLayout.LayoutParams(0, dp(64), 1f));
+        col.addView(nav, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
 
         // ── 뉴스설정 탭 ──
         LinearLayout newsPage = page("뉴스 설정");
         LinearLayout today = section(newsPage, "오늘 뉴스", null);
+        row(today, "오늘 기사 목록 (웹)", v -> startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(SITE + "?app"))), true).setText("");
         sourcesVal = row(today, "들을 언론사", v -> withBrief(this::showSources), true);
         orderVal = row(today, "섹션 순서", v -> withBrief(this::showOrder), true);
         customVal = row(today, "언론사 직접 넣기 (주소)", v -> withBrief(this::showCustom), true);
@@ -199,16 +205,21 @@ public class MainActivity extends Activity {
         LinearLayout bar = new LinearLayout(this);
         bar.setBackgroundColor(dark ? 0xFF121212 : 0xFFF9F9F9);
         bar.setPadding(0, dp(6), 0, dp(6));
-        String[] names = {"뉴스클리핑", "뉴스설정", "설정"};
+        String[] names = {"뉴스클리핑", "자막", "제품공부", "뉴스설정", "설정"};
         tabs = new TextView[names.length];
         for (int i = 0; i < names.length; i++) {
             final int at = i;
             TextView t = text(names[i], 11, secondary);
+            t.setSingleLine(true);
             t.setGravity(Gravity.CENTER);
             t.setCompoundDrawablePadding(dp(3));
             t.setPadding(0, dp(2), 0, dp(2));
             t.setBackground(pressable(new ColorDrawable(0)));
-            t.setOnClickListener(v -> showTab(at));
+            t.setOnClickListener(v -> {
+                if (at == 1) startActivity(new Intent(this, CaptionActivity.class)); // 자막 화면: 듣던 곳에서 이어 보기
+                else if (at == 2) withBrief(this::showLessons); // 제품 공부·농업영어 진도
+                else showTab(at == 0 ? 0 : at - 2);
+            });
             tabs[i] = t;
             bar.addView(t, new LinearLayout.LayoutParams(0, dp(52), 1f));
         }
@@ -285,11 +296,6 @@ public class MainActivity extends Activity {
         boolean playing = NewsService.state() == NewsService.PLAYING;
         playBtn.setImageDrawable(new Glyph(playing ? Glyph.PAUSE : Glyph.PLAY, 0xFFFFFFFF, dp(22)));
         playBtn.setContentDescription(playing ? "일시정지" : NewsService.state() == NewsService.PAUSED ? "이어 듣기" : "지금 듣기");
-        NewsService.Caption c = NewsService.caption();
-        String what = c == null ? "" : c.lesson > 0 ? c.source + " " + c.title : c.source;
-        nowPlaying.setText(playing ? "읽는 중" + (what.isEmpty() ? "" : " · " + what)
-                : NewsService.state() == NewsService.PAUSED ? "멈춤" + (what.isEmpty() ? "" : " · " + what) + " · 재생을 누르면 이어 듣습니다"
-                : "재생을 누르면 오늘 뉴스를 읽습니다.");
     }
 
     private void refresh() {
@@ -303,7 +309,6 @@ public class MainActivity extends Activity {
         customVal.setText(prefs.custom().isEmpty() ? "없음" : prefs.custom().size() + "곳");
         keywordsVal.setText(prefs.keywords().isEmpty() ? "없음" : String.join(", ", prefs.keywords()));
         lessonVal.setText(!prefs.lessonOn() && !prefs.englishOn() ? "끔" : (prefs.lessonRound() > 1 ? prefs.lessonRound() + "바퀴 · " : "") + prefs.lessonDone().size() + "회 완료");
-        lessonTile.setText(lessonVal.getText() + (prefs.lessonOn() || prefs.englishOn() ? " · 진도 보기" : ""));
         voiceVal.setText(prefs.voice().isEmpty() ? "자동" : "직접 고름");
         rateVal.setText(Rules.rateLabel(prefs.rate()));
         enabledSw.setChecked(prefs.enabled());
@@ -416,15 +421,18 @@ public class MainActivity extends Activity {
     private ScrollView scrollOf(LinearLayout col) {
         ScrollView sv = new ScrollView(this);
         sv.setBackgroundColor(bg);
+        sv.setFillViewport(true);
         sv.addView(col);
         return sv;
     }
 
+    /** i: 0 뉴스클리핑, 1 뉴스설정, 2 설정 (아래 막대의 자막·제품공부는 화면을 띄우는 버튼) */
     private void showTab(int i) {
         tab = i;
-        for (int k = 0; k < pages.length; k++) {
-            pages[k].setVisibility(k == i ? View.VISIBLE : View.GONE);
-            int color = k == i ? tint : secondary;
+        for (int k = 0; k < pages.length; k++) pages[k].setVisibility(k == i ? View.VISIBLE : View.GONE);
+        int selected = i == 0 ? 0 : i + 2;
+        for (int k = 0; k < tabs.length; k++) {
+            int color = k == selected ? tint : secondary;
             tabs[k].setTextColor(color);
             tabs[k].setCompoundDrawablesWithIntrinsicBounds(null, new TabIcon(k, color, dp(24)), null, null);
         }
@@ -436,39 +444,7 @@ public class MainActivity extends Activity {
         out.putInt("tab", tab);
     }
 
-    private LinearLayout tileRow(LinearLayout parent) {
-        LinearLayout r = new LinearLayout(this);
-        r.setOrientation(LinearLayout.HORIZONTAL);
-        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-        lp.topMargin = dp(12);
-        parent.addView(r, lp);
-        return r;
-    }
-
-    /** 바로 가기 버튼: 그림 · 굵은 이름 · 회색 설명. 설명 TextView를 돌려준다 */
-    private TextView tile(LinearLayout row, String icon, String name, String sub, View.OnClickListener l) {
-        LinearLayout t = new LinearLayout(this);
-        t.setOrientation(LinearLayout.VERTICAL);
-        t.setPadding(dp(16), dp(14), dp(12), dp(14));
-        t.setMinimumHeight(dp(108));
-        t.setBackground(pressable(rounded(card, dp(16))));
-        t.setOnClickListener(l);
-        t.addView(text(icon, 26, label));
-        TextView n = text(name, 16, label);
-        n.setTypeface(Typeface.DEFAULT_BOLD);
-        n.setPadding(0, dp(8), 0, dp(2));
-        t.addView(n);
-        TextView s2 = text(sub, 13, secondary);
-        s2.setSingleLine(true);
-        s2.setEllipsize(android.text.TextUtils.TruncateAt.END);
-        t.addView(s2);
-        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
-        if (row.getChildCount() > 0) lp.leftMargin = dp(12);
-        row.addView(t, lp);
-        return s2;
-    }
-
-    /** 아래 탭 막대의 그림: 0 뉴스클리핑(재생 원), 1 뉴스설정(신문), 2 설정(톱니) */
+    /** 아래 탭 막대의 그림: 0 뉴스클리핑(재생 원), 1 자막(말풍선), 2 제품공부(책), 3 뉴스설정(신문), 4 설정(톱니) */
     private static final class TabIcon extends Drawable {
         private final int kind, size;
         private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -495,6 +471,33 @@ public class MainActivity extends Activity {
                 p.close();
                 c.drawPath(p, paint);
             } else if (kind == 1) {
+                Path p = new Path();
+                p.addRoundRect(new RectF(x + s * 0.08f, y + s * 0.14f, x + s * 0.92f, y + s * 0.7f), s * 0.14f, s * 0.14f, Path.Direction.CW);
+                c.drawPath(p, paint);
+                paint.setStyle(Paint.Style.FILL);
+                Path tail = new Path();
+                tail.moveTo(x + s * 0.28f, y + s * 0.66f);
+                tail.lineTo(x + s * 0.24f, y + s * 0.9f);
+                tail.lineTo(x + s * 0.48f, y + s * 0.66f);
+                tail.close();
+                c.drawPath(tail, paint);
+                paint.setStrokeWidth(s * 0.07f);
+                paint.setStyle(Paint.Style.STROKE);
+                c.drawLine(x + s * 0.26f, y + s * 0.36f, x + s * 0.74f, y + s * 0.36f, paint);
+                c.drawLine(x + s * 0.26f, y + s * 0.5f, x + s * 0.6f, y + s * 0.5f, paint);
+            } else if (kind == 2) {
+                Path p = new Path(); // 펼친 책
+                p.moveTo(cx, y + s * 0.26f);
+                p.cubicTo(cx - s * 0.12f, y + s * 0.16f, x + s * 0.2f, y + s * 0.16f, x + s * 0.06f, y + s * 0.2f);
+                p.lineTo(x + s * 0.06f, y + s * 0.8f);
+                p.cubicTo(x + s * 0.2f, y + s * 0.76f, cx - s * 0.12f, y + s * 0.76f, cx, y + s * 0.86f);
+                p.cubicTo(cx + s * 0.12f, y + s * 0.76f, x + s * 0.8f, y + s * 0.76f, x + s * 0.94f, y + s * 0.8f);
+                p.lineTo(x + s * 0.94f, y + s * 0.2f);
+                p.cubicTo(x + s * 0.8f, y + s * 0.16f, cx + s * 0.12f, y + s * 0.16f, cx, y + s * 0.26f);
+                p.close();
+                c.drawPath(p, paint);
+                c.drawLine(cx, y + s * 0.26f, cx, y + s * 0.86f, paint);
+            } else if (kind == 3) {
                 c.drawRoundRect(new RectF(x + s * 0.1f, y + s * 0.14f, x + s * 0.9f, y + s * 0.86f), s * 0.1f, s * 0.1f, paint);
                 paint.setStrokeWidth(s * 0.08f);
                 c.drawLine(x + s * 0.26f, y + s * 0.36f, x + s * 0.74f, y + s * 0.36f, paint);
