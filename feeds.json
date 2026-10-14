@@ -571,6 +571,7 @@
         },
         {
           "id": "reuters",
+          "country": "영국",
           "name": "로이터",
           "google": "site:reuters.com",
           "take": 2,
@@ -579,6 +580,7 @@
         },
         {
           "id": "ap",
+          "country": "미국",
           "name": "AP",
           "google": "site:apnews.com",
           "take": 2,
@@ -587,6 +589,7 @@
         },
         {
           "id": "bbc",
+          "country": "영국",
           "name": "BBC",
           "google": "site:bbc.com",
           "take": 2,
@@ -595,6 +598,7 @@
         },
         {
           "id": "bloomberg",
+          "country": "미국",
           "name": "블룸버그",
           "google": "site:bloomberg.com",
           "take": 2,
@@ -612,6 +616,7 @@
         },
         {
           "id": "nikkei-asia",
+          "country": "일본",
           "name": "닛케이 아시아",
           "google": "site:asia.nikkei.com",
           "take": 2,
@@ -630,6 +635,7 @@
       "sources": [
         {
           "id": "worldfertilizer",
+          "country": "영국",
           "name": "월드 퍼틸라이저",
           "google": "site:worldfertilizer.com",
           "take": 2,
@@ -638,6 +644,7 @@
         },
         {
           "id": "argus-fert",
+          "country": "영국",
           "name": "아거스 비료 시황",
           "google": "site:argusmedia.com fertilizer",
           "take": 2,
@@ -665,6 +672,7 @@
         },
         {
           "id": "worldgrain",
+          "country": "미국",
           "name": "월드 그레인",
           "google": "site:world-grain.com",
           "take": 2,
@@ -684,6 +692,7 @@
       "sources": [
         {
           "id": "mit-tr",
+          "country": "미국",
           "url": "https://www.technologyreview.com/topic/artificial-intelligence/feed",
           "name": "MIT 테크놀로지 리뷰",
           "google": "site:technologyreview.com AI",
@@ -693,6 +702,7 @@
         },
         {
           "id": "verge-ai",
+          "country": "미국",
           "url": "https://www.theverge.com/rss/ai-artificial-intelligence/index.xml",
           "name": "더 버지",
           "google": "site:theverge.com AI",
@@ -702,6 +712,7 @@
         },
         {
           "id": "techcrunch-ai",
+          "country": "미국",
           "url": "https://techcrunch.com/category/artificial-intelligence/feed/",
           "name": "테크크런치",
           "google": "site:techcrunch.com AI",
@@ -711,6 +722,7 @@
         },
         {
           "id": "venturebeat-ai",
+          "country": "미국",
           "url": "https://venturebeat.com/category/ai/feed/",
           "name": "벤처비트",
           "google": "site:venturebeat.com AI",
@@ -720,6 +732,7 @@
         },
         {
           "id": "wired-ai",
+          "country": "미국",
           "url": "https://www.wired.com/feed/tag/ai/latest/rss",
           "name": "와이어드",
           "google": "site:wired.com AI",
@@ -729,6 +742,7 @@
         },
         {
           "id": "ars-ai",
+          "country": "미국",
           "url": "https://arstechnica.com/ai/feed/",
           "name": "아르스 테크니카",
           "google": "site:arstechnica.com AI",
@@ -738,6 +752,7 @@
         },
         {
           "id": "the-decoder",
+          "country": "독일",
           "url": "https://the-decoder.com/feed/",
           "name": "더 디코더",
           "google": "site:the-decoder.com",
@@ -747,6 +762,7 @@
         },
         {
           "id": "ieee-ai",
+          "country": "미국",
           "url": "https://spectrum.ieee.org/feeds/topic/artificial-intelligence.rss",
           "name": "IEEE 스펙트럼",
           "google": "site:spectrum.ieee.org AI",
@@ -756,6 +772,7 @@
         },
         {
           "id": "reuters-ai",
+          "country": "영국",
           "name": "로이터 AI",
           "google": "site:reuters.com artificial intelligence",
           "take": 2,

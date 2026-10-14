@@ -145,9 +145,14 @@ final class Extras {
 
     static final class Entry {
         final String title, link, source, summary;
+        /** 구글 뉴스가 알려 준 언론사 주소 (<source url="…">). 모르면 "" */
+        final String sourceUrl;
         final long time; // 모르면 0
         Entry(String title, String link, String source, String summary, long time) {
-            this.title = title; this.link = link; this.source = source; this.summary = summary; this.time = time;
+            this(title, link, source, summary, time, "");
+        }
+        Entry(String title, String link, String source, String summary, long time, String sourceUrl) {
+            this.title = title; this.link = link; this.source = source; this.summary = summary; this.time = time; this.sourceUrl = sourceUrl;
         }
     }
 
@@ -183,8 +188,9 @@ final class Extras {
                 if (h.find()) link = h.group(1);
             }
             String source = clean(tag(it, "source"));
+            Matcher su = Pattern.compile("<source[^>]*url=\"([^\"]+)\"", Pattern.CASE_INSENSITIVE).matcher(it);
             String summary = clean(tag(it, "description|summary|content"));
-            out.add(new Entry(title, link, source, summary, time(clean(tag(it, "pubDate|published|updated|dc:date")))));
+            out.add(new Entry(title, link, source, summary, time(clean(tag(it, "pubDate|published|updated|dc:date"))), su.find() ? su.group(1) : ""));
         }
         return out;
     }

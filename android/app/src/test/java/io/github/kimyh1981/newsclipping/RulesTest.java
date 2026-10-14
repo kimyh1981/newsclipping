@@ -84,6 +84,20 @@ public class RulesTest {
         assertEquals(5, Rules.clampCount("", 5));
     }
 
+    @Test public void assistantResumeWaitsForQuiet() {
+        long lim = 300000;
+        // 제미나이가 듣는 중(마이크): 기다린다. 닫히고 소리도 없으면 이어 읽어도 된다
+        assertEquals(Rules.ASSIST_WAIT, Rules.afterAssistant(true, true, false, false, 3000, lim));
+        assertEquals(Rules.ASSIST_WAIT, Rules.afterAssistant(true, false, true, false, 4000, lim)); // 대답을 말하는 중
+        assertEquals(Rules.ASSIST_QUIET, Rules.afterAssistant(true, false, false, false, 6000, lim));
+        // 마이크를 쓰는 앱이 끝내 없으면 음악 앱 같은 것: 이어 듣기를 기다린다
+        assertEquals(Rules.ASSIST_WAIT, Rules.afterAssistant(false, false, true, false, 5000, lim));
+        assertEquals(Rules.ASSIST_GIVE_UP, Rules.afterAssistant(false, false, false, false, 16000, lim));
+        // 통화가 끼었거나 너무 오래 지났으면 저절로 켜지지 않는다
+        assertEquals(Rules.ASSIST_GIVE_UP, Rules.afterAssistant(true, false, false, true, 6000, lim));
+        assertEquals(Rules.ASSIST_GIVE_UP, Rules.afterAssistant(true, false, false, false, lim + 1, lim));
+    }
+
     @Test public void logoGridShrinksToFit() {
         // 넓은 칸에 몇 개면 가장 큰 크기
         assertArrayEquals(new int[] {90, 3}, Rules.logoGrid(3, 400, 400, 10, 90, 30));
