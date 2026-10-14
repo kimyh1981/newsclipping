@@ -47,8 +47,12 @@ final class Prefs {
     /** 해외 농업·비료 시장 뉴스: 기사 수 (기본 5)와 우리말로 더 찾을 키워드 */
     int fertCount() { return p.getInt("fertCount", 5); }
     void setFertCount(int n) { p.edit().putInt("fertCount", n).apply(); }
-    List<String> fertKeywords() { return split(p.getString("fertKeywords", "")); }
-    void setFertKeywords(List<String> words) { p.edit().putString("fertKeywords", String.join(",", words)).apply(); }
+    /** 해외농업 키워드 (영어나 우리말). 예전 이름 fertKeywords에 넣은 것도 이어 쓴다 */
+    List<String> abroadKeywords() { return split(p.getString("abroadKeywords", p.getString("fertKeywords", ""))); }
+    void setAbroadKeywords(List<String> words) { p.edit().putString("abroadKeywords", String.join(",", words)).apply(); }
+    /** 해외농업 키워드를 찾을 나라 (우리말 이름, Countries) */
+    List<String> abroadCountries() { return split(p.getString("abroadCountries", "미국,중국,인도,베트남,브라질")); }
+    void setAbroadCountries(List<String> names) { p.edit().putString("abroadCountries", String.join(",", names)).apply(); }
 
     /** 홈 화면 로고로 지난번에 보인 언론사 누리집 주소들 (앱을 열자마자 보여 주려고) */
     List<String> logoSites() { return split(p.getString("logoSites", "")); }
