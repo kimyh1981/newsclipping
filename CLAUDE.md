@@ -17,7 +17,8 @@
 ## 확인 명령
 
 ```
-npm test                    # 서버·웹 테스트 (네트워크 없음)
+npm ci                      # 처음 한 번 (없으면 테스트 4개가 실패)
+npm test                    # 서버·웹 테스트 71개 (네트워크 없음)
 npm run collect             # 실제 수집 (샌드박스에서는 뉴스 사이트 접속이 막혀 실패할 수 있음)
 cd android && gradle testReleaseUnitTest assembleRelease   # Android SDK 필요 → 보통 CI(android.yml)에 맡김
 ```
