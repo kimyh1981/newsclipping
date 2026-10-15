@@ -1,0 +1,122 @@
+# 뉴스클리핑 인수인계 (2026-10-16 기준)
+
+다른 Claude 계정(또는 다른 개발자)이 이 저장소에서 바로 이어서 개발할 수 있도록 정리한 문서입니다.
+기능 설명·설치·설정 방법은 [README.md](README.md)에 자세히 있고, 이 문서는 **개발을 이어받는 데 필요한 것**만 모았습니다.
+
+- 현재 버전: **v1.49** (PR #49, `android/version.txt` = `1.49`)
+- 웹: https://kimyh1981.github.io/newsclipping/
+- APK: https://github.com/kimyh1981/newsclipping/releases/latest/download/newsclipping.apk
+- 주인: GitHub `kimyh1981` (바이오플랜). 머지는 주인이 직접 합니다.
+
+## 1. 새 계정에서 처음 할 일
+
+1. **GitHub 접근**: 새 Claude 계정이 쓰는 GitHub 계정이 이 저장소에 쓰기 권한이 있어야 합니다. 같은 `kimyh1981` 계정을 claude.ai에 연결하면 그대로 됩니다(https://claude.ai/connect-github, 저장소에 Claude GitHub 앱 설치).
+2. **저장소 연결**: Claude Code(웹/앱) 환경에 `kimyh1981/newsclipping`을 추가합니다. 저장소 루트의 `CLAUDE.md`를 Claude가 자동으로 읽습니다.
+3. **예약 작업(루틴) 다시 만들기**: 아래 두 루틴은 이전 Claude 계정에 묶여 있어 새 계정으로 따라오지 않습니다. 새 계정에서 같은 일을 하는 루틴을 만들고, 옛 계정 루틴은 끄세요(둘 다 켜져 있어도 15분 안 중복 실행은 건너뛰게 되어 있어 큰 문제는 없습니다).
+
+| 이름 | 일정 | 하는 일 |
+|---|---|---|
+| 뉴스클리핑 새벽 원고 깨우기 | `CRON_TZ=Asia/Seoul 27 4 * * 1-5` | main의 `pages.yml`("Deploy news site")을 workflow_dispatch로 실행. 15분 안에 시작된 pages 실행이 있으면 건너뜀 |
+| 뉴스클리핑 오후 원고 깨우기 | `CRON_TZ=Asia/Seoul 27 16 * * 1-5` | 같음 (오후판) |
+
+   GitHub의 예약 실행(cron)이 몇 시간씩 늦는 일이 있어서 두는 보조 장치입니다. `alarm.yml`도 같은 목적으로 전날 밤에 깨어 기다립니다.
+
+4. **프로젝트 공유 파일**: 이전 프로젝트에만 있던 문서를 [`docs/handoff/`](docs/handoff/)로 옮겨 두었습니다(농업영어 코너 컨셉, 언론사 후보 목록). 음성 샘플 mp3는 옮기지 않았습니다.
+
+## 2. 구조 한눈에
+
+```
+GitHub Actions (새벽·오후)                     폰/웹
+ tools/collect.js ── feeds.json                 android/ (Java, 갤럭시 앱)
+   ├ naver.js   : 신문 1면 / 주요뉴스 / 많이본뉴스   CarReceiver → NewsService(TTS)
+   ├ rss.js     : RSS, 구글뉴스 대체               Brief.java  (= js/brief.js)
+   ├ summarize.js: 본문 요약(기본 리드)             Pron.java   (= js/pron.js)
+   ├ holidays.js: 주말·공휴일 → briefing.txt 비움    Updater.java (앱 내 업데이트)
+   ├ tts.js + edge_tts_batch.py : audio/ 녹음      index.html + js/app.js (웹)
+   └ dist/ → GitHub Pages (briefing.json, briefing.txt, audio/, archive/, ios/)
+```
+
+- **서버·웹·앱이 같은 규칙을 두 번 구현**합니다. `js/brief.js` ↔ `Brief.java`, `js/pron.js` ↔ `Pron.java`. 한쪽을 바꾸면 다른 쪽도 바꾸고 `tests/fixtures`(script-*.txt, pron.json)로 둘을 맞춥니다.
+- 앱은 서버가 만든 `briefing.json`을 받아 사용자가 고른 언론사로 원고를 만들고, 녹음된 줄은 `audio/` 파일로, 나머지는 폰 TTS로 읽습니다.
+- 해외 키워드 뉴스(`Abroad.java`, `Countries.java`)는 앱에서 직접 구글 뉴스 검색 + 무료 구글 번역(gtx)으로 만듭니다.
+- 제품 공부·농업영어: `lessons/product.json`, `lessons/english.json`(`tools/make_english.py`로 생성, 음성 en-US-AndrewNeural -10%). 진행도는 폰에 저장(`Lessons.java`, `Prefs`). 평일 오전에만 붙습니다.
+
+## 3. 워크플로·배포
+
+| 파일 | 내용 |
+|---|---|
+| `pages.yml` | 테스트 → 수집 → 녹음 → Pages 배포. 새벽 cron(04:30~06:00 KST)·오후 cron(16:20~17:20 KST), push, dispatch. `concurrency: pages`, cancel-in-progress, 30분 타임아웃 |
+| `alarm.yml` | 전날 밤 깨어 기다렸다가 04:40·05:50 KST에 pages.yml을 dispatch |
+| `android.yml` | 앱 단위 테스트·APK 빌드. main이면 릴리스 `v<version.txt>-r<run번호>` 생성 → APK 링크 갱신 |
+| `news-check.yml` | PR마다 실제 출처를 불러 원고를 로그로 보여 줌 (샌드박스에서 뉴스 사이트에 못 들어가므로 여기서 실제 결과 확인) |
+
+- **앱 버전 규칙**: 앱을 바꾸는 PR마다 `android/version.txt`를 `1.<PR 번호>`로 올립니다. `versionCode`는 Actions run 번호라서 자동으로 증가합니다. 서버만 바꾸는 PR은 올리지 않아도 됩니다.
+- **서명 키**: `android/app/release.keystore` (저장소에 공개, 기본 비밀번호는 build.gradle 참고). 같은 키여야 기존 앱 위에 업데이트됩니다. 바꾸면 사용자가 앱을 지우고 다시 깔아야 합니다.
+- **앱 내 업데이트**: `Updater.java`가 releases/latest 태그의 버전과 설치된 versionCode를 비교해 PackageInstaller로 설치합니다.
+
+### 비밀값·변수 (이름만, 값은 저장소 Settings에 이미 있음)
+
+| 종류 | 이름 | 용도 |
+|---|---|---|
+| Secret | `DATA_GO_KR_KEY` | 공공데이터포털 특일 정보(공휴일). 2028-10-06까지 유효 |
+| Secret | `GOOGLE_TTS_KEY` | (선택) 구글 클라우드 TTS. 없으면 엣지 TTS |
+| Secret | `ANTHROPIC_API_KEY` | (선택) `SUMMARY_MODE=claude`일 때만. 기본은 안 씀(유료) |
+| Variable | `TTS_VOICE` | 서버 음성. 기본 `ko-KR-HyunsuMultilingualNeural`, 실패 시 `ko-KR-InJoonNeural` |
+| Variable | `TTS_ENGINE` | `off`면 녹음 안 함 |
+| Variable | `SUMMARY_MODE` | 기본 `lead`(본문 첫 문장) |
+| (선택) | `KEYSTORE_PASSWORD` | 서명 키 비밀번호를 바꿀 때 |
+
+Pages Source는 **GitHub Actions**로 설정되어 있어야 합니다.
+
+## 4. 개발 환경 제약 (Claude 클라우드 샌드박스)
+
+- 샌드박스에서는 **네이버·뉴스 사이트·구글에 접속이 안 됩니다**. 실제 수집 결과는 PR의 `news-check` 로그와 Actions 로그로 확인합니다.
+- **Android SDK가 없어** 로컬에서 APK를 못 만듭니다. `android.yml`이 빌드·테스트하며, 순수 자바 로직은 `android/app/src/test`의 단위 테스트로 확인합니다.
+- 서버 테스트: 처음에 `npm ci`, 그다음 `npm test` (네트워크 없이 동작, 71개). `npm ci`를 빼먹으면 4개가 실패합니다.
+- 실제 갤럭시·차량 테스트는 주인이 합니다. 변경 후 "실제 폰에서 아직 시험하지 못함"을 솔직하게 알립니다.
+
+## 5. 기능 이력 (요약)
+
+| PR | 버전 | 내용 |
+|---|---|---|
+| #1 | 1.0.2 | Personal-Project에서 이 저장소로 이전 (Pages 경로 충돌 때문) |
+| #14 | | '헤드라인' = 각 신문의 그날 **1면** 기사 (`tools/naver.js`) |
+| #20 | | `alarm.yml`, 스테레오 녹음(ffmpeg, 고음 낮춤), 아이폰 `?car` 화면 |
+| #27 | | 멈춘 pages 실행이 새벽 실행을 막던 문제 → cancel-in-progress + 30분 타임아웃 |
+| #28 | | 언론사별 고르게 선택, 스팸 거르기, 농업·비료 `demote` |
+| #30·#31 | | 숫자 읽기(`pron.js`=`Pron.java`), KBS 아나운서 투(사용자 선호: 한석준 아나운서 스타일), 모든 본문 녹음 |
+| #32·#33 | | edge-tts 7.3.1로 403 해결, 기본 음성 인준 |
+| #36 | 1.36 | 평일 제품 공부(20회) + 같은 회차 농업영어 |
+| #37 | 1.37 | 앱 내 업데이트, 설정 화면 스타일 팝업(`Sheet.java`), 자막 화면 넘기기 |
+| #38~#41 | 1.41 | 홈 = 재생 버튼 + 고른 언론사 로고 벽, 탭 5개, 신문 아이콘 |
+| #42~#46 | 1.46 | 해외 비료·농자재 시장 뉴스(바이오플랜 해외 영업용), 설치 막힘 안내, 국내/해외 농업 키워드 분리(GDP 상위 100개국, 대륙별) |
+| #47 | 1.47 | 서버 음성 현수 다국어(영어는 미국식), 나라별 화폐 읽기 |
+| #48 | 1.48 | 하루 두 번(오후판: 네이버 많이 본 뉴스, 저녁 인사, 공부는 오전만), 본문 재시도·다른 언론사 대체 |
+| #49 | 1.49 | 해외 키워드 뉴스 나라 간 중복 제거·현지 기사 우선, 해외 기사는 나라 이름으로 시작, 제미나이 닫히면 자동 이어 읽기 |
+
+자세한 내용은 각 PR 설명과 커밋 메시지를 보세요.
+
+## 6. 남은 일 / 확인할 것
+
+- **v1.49 실기기 확인 대기**: 제미나이 닫은 뒤 자동 이어 읽기, 해외 키워드 중복 제거. 주인 피드백을 기다리는 중.
+- **오후판 많이 본 뉴스 페이지 구조**: 샌드박스에서 확인 못 함. 순위를 못 읽으면 1면으로 대신하고 수집 기록에 남기게 되어 있으니 Actions 로그 확인.
+- **퇴근길 자동 재생**: 지금 자동 재생은 아침 6~8시만. 오후판도 차에 타면 자동으로 읽게 할지 주인에게 물어본 상태(답 없음).
+- 엣지 TTS는 비공식이라 언제든 막힐 수 있음. 막히면 edge-tts 버전부터 확인(10월 403은 7.3.1로 해결).
+- 새벽에 원고가 없으면: 먼저 'waiting'에 걸린 pages 실행이 없는지 확인.
+- 아이폰은 블루투스 감지 불가 → 단축어/`?car` 화면 방식 유지.
+
+## 7. 주인과 일하는 규칙
+
+- **소통은 한국어**, 쉬운 말로. 결과부터 말하기.
+- **"헤드라인"** = 각 언론사 **1면 주요 기사** (최신순·순위 아님).
+- 자동 재생: **평일 06~08시(KST), 공휴일 제외**가 기본.
+- **무료 우선**. 유료 API는 쓰지 않음(음성은 무료 MS 엣지 TTS).
+- 주인 폰은 **갤럭시**. 아이폰도 염두(단축어).
+- 웹에서 **최근 7일 원고**를 날짜로 골라 볼 수 있게 유지.
+- **머지 요청·머지 알림마다** PR 번호와 앱 버전을 괄호로 함께 쓰고, APK 링크를 붙입니다. 예:
+  > PR #50 (v1.50) 머지 부탁드립니다.
+  > APK: https://github.com/kimyh1981/newsclipping/releases/latest/download/newsclipping.apk
+  > 설치한 뒤 설정 탭 맨 아래가 "버전 1.50"인지 확인해 주세요.
+
+  서버만 바뀐 PR이면 "앱은 그대로"라고 알립니다.
+- PR은 Claude가 만들고, 빌드(android, news-check, pages 테스트)가 통과한 뒤 머지를 요청합니다. 머지는 주인이 합니다.
