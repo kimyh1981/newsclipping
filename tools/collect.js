@@ -208,7 +208,15 @@ async function readSource(src, log, lang, now = Date.now(), edition = 'morning')
   if (src.google) tries.push(['구글', googleUrl(src.google, src.when, src.edition || lang)]);
   for (const [kind, url] of tries) {
     try {
-      const items = rss.parseFeed(await get(url)).map((it) => ({ ...it, viaGoogle: url.startsWith('https://news.google.com/') }));
+      let items = rss.parseFeed(await get(url)).map((it) => ({ ...it, viaGoogle: url.startsWith('https://news.google.com/') }));
+      // 같은 제목이 세 번 이상이면 기사가 아니라 사이트 첫 화면이다 (구글 뉴스의 '한국무역신문, 주간무역' 18건)
+      const count = {};
+      for (const it of items) count[titleKey(it.title)] = (count[titleKey(it.title)] || 0) + 1;
+      const home = items.filter((it) => count[titleKey(it.title)] >= 3).length;
+      if (home) {
+        items = items.filter((it) => count[titleKey(it.title)] < 3);
+        log.push(`${src.name}: 같은 제목이 반복된 ${home}건(사이트 화면)을 뺌`);
+      }
       if (items.length) {
         log.push(`${src.name}: ${kind} ${items.length}건`);
         return items;

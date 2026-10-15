@@ -42,6 +42,16 @@ test('언론사 RSS가 막히면 구글 뉴스로 대신하고, 섹션끼리 겹
   assert.match(b.script, /농업신문 소식입니다\.\n벼 수확 한창\./);
 });
 
+// 한국무역신문: 구글 뉴스 21건 중 18건이 사이트 첫 화면 제목 '한국무역신문, 주간무역'이었다 (2026-10-16)
+test('같은 제목이 세 번 이상 나오면 기사가 아니라 사이트 화면으로 보고 뺀다', async (t) => {
+  const home = '한국무역신문, 주간무역 - 한국무역신문';
+  t.mock.method(globalThis, 'fetch', async () => new Response(feed(home, home, home, 'CPTPP 가입 안 해 수출품 경쟁력 하락 - 한국무역신문', home)));
+  const config = { sections: [{ id: 'economy', title: '경제 신문 헤드라인', perSourceLabel: true, limit: 5, sources: [{ id: 'weeklytrade', name: '한국무역신문', google: 'site:weeklytrade.co.kr', take: 2 }] }] };
+  const b = await collect(config, NOW);
+  assert.deepEqual(b.sections[0].sources[0].items.map((i) => i.title), ['CPTPP 가입 안 해 수출품 경쟁력 하락']);
+  assert.ok(b.log.includes('한국무역신문: 같은 제목이 반복된 4건(사이트 화면)을 뺌'));
+});
+
 test('하나도 못 가져오면 그 사실을 말해 준다', async (t) => {
   t.mock.method(globalThis, 'fetch', async () => { throw new Error('offline'); });
   const b = await collect({ sections: [{ id: 'a', title: '가', limit: 3, sources: [{ id: 'a', name: '가', url: 'https://a' }] }] }, NOW);
