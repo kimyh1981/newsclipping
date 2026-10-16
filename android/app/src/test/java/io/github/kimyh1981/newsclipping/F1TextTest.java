@@ -18,7 +18,7 @@ public class F1TextTest {
     @Test public void longTextIsChunkedBySentenceThenComma() {
         String s = "가".repeat(80) + ". " + "나".repeat(80) + ". " + "다".repeat(30);
         List<String> c = F1Text.chunks(s, 120);
-        assertEquals(3, c.size());
+        assertEquals(2, c.size()); // 81자 문장 둘은 나뉘고, 뒤의 30자는 120자 안이라 둘째 덩이에 붙는다
         for (String x : c) assertTrue(x, x.length() <= 120);
         assertEquals(1, F1Text.chunks("짧은 문장입니다.", 120).size());
         List<String> commas = F1Text.chunks("가".repeat(70) + ", " + "나".repeat(70) + ", " + "다".repeat(70), 120);
