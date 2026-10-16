@@ -187,6 +187,12 @@
           "default": false,
           "naver": "016",
           "front": true
+        },
+        {
+          "id": "weeklytrade",
+          "name": "한국무역신문",
+          "google": "site:weeklytrade.co.kr",
+          "take": 2
         }
       ]
     },
@@ -313,6 +319,13 @@
           "take": 2,
           "default": false,
           "when": "3d"
+        },
+        {
+          "id": "newsfm",
+          "url": "https://www.newsfm.kr/data/rss/news.xml",
+          "name": "영농자재신문",
+          "google": "site:newsfm.kr",
+          "take": 2
         }
       ]
     },
