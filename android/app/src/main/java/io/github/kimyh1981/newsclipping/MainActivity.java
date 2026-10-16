@@ -51,7 +51,7 @@ public class MainActivity extends Activity {
     private static final String SITE = "https://kimyh1981.github.io/newsclipping/";
     private static final String APK = "https://github.com/kimyh1981/newsclipping/releases/latest/download/newsclipping.apk";
     private Prefs prefs;
-    private TextView footer, permVal, batteryVal, overlayVal, carVal, timeVal, sourcesVal, orderVal, customVal, keywordsVal, fertVal, lessonVal, voiceVal, rateVal;
+    private TextView footer, permVal, batteryVal, overlayVal, carVal, timeVal, sourcesVal, orderVal, customVal, keywordsVal, fertVal, lessonVal, voiceVal, rateVal, f1Val;
     private Switch enabledSw, weekdaysSw, captionsSw;
     private ImageView playBtn;
     private TextToSpeech preview; // 목소리·빠르기를 고를 때 미리 들려준다
@@ -178,7 +178,8 @@ public class MainActivity extends Activity {
         captionsSw = switchRow(auto, "자막 화면 띄우기", on -> prefs.setCaptions(on), true);
         overlayVal = row(auto, "다른 앱 위에 표시 (자막 화면용)", v -> startActivity(new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:" + getPackageName()))), false);
 
-        LinearLayout listen = section(setPage, "듣기", "목소리와 빠르기는 고르는 동안 미리 들려 드립니다.");
+        LinearLayout listen = section(setPage, "듣기", "목소리와 빠르기는 고르는 동안 미리 들려 드립니다. F1 음성은 폰이 직접 만들어 읽는 자연스러운 목소리입니다(처음 한 번 약 400MB 받기).");
+        f1Val = row(listen, "F1 음성", v -> pickF1(), true);
         voiceVal = row(listen, "목소리", v -> withPreview(this::pickVoice), true);
         rateVal = row(listen, "말 빠르기", v -> withPreview(this::pickRate), false);
 
@@ -409,6 +410,7 @@ public class MainActivity extends Activity {
         fertVal.setText(prefs.abroadCountries().size() + "개국" + (prefs.abroadKeywords().isEmpty() ? "" : " · " + String.join(", ", prefs.abroadKeywords())));
         lessonVal.setText(!prefs.lessonOn() && !prefs.englishOn() ? "끔" : (prefs.lessonRound() > 1 ? prefs.lessonRound() + "바퀴 · " : "") + prefs.lessonDone().size() + "회 완료");
         voiceVal.setText(prefs.voice().isEmpty() ? "자동" : "직접 고름");
+        f1Val.setText(f1Label());
         rateVal.setText(Rules.rateLabel(prefs.rate()));
         enabledSw.setChecked(prefs.enabled());
         weekdaysSw.setChecked(prefs.weekdaysOnly());
@@ -1234,6 +1236,87 @@ public class MainActivity extends Activity {
                 .setPositiveButton("저장", (d, w) -> { preview.stop(); prefs.setRate(Rules.RATES[choice[0]]); refresh(); })
                 .setNegativeButton("취소", (d, w) -> preview.stop())
                 .show();
+    }
+
+    /** F1 음성 행의 값: 받는 중 · 켬 · 끔 */
+    private String f1Label() {
+        if (F1Voice.progress >= 0) return "받는 중 " + F1Voice.progress + "%";
+        if (!F1Voice.ready(this)) return F1Voice.error.isEmpty() ? "끔" : "받기 실패";
+        if (!prefs.f1On()) return "끔 (받아 둠)";
+        float x = prefs.f1Speed();
+        return x > 0 ? String.format(Locale.KOREA, "켬 · %.1f배 빠름", x) : "켬";
+    }
+
+    private void pickF1() {
+        if (F1Voice.progress >= 0) {
+            new Sheet(this).setMessage("F1 목소리를 받는 중입니다 (" + F1Voice.progress + "%). 다 받으면 저절로 켜집니다.").setPositiveButton("확인", null).show();
+            return;
+        }
+        if (!F1Voice.ready(this)) {
+            String why = F1Voice.error.isEmpty() ? "" : "\n\n지난번에 받지 못했습니다: " + F1Voice.error;
+            new Sheet(this)
+                    .setTitle("F1 음성 받기")
+                    .setMessage("자연스러운 F1 목소리를 폰에 받습니다. 약 " + F1Voice.TOTAL_MB + "MB라 와이파이에서 받으세요. 받은 뒤에는 인터넷 없이도 F1으로 읽고, 서버 녹음은 받지 않습니다." + why)
+                    .setPositiveButton("받기", (d, w) -> downloadF1())
+                    .setNegativeButton("취소", null)
+                    .show();
+            return;
+        }
+        new Sheet(this)
+                .setTitle("F1 음성")
+                .setMessage("켜면 뉴스를 F1 목소리로 읽습니다. 만들기가 늦거나 안 되면 그 줄만 폰 음성으로 읽습니다." + (prefs.f1Speed() > 0 ? String.format(Locale.KOREA, "\n\n이 폰 속도: 실시간의 %.1f배 (1배보다 커야 끊기지 않습니다)", prefs.f1Speed()) : ""))
+                .setPositiveButton(prefs.f1On() ? "끄기" : "켜기", (d, w) -> { prefs.setF1On(!prefs.f1On()); refresh(); })
+                .setNeutralButton("미리 듣기", (d, w) -> previewF1())
+                .setNegativeButton("모델 지우기", (d, w) -> { prefs.setF1On(false); F1Voice.delete(this); refresh(); })
+                .show();
+    }
+
+    private void downloadF1() {
+        new Thread(() -> {
+            boolean ok = F1Voice.download(this);
+            runOnUiThread(() -> {
+                if (ok) { prefs.setF1On(true); previewF1(); }
+                refresh();
+            });
+        }).start();
+        tickF1();
+    }
+
+    /** 받는 동안 1초마다 진행률을 고친다 */
+    private void tickF1() {
+        refresh();
+        if (F1Voice.progress >= 0) f1Val.postDelayed(this::tickF1, 1000);
+    }
+
+    /** 견본 한 문장을 F1으로 만들어 들려주고 이 폰의 속도를 잰다 */
+    private void previewF1() {
+        f1Val.setText("준비 중…");
+        new Thread(() -> {
+            String msg;
+            try {
+                F1Engine e = F1Voice.engine(this);
+                if (e == null) throw new IllegalStateException(F1Voice.error);
+                long t = System.currentTimeMillis();
+                float[] pcm = e.synth(Pron.say(Voices.SAMPLE), "ko", F1Voice.speed(prefs.rate()));
+                float x = pcm.length / (float) e.sampleRate / Math.max(0.001f, (System.currentTimeMillis() - t) / 1000f);
+                prefs.setF1Speed(x);
+                java.io.File f = new java.io.File(getCacheDir(), "f1-preview.wav");
+                F1Engine.writeWav(pcm, e.sampleRate, f);
+                android.media.MediaPlayer mp = new android.media.MediaPlayer();
+                mp.setDataSource(f.getPath());
+                mp.setOnCompletionListener(android.media.MediaPlayer::release);
+                mp.prepare();
+                mp.start();
+                msg = null;
+            } catch (Throwable ex) {
+                msg = "F1 음성을 만들지 못했습니다: " + ex.getMessage();
+            }
+            String m = msg;
+            runOnUiThread(() -> {
+                refresh();
+                if (m != null) new Sheet(this).setMessage(m).setPositiveButton("확인", null).show();
+            });
+        }).start();
     }
 
     private TextView text(String s, int sp, int color) {

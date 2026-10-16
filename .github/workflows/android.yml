@@ -41,3 +41,39 @@ jobs:
         run: |
           tag="v$(tr -d '[:space:]' < android/version.txt)-r${GITHUB_RUN_NUMBER}" # 앱 화면의 버전 + 배포 번호
           gh release create "$tag" newsclipping.apk --title "뉴스클리핑 $tag" --notes "갤럭시(안드로이드)용 앱. 휴대폰에서 newsclipping.apk를 받아 설치합니다." --latest
+
+  # F1 음성: 앱의 엔진 코드(F1Engine·F1Text·Pron)를 PC용 ONNX Runtime으로 그대로 돌려 실제 모델로 소리를 만들고, 받아쓰기로 확인한다
+  f1-live:
+    if: github.event_name != 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: actions/cache@v4
+        with:
+          path: f1model
+          key: f1-supertonic3-aafc6e3
+      - name: Model and libraries
+        run: |
+          base=https://huggingface.co/supertone-oss-archive/supertonic-3/resolve/aafc6e32416a594460b32413efc49d7fe4ce6d46
+          for f in onnx/tts.json onnx/unicode_indexer.json voice_styles/F1.json onnx/duration_predictor.onnx onnx/text_encoder.onnx onnx/vocoder.onnx onnx/vector_estimator.onnx; do
+            [ -s "f1model/$f" ] || curl -sSfL --create-dirs -o "f1model/$f" "$base/$f"
+          done
+          curl -sSfL -o /tmp/ort.jar https://repo1.maven.org/maven2/com/microsoft/onnxruntime/onnxruntime/1.23.1/onnxruntime-1.23.1.jar
+          curl -sSfL -o /tmp/json.jar https://repo1.maven.org/maven2/org/json/json/20240303/json-20240303.jar
+      - name: F1 from the app's engine code
+        run: |
+          J=android/app/src/main/java/io/github/kimyh1981/newsclipping
+          javac -encoding UTF-8 -nowarn -d /tmp/f1 -cp /tmp/ort.jar:/tmp/json.jar $J/F1Engine.java $J/F1Text.java $J/Pron.java android/app/src/test/java/io/github/kimyh1981/newsclipping/F1Live.java
+          java -cp /tmp/f1:/tmp/ort.jar:/tmp/json.jar io.github.kimyh1981.newsclipping.F1Live f1model f1.wav "좋은 아침입니다. 10월 16일 금요일, 출근길 뉴스 브리핑입니다." "이날 삼성전자는 9.48% 급락한 21만원에 거래를 마쳤다." "이대통령 지지율, 2%p 올라 39%."
+      - name: Transcribe
+        run: |
+          pip install -q faster-whisper "av==14.2.0" # 최신 av는 faster-whisper가 쓰는 인자를 뺐다 (2026-10-16 실패)
+          python -c "from faster_whisper import WhisperModel; m=WhisperModel('small', device='cpu', compute_type='int8'); s,_=m.transcribe('f1.wav', language='ko'); print('받아쓰기:', ' '.join(x.text for x in s))"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: f1-live
+          path: f1.wav

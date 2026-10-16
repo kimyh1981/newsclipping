@@ -15,6 +15,8 @@ android {
         // 보이는 버전은 android/version.txt (1.<PR 번호>). PR마다 올려서 머지 안내의 'PR #N (v1.N)'과 앱 화면 버전이 같게 한다
         versionName rootProject.file('version.txt').text.trim()
         // 뉴스 브리핑(언론사별 기사) 주소. 다른 곳에 배포하면 NEWS_URL 환경 변수로 바꾼다
+        // F1 음성 엔진(ONNX Runtime)은 갤럭시(64비트 ARM)용만 넣는다: 앱 크기를 줄이려고
+        ndk { abiFilters 'arm64-v8a' }
         buildConfigField 'String', 'NEWS_URL', "\"${System.getenv('NEWS_URL') ?: 'https://kimyh1981.github.io/newsclipping/briefing.json'}\""
     }
 
@@ -50,6 +52,8 @@ android {
 }
 
 dependencies {
+    // F1 음성(Supertonic-3)을 폰에서 만드는 엔진
+    implementation 'com.microsoft.onnxruntime:onnxruntime-android:1.23.1'
     testImplementation 'junit:junit:4.13.2'
     // 안드로이드에 들어 있는 org.json을 JVM 단위 테스트에서도 쓰려면 실제 구현이 필요하다
     testImplementation 'org.json:json:20240303'

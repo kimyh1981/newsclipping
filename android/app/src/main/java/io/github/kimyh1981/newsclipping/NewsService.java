@@ -84,6 +84,15 @@ public class NewsService extends Service {
      *  (음성 엔진의 addSpeech는 엔진 앱이 이 앱의 파일을 읽지 못해 소리 없이 건너뛴다) */
     private final Map<String, File> clips = new ConcurrentHashMap<>();
     private ExecutorService pool;
+    /** F1 목소리(폰에서 만듦)로 읽는다: 모델을 받아 두고 설정에서 켰을 때. 다음 차례 몇 개를 미리 만들어 둔다 (주인 요청 2026-10-16) */
+    private volatile boolean useF1;
+    private ExecutorService f1Pool;
+    /** 차례 글자(+언어) → 만들고 있는/만든 소리 파일 */
+    private final Map<String, Future<File>> f1Jobs = new ConcurrentHashMap<>();
+    private File f1Dir;
+    private static final int F1_AHEAD = 3;
+    /** 다음 차례가 이만큼 안에 안 만들어지면 그 차례만 폰 음성으로 */
+    private static final long F1_WAIT_MS = 20000;
     /** 읽을 차례들과 지금 차례. 한 차례가 끝나면 다음 차례를 튼다 */
     private List<Step> queue = new ArrayList<>();
     private int pos;
@@ -352,7 +361,10 @@ public class NewsService extends Service {
         }
         if (!manual && lessonOnly == 0) new Prefs(this).markPlayed();
         List<Brief.Line> ready = script;
-        if (brief != null) fetchClips(brief, ready);
+        // F1을 켰으면 서버 녹음은 받지 않고 폰에서 만든다. 엔진은 여기서(화면 밖 스레드) 미리 띄운다. 못 띄우면 예전처럼
+        useF1 = new Prefs(this).f1On() && F1Voice.ready(this) && F1Voice.engine(this) != null;
+        if (useF1) startF1();
+        else if (brief != null) fetchClips(brief, ready);
         main.post(() -> speak(ready));
     }
 
@@ -482,6 +494,8 @@ public class NewsService extends Service {
     /** 지금 읽던 것을 끊고 steps를 처음부터 읽는다 */
     private void play(List<Step> steps) {
         halt();
+        // 건너뛰면 아직 시작 안 한 F1 만들기는 버린다: 새 자리의 차례부터 만들게
+        for (Map.Entry<String, Future<File>> e : f1Jobs.entrySet()) if (!e.getValue().isDone() && e.getValue().cancel(false)) f1Jobs.remove(e.getKey());
         queue = steps;
         pos = 0;
         advance();
@@ -513,8 +527,17 @@ public class NewsService extends Service {
         if (s.id.startsWith("Q")) new Prefs(this).markLessonDone(Integer.parseInt(s.id.substring(1, s.id.indexOf('.'))));
         if (s.silence > 0) { main.postDelayed(afterSilence, s.silence); return; }
         showCaption(s);
+        if (useF1) {
+            for (int k = pos - 1; k < Math.min(queue.size(), pos - 1 + F1_AHEAD); k++) f1Job(queue.get(k));
+            if (playF1(s, gen, System.currentTimeMillis())) return;
+        }
         File f = clips.get(s.text);
         if (f != null && playClip(f)) return;
+        speakPhone(s);
+    }
+
+    /** 폰 음성으로 한 차례 */
+    private void speakPhone(Step s) {
         boolean en = isEnglish(s);
         if (en != phoneEnglish) { // 농업영어의 영어 줄은 폰 음성도 영어로 (녹음이 없을 때)
             phoneEnglish = en;
@@ -522,6 +545,51 @@ public class NewsService extends Service {
             else { tts.setLanguage(Locale.KOREAN); Voices.apply(tts, new Prefs(this)); }
         }
         tts.speak(en ? s.text : Pron.say(s.text), TextToSpeech.QUEUE_FLUSH, speakParams, gen + ":" + s.id); // 자막은 쓴 글, 소리는 들리는 대로
+    }
+
+    private void startF1() {
+        f1Dir = new File(getCacheDir(), "f1clips");
+        deleteTree(f1Dir); // 지난번에 만든 소리는 지운다
+        f1Dir.mkdirs();
+        f1Pool = Executors.newSingleThreadExecutor(); // 엔진이 안에서 여러 코어를 쓴다: 한 번에 하나씩
+    }
+
+    /** 이 차례의 F1 소리 만들기 (이미 맡겼으면 그것). 쉼 차례는 null */
+    private Future<File> f1Job(Step s) {
+        if (s.silence > 0 || s.text.isEmpty() || f1Pool == null || f1Pool.isShutdown()) return null;
+        boolean en = isEnglish(s);
+        String key = (en ? "en|" : "ko|") + s.text;
+        return f1Jobs.computeIfAbsent(key, k -> f1Pool.submit(() -> {
+            F1Engine e = F1Voice.engine(this);
+            if (e == null || stopped) return null;
+            File out = new File(f1Dir, Brief.audioId(k) + ".wav");
+            if (out.exists()) return out;
+            long t = System.currentTimeMillis();
+            float[] pcm = e.synth(en ? s.text : Pron.say(s.text), en ? "en" : "ko", F1Voice.speed(new Prefs(this).rate()));
+            F1Engine.writeWav(pcm, e.sampleRate, out);
+            float x = pcm.length / (float) e.sampleRate / Math.max(0.001f, (System.currentTimeMillis() - t) / 1000f);
+            new Prefs(this).setF1Speed(x);
+            Log.i(TAG, "F1 " + s.text.length() + "자 · 실시간의 " + String.format(Locale.ROOT, "%.1f", x) + "배");
+            return out;
+        }));
+    }
+
+    /** F1 소리로 튼다. 아직 만드는 중이면 기다렸다가(F1_WAIT_MS까지) 틀고, 못 만들면 false (폰 음성으로) */
+    private boolean playF1(Step s, int g, long since) {
+        Future<File> job = f1Job(s);
+        if (job == null) return false;
+        if (!job.isDone()) {
+            if (System.currentTimeMillis() - since > F1_WAIT_MS) { Log.w(TAG, "F1이 늦어 이 차례는 폰 음성으로"); return false; }
+            main.postDelayed(() -> { if (g == gen && !stopped && !paused && !playF1(s, g, since)) speakPhone(s); }, 80);
+            return true;
+        }
+        try {
+            File f = job.get();
+            return f != null && playClip(f);
+        } catch (Exception e) {
+            Log.w(TAG, "F1 만들기 실패, 폰 음성으로: " + e);
+            return false;
+        }
     }
 
     /** 폰 음성이 지금 영어로 맞춰져 있나 */
@@ -984,6 +1052,7 @@ public class NewsService extends Service {
         main.removeCallbacks(afterSilence);
         releasePlayer();
         if (pool != null) pool.shutdownNow();
+        if (f1Pool != null) f1Pool.shutdownNow();
         if (hold != null) { hold.release(); hold = null; }
         if (tts != null) { tts.stop(); tts.shutdown(); tts = null; }
         if (session != null) { session.setActive(false); session.release(); session = null; }

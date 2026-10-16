@@ -129,6 +129,13 @@ final class Prefs {
     String voice() { return p.getString("voice", ""); }
     void setVoice(String name) { p.edit().putString("voice", name).apply(); }
 
+    /** F1 목소리(폰에서 실시간으로 만듦)로 읽기. 모델을 받아 둬야 실제로 쓴다 */
+    boolean f1On() { return p.getBoolean("f1", false); }
+    void setF1On(boolean on) { p.edit().putBoolean("f1", on).apply(); }
+    /** 마지막으로 잰 F1 속도: 실시간의 몇 배 (1보다 커야 끊기지 않는다). 안 쟀으면 0 */
+    float f1Speed() { return p.getFloat("f1Speed", 0f); }
+    void setF1Speed(float x) { p.edit().putFloat("f1Speed", x).apply(); }
+
     /** 말 빠르기, 보통 = 100 */
     int rate() { return p.getInt("rate", 100); }
     void setRate(int rate) { p.edit().putInt("rate", rate).apply(); }
