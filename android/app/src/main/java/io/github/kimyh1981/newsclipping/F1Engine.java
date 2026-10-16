@@ -41,7 +41,7 @@ final class F1Engine implements AutoCloseable {
     private final Random rng = new Random();
 
     /** dir: onnx/ 와 voice_styles/ 가 든 폴더 (허깅페이스 supertone-oss-archive/supertonic-3 와 같은 모양) */
-    F1Engine(File dir) throws IOException, OrtException {
+    F1Engine(File dir) throws Exception { // 안드로이드의 JSONException은 확인 예외라 함께 넘긴다
         JSONObject cfg = json(new File(dir, "onnx/tts.json"));
         sampleRate = cfg.getJSONObject("ae").getInt("sample_rate");
         baseChunkSize = cfg.getJSONObject("ae").getInt("base_chunk_size");
@@ -165,7 +165,7 @@ final class F1Engine implements AutoCloseable {
         }
     }
 
-    private OnnxTensor styleTensor(JSONObject s) throws OrtException {
+    private OnnxTensor styleTensor(JSONObject s) throws Exception {
         JSONArray dims = s.getJSONArray("dims");
         long[] shape = {dims.getLong(0), dims.getLong(1), dims.getLong(2)};
         float[] data = new float[(int) (shape[0] * shape[1] * shape[2])];
@@ -190,5 +190,5 @@ final class F1Engine implements AutoCloseable {
     }
 
     private static String read(File f) throws IOException { return new String(Files.readAllBytes(f.toPath()), StandardCharsets.UTF_8); }
-    private static JSONObject json(File f) throws IOException { return new JSONObject(read(f)); }
+    private static JSONObject json(File f) throws Exception { return new JSONObject(read(f)); }
 }
