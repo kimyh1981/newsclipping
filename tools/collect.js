@@ -436,11 +436,12 @@ if (require.main === module) {
     });
     // 제품 공부 원고(평일 뉴스 뒤 한 회씩, 어느 회를 읽을지는 기기가 진도에 따라 고른다)
     b.lessons = lessons();
-    // 원고 줄을 신경망 음성으로 미리 녹음 (기본: 무료 MS 엣지 음성, GOOGLE_TTS_KEY가 있으면 구글, TTS_ENGINE=off면 안 함). 녹음이 없으면 앱이 폰 음성으로 읽는다
-    const key = process.env.GOOGLE_TTS_KEY || '';
+    // 원고 줄을 신경망 음성으로 미리 녹음 (기본: 무료 MS 엣지 음성, TYPECAST_API_KEY가 있으면 타입캐스트, GOOGLE_TTS_KEY가 있으면 구글, TTS_ENGINE으로 고정·off). 녹음이 없으면 앱이 폰 음성으로 읽는다
+    const engine = process.env.TTS_ENGINE || (process.env.TYPECAST_API_KEY ? 'typecast' : process.env.GOOGLE_TTS_KEY ? 'google' : 'edge');
+    const key = (engine === 'typecast' ? process.env.TYPECAST_API_KEY : process.env.GOOGLE_TTS_KEY) || '';
     b.audio = await tts.record(b, {
-      out, key, engine: process.env.TTS_ENGINE || (key ? 'google' : 'edge'), cache: process.env.TTS_CACHE || '', voice: process.env.TTS_VOICE || '',
-      budget: Number(process.env.TTS_DAILY_CHARS) || 0, log: b.log, run: limiter(4),
+      out, key, engine, cache: process.env.TTS_CACHE || '', voice: process.env.TTS_VOICE || '',
+      budget: Number(process.env.TTS_DAILY_CHARS) || 0, log: b.log, run: limiter(Number(process.env.TTS_CONCURRENCY) || (engine === 'typecast' ? 2 : 4)), fallback: 'edge', // 유료 음성이 못 한 줄은 엣지 음성으로
     });
     fs.writeFileSync(path.join(out, 'briefing.json'), JSON.stringify(b, null, 1));
     fs.writeFileSync(path.join(out, 'briefing.txt'), speechText(b));

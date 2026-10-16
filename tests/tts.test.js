@@ -139,3 +139,61 @@ test('제품 공부와 농업영어: 영어 줄은 영어 목소리로, 한국�
   const ko = jobs.find((j) => j.id === audioId(brief.lessonIntro(1, b.lessons.product.episodes[0].title)));
   assert.equal(ko.voice, undefined);
 });
+
+test('유료 음성이 한도(429)를 넘기면 쉬었다가 다시 보내고, 계속 막히거나 한도·시간을 넘긴 줄은 엣지로 채운다 (2026-10-16 구글 203줄 사고)', async () => {
+  const all = wanted(B).filter(([, , en]) => !en);
+  let calls = 0;
+  const synth = async (text) => { calls++; if (calls % 3 === 0) { const e = new Error('HTTP 429 RESOURCE_EXHAUSTED'); e.status = 429; throw e; } return Buffer.from(text); };
+  const edged = [];
+  const batch = (jobs, voice) => { for (const j of jobs) { edged.push({ voice, j }); fs.writeFileSync(j.file, 'mp3'); } return {}; };
+  const waits = [];
+  const log = [];
+  const a = await record(B, { out: tmp(), key: 'k', engine: 'google', voice: 'v', budget: 400, fallback: 'edge', log, run, synth, batch, wait: async (ms) => { waits.push(ms); } });
+  assert.ok(waits.length > 0, '429면 쉬었다가 다시');
+  assert.ok(edged.length > 0 && edged.every((e) => e.voice === 'ko-KR-HyunsuMultilingualNeural'));
+  assert.equal(a.ids.length, wanted(B).length, '모든 줄이 녹음됨 (유료 + 엣지)');
+  assert.match(log.join('\n'), /엣지 음성으로 채운 줄 \d+/);
+  assert.ok(all.length > edged.length);
+});
+
+test('타입캐스트: 이름으로 목소리를 찾고, 크레딧이 떨어지면(402) 멈춰 남은 줄을 엣지로, 읽을 수 없는 줄(422)은 그 줄만 엣지로', async () => {
+  let found = '';
+  const findVoice = async (key, name) => { found = name; return 'tc_jain'; };
+  const voices = [];
+  let n = 0;
+  const synth = async (text, key, v) => {
+    voices.push(v); n++;
+    if (n === 2) { const e = new Error('HTTP 422 TEXT_NOT_SYNTHESIZABLE'); e.status = 422; throw e; }
+    if (n === 6) { const e = new Error('HTTP 402 Insufficient credit'); e.status = 402; throw e; }
+    return Buffer.from(text);
+  };
+  const edged = [];
+  const batch = (jobs) => { for (const j of jobs) { edged.push(j); fs.writeFileSync(j.file, 'mp3'); } return {}; };
+  const log = [];
+  let chain = Promise.resolve();
+  const serial = (f) => (chain = chain.then(f));
+  const a = await record(B, { out: tmp(), key: 'k', engine: 'typecast', fallback: 'edge', log, run: serial, synth, batch, findVoice, wait: async () => {} });
+  assert.equal(found, '자인');
+  assert.ok(voices.every((v) => v === 'tc_jain'));
+  assert.equal(n, 6, '402 뒤로는 타입캐스트에 더 보내지 않는다');
+  assert.equal(a.ids.length, wanted(B).length);
+  assert.match(log.join('\n'), /키나 설정 문제로 멈춤 \(HTTP 402/);
+  assert.match(log.join('\n'), /음성 녹음 실패 \(HTTP 422/);
+  assert.equal(a.voice, 'tc_jain');
+});
+
+test('타입캐스트: 목소리를 못 찾으면 전부 엣지로, 정해진 시간이 지나면 남은 줄을 엣지로', async () => {
+  const batch = (jobs) => { for (const j of jobs) fs.writeFileSync(j.file, 'mp3'); return {}; };
+  const log = [];
+  let calls = 0;
+  const findVoice = async () => { const e = new Error("목소리 '자인'를 목록에서 못 찾음"); e.status = 404; throw e; };
+  const a = await record(B, { out: tmp(), key: 'k', engine: 'typecast', fallback: 'edge', log, run, batch, findVoice, synth: async () => { calls++; return Buffer.from('x'); } });
+  assert.equal(calls, 0);
+  assert.equal(a.ids.length, wanted(B).length);
+  assert.match(log.join('\n'), /목소리를 못 정함/);
+  const log2 = [];
+  const b2 = await record(B, { out: tmp(), key: 'k', engine: 'typecast', fallback: 'edge', minutes: -1, log: log2, run, batch, findVoice: async () => 'tc_x', synth: async () => { calls++; return Buffer.from('x'); } });
+  assert.equal(calls, 0, '시간이 이미 지났으면 타입캐스트에 보내지 않는다');
+  assert.equal(b2.ids.length, wanted(B).length);
+  assert.match(log2.join('\n'), /분을 넘겨 남은 줄은 엣지로/);
+});
