@@ -67,6 +67,7 @@ public class MainActivity extends Activity {
     private Updater.Release update;
     /** 홈 화면 언론사 로고와, 로고를 고르려고 받아 둔 오늘 뉴스 목록 */
     private LogoWall logos;
+    private ChapterBar bar;
     private String briefJson;
     private boolean loadingLogos;
     private boolean updating;
@@ -148,9 +149,26 @@ public class MainActivity extends Activity {
         nav.addView(new View(this), new LinearLayout.LayoutParams(dp(10), 1));
         nav.addView(iconPill(Glyph.NEXT, "다음 기사", card, tint, v -> NewsService.control(NewsService.ACTION_NEXT)), new LinearLayout.LayoutParams(0, dp(64), 1f));
         col.addView(nav, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
+        // 진행바: 섹션마다 끊어 보이고, 끌면 그 언론사 로고가 커지고, 놓으면 거기부터 읽는다 (홈 화면의 핵심, 주인 요청 2026-10-17)
+        bar = new ChapterBar(this, tint, separator);
+        bar.setListener(new ChapterBar.Listener() {
+            @Override public void onScrub(int line) {
+                Chapters c = NewsService.chapters();
+                if (line < 0 || c == null) showProgress();
+                else logos.setFocus(c.site(line));
+            }
+            @Override public void onSeek(int line) {
+                Chapters c = NewsService.chapters();
+                if (c != null) logos.setFocus(c.site(line));
+                NewsService.seek(line);
+            }
+        });
+        LinearLayout.LayoutParams bl = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        bl.topMargin = dp(12);
+        col.addView(bar, bl);
         logos = new LogoWall(this, dark, separator);
         LinearLayout.LayoutParams ll = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f);
-        ll.topMargin = dp(16);
+        ll.topMargin = dp(4);
         col.addView(logos, ll);
 
         // ── 뉴스설정 탭 ──
@@ -249,7 +267,9 @@ public class MainActivity extends Activity {
     protected void onResume() {
         super.onResume();
         NewsService.onStateChange = this::showPlayState;
+        NewsService.onProgress = this::showProgress;
         showPlayState();
+        showProgress();
         refresh();
         checkUpdate();
         loadLogos();
@@ -407,6 +427,16 @@ public class MainActivity extends Activity {
     protected void onPause() {
         NewsService.onStateChange = null;
         super.onPause();
+    }
+
+    /** 진행바와 로고: 지금 읽는 줄까지 칠하고, 그 줄의 언론사 로고를 키운다 (끄는 중에는 손가락이 정한다) */
+    private void showProgress() {
+        if (bar == null || logos == null) return;
+        Chapters c = NewsService.chapters();
+        int line = NewsService.progressLine();
+        if (bar.dragging()) return;
+        bar.set(c, line);
+        logos.setFocus(c == null || line < 0 ? null : c.site(line));
     }
 
     private void showPlayState() {

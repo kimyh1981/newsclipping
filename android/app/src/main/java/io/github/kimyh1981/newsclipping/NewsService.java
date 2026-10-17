@@ -35,6 +35,7 @@ import java.nio.charset.StandardCharsets;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -227,6 +228,44 @@ public class NewsService extends Service {
     /** 읽는 중이 아니면 null */
     static Caption caption() { return running == null ? null : caption; }
 
+    // ── 홈 화면 진행바 (주인 요청 2026-10-17): 지금 원고의 토막·언론사, 지금 읽는 줄, 그 줄로 건너뛰기 ──
+    private static volatile Chapters chapters;
+    private static volatile int progressLine = -1;
+    /** 읽는 줄이 바뀌거나(건너뛰기 포함) 읽기가 끝날 때 화면에서 부른다 */
+    static Runnable onProgress;
+
+    /** 읽는 중이 아니면 null */
+    static Chapters chapters() { return running == null ? null : chapters; }
+
+    /** 지금 읽는 원고 줄 (모르면 -1) */
+    static int progressLine() { return running == null ? -1 : progressLine; }
+
+    private static void progressChanged() {
+        Runnable r = onProgress;
+        if (r != null) new Handler(Looper.getMainLooper()).post(r);
+    }
+
+    /** 진행바를 끌다 놓은 줄부터 다시 읽는다 */
+    static void seek(int line) {
+        NewsService s = running;
+        if (s != null) s.main.post(() -> { if (running == s && s.tts != null && !s.lines.isEmpty()) s.jump(line); });
+    }
+
+    /** 기사 → 언론사 누리집 (로고 벽의 열쇠): 그 기사가 든 언론사의 누리집, 모르면 같은 이름 언론사의 누리집 */
+    private static java.util.function.Function<Brief.Item, String> siteOf(Brief b) {
+        Map<Brief.Item, String> byItem = new java.util.IdentityHashMap<>();
+        Map<String, String> byName = new HashMap<>();
+        if (b != null) for (Brief.Section sec : b.sections) for (Brief.Source src : sec.sources) {
+            if (src.site.isEmpty()) continue;
+            byName.putIfAbsent(src.name, src.site);
+            for (Brief.Item it : src.items) byItem.put(it, src.site);
+        }
+        return it -> {
+            String s = byItem.get(it);
+            return s != null ? s : byName.getOrDefault(it.source, "");
+        };
+    }
+
     /** 앱 화면의 이전·전체 듣기·다음 버튼 */
     static void control(String action) {
         NewsService s = running;
@@ -367,6 +406,8 @@ public class NewsService extends Service {
         useF1 = new Prefs(this).f1On() && F1Voice.ready(this) && F1Voice.engine(this) != null;
         if (useF1) startF1();
         else if (brief != null) fetchClips(brief, ready);
+        chapters = Chapters.of(ready, siteOf(brief));
+        progressLine = -1;
         main.post(() -> speak(ready));
     }
 
@@ -525,6 +566,8 @@ public class NewsService extends Service {
             int i = Integer.parseInt(s.id.substring(1, s.id.indexOf('.')));
             current = i;
             showLine(i);
+            progressLine = i;
+            progressChanged();
         }
         if (s.id.startsWith("Q")) new Prefs(this).markLessonDone(Integer.parseInt(s.id.substring(1, s.id.indexOf('.'))));
         if (s.silence > 0) { main.postDelayed(afterSilence, s.silence); return; }
@@ -720,6 +763,8 @@ public class NewsService extends Service {
         int start = i;
         if (i > 0 && lines.get(i).item != null && lines.get(i - 1).item == null && lines.get(i - 1).text.endsWith("소식입니다.")) start = i - 1;
         current = i;
+        progressLine = start;
+        progressChanged();
         if (paused) { showLine(i); return; } // 멈춤 중에는 위치만 옮기고, 이어 듣기로 거기서 시작
         play(stepsFrom(start));
     }
@@ -1064,7 +1109,7 @@ public class NewsService extends Service {
         if (audio != null && playbackWatch != null) audio.unregisterAudioPlaybackCallback(playbackWatch);
         if (audio != null && modeWatch != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) audio.removeOnModeChangedListener((AudioManager.OnModeChangedListener) modeWatch);
         if (audio != null && focus != null) audio.abandonAudioFocusRequest(focus);
-        if (running == this) running = null;
+        if (running == this) { running = null; chapters = null; progressLine = -1; progressChanged(); }
         caption = null;
         stateChanged();
         stopForeground(STOP_FOREGROUND_REMOVE);
