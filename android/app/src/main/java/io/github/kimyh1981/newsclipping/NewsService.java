@@ -1116,7 +1116,7 @@ public class NewsService extends Service {
 
     /** percent: 받은 만큼(0~100)을 알려 준다 (홈 화면 당겨서 새로 받기). 크기를 알도록 압축 없이 받는다 */
     static String fetch(String url, java.util.function.IntConsumer percent) throws Exception {
-        HttpURLConnection c = (HttpURLConnection) new URL(url + "?t=" + System.currentTimeMillis()).openConnection();
+        HttpURLConnection c = (HttpURLConnection) new URL(url + (url.contains("?") ? "&" : "?") + "t=" + System.currentTimeMillis()).openConnection();
         c.setConnectTimeout(15000);
         c.setReadTimeout(20000);
         c.setUseCaches(false);
