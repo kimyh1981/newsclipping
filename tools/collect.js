@@ -152,6 +152,17 @@ async function get(url, { ua = UA, timeout = 15e3 } = {}) {
   return decode(new Uint8Array(await res.arrayBuffer()), res.headers.get('content-type') || '');
 }
 
+// RSS·검색 결과: 연결이 안 되거나 시간 초과면 쉬었다가 한 번 더 (2026-10-17: 영농자재신문 RSS가 새벽에만 시간 초과)
+async function getFeed(url) {
+  try {
+    return await get(url);
+  } catch (err) {
+    if (err.status) throw err;
+    await sleep(RETRY.waits[0]);
+    return get(url, { timeout: 25e3 });
+  }
+}
+
 // 기사 본문 페이지: 브라우저처럼 받고, 시간 초과·연결 끊김·5xx·429면 쉬었다가 두 번 더 (2026-10-14: 네이버 기사 17건이 시간 초과)
 const BROWSER = 'Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126 Mobile Safari/537.36';
 const PAGE_WAITS = [2e3, 6e3];
@@ -208,7 +219,7 @@ async function readSource(src, log, lang, now = Date.now(), edition = 'morning')
   if (src.google) tries.push(['구글', googleUrl(src.google, src.when, src.edition || lang)]);
   for (const [kind, url] of tries) {
     try {
-      let items = rss.parseFeed(await get(url)).map((it) => ({ ...it, viaGoogle: url.startsWith('https://news.google.com/') }));
+      let items = rss.parseFeed(await getFeed(url)).map((it) => ({ ...it, viaGoogle: url.startsWith('https://news.google.com/') }));
       // 같은 제목이 세 번 이상이면 기사가 아니라 사이트 첫 화면이다 (구글 뉴스의 '한국무역신문, 주간무역' 18건)
       const count = {};
       for (const it of items) count[titleKey(it.title)] = (count[titleKey(it.title)] || 0) + 1;
