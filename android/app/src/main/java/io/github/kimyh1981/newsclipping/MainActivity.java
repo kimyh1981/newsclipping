@@ -68,6 +68,13 @@ public class MainActivity extends Activity {
     /** 홈 화면 언론사 로고와, 로고를 고르려고 받아 둔 오늘 뉴스 목록 */
     private LogoWall logos;
     private ChapterBar bar;
+    private TextView timeText;
+    /** 읽는 동안 0.5초마다 진행바와 시간을 고친다 */
+    private final Runnable tick = new Runnable() {
+        @Override public void run() {
+            showProgress();
+        }
+    };
     private String briefJson;
     /** 서버의 원고 만들기(Deploy news site) 최근 실행: 공개 정보라 열쇠 없이 읽는다 */
     private static final String PAGES_RUNS = "https://api.github.com/repos/kimyh1981/newsclipping/actions/workflows/pages.yml/runs?per_page=1";
@@ -107,7 +114,7 @@ public class MainActivity extends Activity {
         LinearLayout col = new LinearLayout(this);
         col.setOrientation(LinearLayout.VERTICAL);
         col.setGravity(Gravity.CENTER_HORIZONTAL);
-        col.setPadding(dp(16), dp(8), dp(16), dp(8));
+        col.setPadding(dp(16), dp(8), dp(16), dp(16));
         briefLine = text("", 13, secondary);
         briefLine.setGravity(Gravity.CENTER);
         LinearLayout.LayoutParams bt = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
@@ -124,6 +131,13 @@ public class MainActivity extends Activity {
         ub.bottomMargin = dp(14);
         col.addView(updateBar, ub);
 
+        // ── '듣기' 카드: 재생 단추들과 진행바 (주인 요청 2026-10-17: 단추부와 기사부를 나누기). 간격은 8의 배수 ──
+        LinearLayout controls = new LinearLayout(this);
+        controls.setOrientation(LinearLayout.VERTICAL);
+        controls.setBackground(rounded(card, dp(20)));
+        controls.setPadding(dp(16), dp(16), dp(16), dp(8));
+        col.addView(controls, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
+
         // 지금 듣기 / 멈춤
         LinearLayout play = new LinearLayout(this);
         play.setOrientation(LinearLayout.HORIZONTAL);
@@ -134,31 +148,31 @@ public class MainActivity extends Activity {
             else if (st == NewsService.PAUSED) NewsService.control(NewsService.ACTION_RESUME);
             else NewsService.start(this, true);
         });
-        play.addView(playBtn, new LinearLayout.LayoutParams(0, dp(84), 1f));
+        play.addView(playBtn, new LinearLayout.LayoutParams(0, dp(72), 1f));
         play.addView(new View(this), new LinearLayout.LayoutParams(dp(12), 1));
-        play.addView(iconPill(Glyph.STOP, "멈춤", card, red, v -> NewsService.stopIfRunning()), new LinearLayout.LayoutParams(0, dp(84), 1f));
-        col.addView(play, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
+        play.addView(iconPill(Glyph.STOP, "멈춤", bg, red, v -> NewsService.stopIfRunning()), new LinearLayout.LayoutParams(0, dp(72), 1f));
+        controls.addView(play, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
 
         // 이전 기사 / 듣던 기사 전체 듣기 / 다음 기사 (읽는 중에만 동작)
         LinearLayout nav = new LinearLayout(this);
         nav.setOrientation(LinearLayout.HORIZONTAL);
         nav.setPadding(0, dp(12), 0, 0);
-        nav.addView(iconPill(Glyph.PREV, "이전 기사", card, tint, v -> NewsService.control(NewsService.ACTION_PREV)), new LinearLayout.LayoutParams(0, dp(64), 1f));
-        nav.addView(new View(this), new LinearLayout.LayoutParams(dp(10), 1));
+        nav.addView(iconPill(Glyph.PREV, "이전 기사", bg, tint, v -> NewsService.control(NewsService.ACTION_PREV)), new LinearLayout.LayoutParams(0, dp(56), 1f));
+        nav.addView(new View(this), new LinearLayout.LayoutParams(dp(12), 1));
         TextView fullBtn = text("전체 듣기", 16, tint);
         fullBtn.setTypeface(Typeface.DEFAULT_BOLD);
         fullBtn.setGravity(Gravity.CENTER);
-        fullBtn.setBackground(pressable(rounded(card, dp(14))));
+        fullBtn.setBackground(pressable(rounded(bg, dp(14))));
         // 전체 듣기: 듣던 기사(멈췄으면 멈춘 곳, 안 읽는 중이면 지난번 듣던 기사)부터 이어서, 자막 화면으로 넘어간다
         fullBtn.setOnClickListener(v -> {
             if (NewsService.isRunning()) NewsService.control(NewsService.ACTION_MORE);
             else NewsService.start(this, true);
             startActivity(new Intent(this, CaptionActivity.class));
         });
-        nav.addView(fullBtn, new LinearLayout.LayoutParams(0, dp(64), 1f));
-        nav.addView(new View(this), new LinearLayout.LayoutParams(dp(10), 1));
-        nav.addView(iconPill(Glyph.NEXT, "다음 기사", card, tint, v -> NewsService.control(NewsService.ACTION_NEXT)), new LinearLayout.LayoutParams(0, dp(64), 1f));
-        col.addView(nav, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
+        nav.addView(fullBtn, new LinearLayout.LayoutParams(0, dp(56), 1f));
+        nav.addView(new View(this), new LinearLayout.LayoutParams(dp(12), 1));
+        nav.addView(iconPill(Glyph.NEXT, "다음 기사", bg, tint, v -> NewsService.control(NewsService.ACTION_NEXT)), new LinearLayout.LayoutParams(0, dp(56), 1f));
+        controls.addView(nav, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
         // 진행바: 섹션마다 끊어 보이고, 끌면 그 언론사 로고가 커지고, 놓으면 거기부터 읽는다 (홈 화면의 핵심, 주인 요청 2026-10-17)
         bar = new ChapterBar(this, tint, separator);
         bar.setListener(new ChapterBar.Listener() {
@@ -174,12 +188,28 @@ public class MainActivity extends Activity {
             }
         });
         LinearLayout.LayoutParams bl = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-        bl.topMargin = dp(12);
-        col.addView(bar, bl);
+        bl.topMargin = dp(8);
+        controls.addView(bar, bl);
+        // 진행바 가운데 아래: 지난 시간 / 전체 시간 (숫자 폭이 같아 흔들리지 않게)
+        timeText = text("", 13, secondary);
+        timeText.setGravity(Gravity.CENTER);
+        timeText.setFontFeatureSettings("tnum");
+        timeText.setVisibility(View.INVISIBLE);
+        controls.addView(timeText, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
+
+        // ── '듣는 언론사' 카드: 로고 벽 (지금 읽는 곳이 커진다). 아래 메뉴 막대와 16 띄운다 ──
+        LinearLayout outlets = new LinearLayout(this);
+        outlets.setOrientation(LinearLayout.VERTICAL);
+        outlets.setBackground(rounded(card, dp(20)));
+        outlets.setPadding(dp(8), dp(12), dp(8), dp(8));
+        TextView outletsTitle = text("듣는 언론사", 13, secondary);
+        outletsTitle.setPadding(dp(8), 0, dp(8), 0);
+        outlets.addView(outletsTitle);
         logos = new LogoWall(this, dark, separator);
-        LinearLayout.LayoutParams ll = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f);
-        ll.topMargin = dp(4);
-        col.addView(logos, ll);
+        outlets.addView(logos, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f));
+        LinearLayout.LayoutParams ol = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f);
+        ol.topMargin = dp(16);
+        col.addView(outlets, ol);
 
         // ── 뉴스설정 탭 ──
         LinearLayout newsPage = page("뉴스 설정");
@@ -446,8 +476,17 @@ public class MainActivity extends Activity {
         if (bar == null || logos == null) return;
         Chapters c = NewsService.chapters();
         int line = NewsService.progressLine();
+        float[] t = NewsService.times(this);
+        if (t != null && t[1] > 0) {
+            timeText.setText(Rules.clock(t[0]) + " / " + Rules.clock(t[1]));
+            timeText.setVisibility(View.VISIBLE);
+        } else {
+            timeText.setVisibility(View.INVISIBLE);
+        }
+        bar.removeCallbacks(tick);
+        if (NewsService.state() == NewsService.PLAYING) bar.postDelayed(tick, 500);
         if (bar.dragging()) return;
-        bar.set(c, line);
+        bar.set(c, line, t != null && t[1] > 0 && line >= 0 ? t[0] / t[1] : -1);
         logos.setFocus(c == null || line < 0 ? null : c.site(line));
     }
 

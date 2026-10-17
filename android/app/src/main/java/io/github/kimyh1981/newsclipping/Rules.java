@@ -161,4 +161,10 @@ public final class Rules {
             return "";
         }
     }
+
+    /** 초 → 동영상처럼 '6:12', 한 시간 넘으면 '1:02:05' (홈 화면 진행바 아래) */
+    public static String clock(float seconds) {
+        int t = Math.max(0, (int) seconds), h = t / 3600, m = t % 3600 / 60, s = t % 60;
+        return h > 0 ? String.format(java.util.Locale.ROOT, "%d:%02d:%02d", h, m, s) : String.format(java.util.Locale.ROOT, "%d:%02d", m, s);
+    }
 }

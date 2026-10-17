@@ -25,6 +25,8 @@ final class ChapterBar extends View {
     private final Paint thumb = new Paint(Paint.ANTI_ALIAS_FLAG);
     private Chapters chapters;
     private int line = -1;
+    /** 줄 안에서도 부드럽게 차오르게: 지난 시간 ÷ 전체 시간 (모르면 -1) */
+    private float frac = -1;
     private boolean dragging;
     private float dragAt;
     private Listener listener;
@@ -43,9 +45,12 @@ final class ChapterBar extends View {
     boolean dragging() { return dragging; }
 
     /** 지금 원고(읽는 중이 아니면 null)와 읽는 줄 */
-    void set(Chapters c, int at) {
+    void set(Chapters c, int at) { set(c, at, -1); }
+
+    void set(Chapters c, int at, float fraction) {
         chapters = c;
         line = at;
+        frac = fraction;
         if (c == null) dragging = false;
         invalidate();
     }
@@ -74,6 +79,7 @@ final class ChapterBar extends View {
                 dragging = false;
                 int target = c.seekTarget(c.lineAt(toFraction(e.getX())));
                 line = target;
+                frac = -1;
                 if (listener != null) listener.onSeek(target);
                 invalidate();
                 return true;
@@ -96,7 +102,7 @@ final class ChapterBar extends View {
             canvas.drawRoundRect(new RectF(l, cy - h / 2, r, cy + h / 2), round, round, track);
             return;
         }
-        float p = dragging ? dragAt : line < 0 ? 0 : c.fractionOf(line);
+        float p = dragging ? dragAt : frac >= 0 ? Math.min(1f, frac) : line < 0 ? 0 : c.fractionOf(line);
         float[] b = c.bounds();
         for (int k = 0; k + 1 < b.length; k++) {
             float x0 = l + b[k] * w + (k == 0 ? 0 : gap / 2), x1 = l + b[k + 1] * w - (k + 2 == b.length ? 0 : gap / 2);

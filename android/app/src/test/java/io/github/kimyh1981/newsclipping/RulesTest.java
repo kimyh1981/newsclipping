@@ -11,6 +11,14 @@ import org.junit.Test;
 
 public class RulesTest {
     // 홈 화면 맨 위 '원고 시각' (당겨서 새로 받기, 주인 요청 2026-10-17). 시각은 서울 시간
+    @Test public void clockLikeAVideoPlayer() {
+        assertEquals("0:00", Rules.clock(0));
+        assertEquals("0:09", Rules.clock(9.9f));
+        assertEquals("6:12", Rules.clock(372));
+        assertEquals("1:02:05", Rules.clock(3725));
+        assertEquals("0:00", Rules.clock(-3));
+    }
+
     @Test public void briefTimeInPlainKorean() {
         long now = java.time.Instant.parse("2026-10-17T06:30:00Z").toEpochMilli(); // 10/17 15:30 KST
         assertEquals("오늘 오후 2:56", Rules.briefTime("2026-10-17T05:56:35.143Z", now));

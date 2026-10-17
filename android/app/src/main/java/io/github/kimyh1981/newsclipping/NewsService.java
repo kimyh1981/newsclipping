@@ -245,6 +245,45 @@ public class NewsService extends Service {
         if (r != null) new Handler(Looper.getMainLooper()).post(r);
     }
 
+    // 진행바 아래 '지난 시간 / 전체 시간'. 줄 무게(글자 수)로 어림잡고, 차례대로 읽는 동안 실제로 걸린 시간을 재서 맞춘다
+    private static volatile long lineStart;      // 지금 줄을 읽기 시작한 시각 (0 = 모름)
+    private static volatile float within;        // 멈췄을 때 그 줄에서 지난 초
+    private static volatile double perWeight;    // 잰 '초/무게' (0 = 아직 못 잼)
+    private long calMs, lastAt;
+    private float calWeight;
+    private int lastLine = -1;
+
+    /** 초/무게: 잰 값이 있으면 그것, 없으면 어림 (1,703자 원고가 약 6분 → 글자당 0.2초, 말 빠르기에 반비례) */
+    private static double secondsPerWeight(Context c) {
+        return perWeight > 0 ? perWeight : 0.2 * 100 / Math.max(50, new Prefs(c).rate());
+    }
+
+    /** {지난 초, 전체 초}. 읽는 중이 아니면 null */
+    static float[] times(Context c) {
+        Chapters ch = chapters();
+        int line = progressLine();
+        if (ch == null || line < 0) return ch == null ? null : new float[] {0, (float) (ch.totalWeight() * secondsPerWeight(c))};
+        double spw = secondsPerWeight(c);
+        float lineSec = (float) (ch.weightOf(line) * spw);
+        float in = state() == PLAYING && lineStart > 0 ? (System.currentTimeMillis() - lineStart) / 1000f : within;
+        return new float[] {(float) (ch.weightAt(line) * spw) + Math.min(Math.max(0, in), lineSec), (float) (ch.totalWeight() * spw)};
+    }
+
+    /** 줄 i를 읽기 시작: 앞 줄에서 차례대로 넘어왔으면 걸린 시간으로 초/무게를 잰다 */
+    private void lineStarted(int i, boolean sequential) {
+        long now = System.currentTimeMillis();
+        Chapters ch = chapters;
+        if (sequential && ch != null && lastLine >= 0 && i > lastLine && lastAt > 0 && now - lastAt < 120000) {
+            calMs += now - lastAt;
+            calWeight += ch.weightAt(i) - ch.weightAt(lastLine);
+            if (calWeight >= 60) perWeight = calMs / 1000.0 / calWeight;
+        }
+        lastLine = i;
+        lastAt = sequential ? now : 0;
+        lineStart = now;
+        within = 0;
+    }
+
     /** 진행바를 끌다 놓은 줄부터 다시 읽는다 */
     static void seek(int line) {
         NewsService s = running;
@@ -408,6 +447,8 @@ public class NewsService extends Service {
         else if (brief != null) fetchClips(brief, ready);
         chapters = Chapters.of(ready, siteOf(brief));
         progressLine = -1;
+        lineStart = 0;
+        within = 0;
         main.post(() -> speak(ready));
     }
 
@@ -567,6 +608,7 @@ public class NewsService extends Service {
             current = i;
             showLine(i);
             progressLine = i;
+            lineStarted(i, true);
             progressChanged();
         }
         if (s.id.startsWith("Q")) new Prefs(this).markLessonDone(Integer.parseInt(s.id.substring(1, s.id.indexOf('.'))));
@@ -764,6 +806,7 @@ public class NewsService extends Service {
         if (i > 0 && lines.get(i).item != null && lines.get(i - 1).item == null && lines.get(i - 1).text.endsWith("소식입니다.")) start = i - 1;
         current = i;
         progressLine = start;
+        lineStarted(start, false);
         progressChanged();
         if (paused) { showLine(i); return; } // 멈춤 중에는 위치만 옮기고, 이어 듣기로 거기서 시작
         play(stepsFrom(start));
@@ -851,6 +894,8 @@ public class NewsService extends Service {
         }
         resumeOnGain = autoResume;
         pausedAt = System.currentTimeMillis();
+        if (lineStart > 0) within = (pausedAt - lineStart) / 1000f; // 진행바 시간이 멈춘 자리에 선다
+        lastAt = 0;
         callSincePause = callNow();
         sawMic = false;
         if (!autoResume && audio != null && focus != null) audio.abandonAudioFocusRequest(focus); // 손으로 멈추면 소리 차례를 내준다: 통화·음악이 끝나도 다시 켜지지 않게
