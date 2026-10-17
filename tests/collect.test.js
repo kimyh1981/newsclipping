@@ -42,6 +42,22 @@ test('언론사 RSS가 막히면 구글 뉴스로 대신하고, 섹션끼리 겹
   assert.match(b.script, /농업신문 소식입니다\.\n벼 수확 한창\./);
 });
 
+test('RSS가 시간 초과면 한 번 더 받고, 비료 섹션은 비료 기사만 남긴다', async (t) => {
+  const { RETRY } = require('../tools/collect.js');
+  const saved = RETRY.waits;
+  RETRY.waits = [0];
+  t.after(() => { RETRY.waits = saved; });
+  let calls = 0;
+  t.mock.method(globalThis, 'fetch', async () => {
+    if (calls++ === 0) throw new TypeError('fetch failed', { cause: { code: 'UND_ERR_CONNECT_TIMEOUT' } });
+    return new Response(feed('친환경농자재 생산 확대', 'K-푸드 페스타 개막', '요소비료 수급 안정'));
+  });
+  const config = { sections: [{ id: 'fertilizer', title: '비료 관련 뉴스', limit: 5, must: '비료|요소|농자재', sources: [{ id: 'newsfm', name: '영농자재신문', url: 'https://www.newsfm.kr/data/rss/news.xml', take: 2 }] }] };
+  const b = await collect(config, NOW);
+  assert.equal(calls, 2);
+  assert.deepEqual(b.sections[0].sources[0].items.map((i) => i.title), ['친환경농자재 생산 확대', '요소비료 수급 안정']);
+});
+
 // 한국무역신문: 구글 뉴스 21건 중 18건이 사이트 첫 화면 제목 '한국무역신문, 주간무역'이었다 (2026-10-16)
 test('같은 제목이 세 번 이상 나오면 기사가 아니라 사이트 화면으로 보고 뺀다', async (t) => {
   const home = '한국무역신문, 주간무역 - 한국무역신문';
