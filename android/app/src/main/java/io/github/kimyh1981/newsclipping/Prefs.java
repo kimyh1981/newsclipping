@@ -135,6 +135,16 @@ final class Prefs {
     /** 마지막으로 잰 F1 속도: 실시간의 몇 배 (1보다 커야 끊기지 않는다). 안 쟀으면 0 */
     float f1Speed() { return p.getFloat("f1Speed", 0f); }
     void setF1Speed(float x) { p.edit().putFloat("f1Speed", x).apply(); }
+    /** F1 엔진을 띄우거나 소리를 만드는 중 표시. 그 사이 앱이 꺼지면 다음에 남아 있다 (바로 디스크에 쓴다) */
+    boolean f1Busy() { return p.getBoolean("f1Busy", false); }
+    void setF1Busy(boolean on) { p.edit().putBoolean("f1Busy", on).commit(); }
+    /** F1을 쓰다 앱이 꺼져 저절로 껐다 (화면에서 한 번 알린다) */
+    boolean f1AutoOff() { return p.getBoolean("f1AutoOff", false); }
+    void setF1AutoOff(boolean on) { p.edit().putBoolean("f1AutoOff", on).commit(); }
+
+    /** '앱이 꺼진 이유'를 마지막으로 보여 준 종료 시각 */
+    long crashSeen() { return p.getLong("crashSeen", 0); }
+    void setCrashSeen(long t) { p.edit().putLong("crashSeen", t).apply(); }
 
     /** 말 빠르기, 보통 = 100 */
     int rate() { return p.getInt("rate", 100); }

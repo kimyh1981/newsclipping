@@ -253,6 +253,7 @@ public class NewsService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
+        Crash.install(this);
         if (intent != null && ACTION_STOP.equals(intent.getAction())) {
             finish();
             return START_NOT_STICKY;
@@ -362,6 +363,7 @@ public class NewsService extends Service {
         if (!manual && lessonOnly == 0) new Prefs(this).markPlayed();
         List<Brief.Line> ready = script;
         // F1을 켰으면 서버 녹음은 받지 않고 폰에서 만든다. 엔진은 여기서(화면 밖 스레드) 미리 띄운다. 못 띄우면 예전처럼
+        Crash.f1Crashed(this, new Prefs(this)); // 지난번 F1을 쓰다 앱이 꺼졌으면 F1을 끈다 (차에서 매번 꺼지지 않게)
         useF1 = new Prefs(this).f1On() && F1Voice.ready(this) && F1Voice.engine(this) != null;
         if (useF1) startF1();
         else if (brief != null) fetchClips(brief, ready);
@@ -565,7 +567,7 @@ public class NewsService extends Service {
             File out = new File(f1Dir, Brief.audioId(k) + ".wav");
             if (out.exists()) return out;
             long t = System.currentTimeMillis();
-            float[] pcm = e.synth(en ? s.text : Pron.say(s.text), en ? "en" : "ko", F1Voice.speed(new Prefs(this).rate()));
+            float[] pcm = F1Voice.synth(this, e, en ? s.text : Pron.say(s.text), en ? "en" : "ko", F1Voice.speed(new Prefs(this).rate()));
             F1Engine.writeWav(pcm, e.sampleRate, out);
             float x = pcm.length / (float) e.sampleRate / Math.max(0.001f, (System.currentTimeMillis() - t) / 1000f);
             new Prefs(this).setF1Speed(x);
