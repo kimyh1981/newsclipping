@@ -76,6 +76,8 @@ public class MainActivity extends Activity {
         }
     };
     private String briefJson;
+    /** 서버의 원고 만들기(Deploy news site) 최근 실행: 공개 정보라 열쇠 없이 읽는다 */
+    private static final String PAGES_RUNS = "https://api.github.com/repos/kimyh1981/newsclipping/actions/workflows/pages.yml/runs?per_page=1";
     /** 홈 화면 맨 위 한 줄: 원고 시각, 당기는 중 안내, 받는 중 % (당겨서 새로 받기, 주인 요청 2026-10-17) */
     private TextView briefLine;
     private boolean refreshing;
@@ -666,16 +668,53 @@ public class MainActivity extends Activity {
 
     /** 당겨서 놓으면 바로 받지 않고 한 번 묻는다: 듣는 중에 손이 닿아 저절로 일이 엉키지 않게 (주인 요청 2026-10-17) */
     private void askRefresh() {
-        showBriefTime(null);
-        boolean listening = NewsService.isRunning();
-        new Sheet(this)
-                .setTitle("최신 원고를 받을까요?")
-                .setMessage(listening
-                        ? "지금 듣는 뉴스는 끊기지 않고 그대로 이어 읽습니다. 새 원고는 다음에 재생할 때부터 씁니다."
-                        : "서버가 만들어 둔 가장 새 원고를 받습니다 (약 1초).")
-                .setPositiveButton("받기", (d, w) -> refreshBrief())
-                .setNegativeButton("취소", null)
-                .show();
+        // 먼저 서버에 새 원고가 있는지(작은 latest.json), 서버가 지금 모으는 중인지(GitHub 공개 정보) 확인하고 묻는다.
+        // 이미 받은 원고를 또 받고 나서야 '같은 원고'라고 알던 것을 없앤다 (주인 요청 2026-10-17)
+        refreshing = true;
+        briefLine.setText("새 원고가 있는지 확인하는 중…");
+        String mine = briefJson == null ? "" : generatedAt(briefJson);
+        new Thread(() -> {
+            String server = null;
+            int collecting = -1; // 서버가 모으기 시작한 지 몇 분 (모으는 중이 아니면 -1)
+            try {
+                server = new org.json.JSONObject(NewsService.fetch(BuildConfig.NEWS_URL.replace("briefing.json", "latest.json"))).optString("generatedAt", null);
+            } catch (Exception ignored) { } // 옛 서버(latest.json 없음)면 예전처럼 묻는다
+            try {
+                org.json.JSONArray runs = new org.json.JSONObject(NewsService.fetch(PAGES_RUNS)).getJSONArray("workflow_runs");
+                if (runs.length() > 0) {
+                    org.json.JSONObject r = runs.getJSONObject(0);
+                    if (!"completed".equals(r.optString("status"))) {
+                        long started = java.time.Instant.parse(r.optString("created_at")).toEpochMilli();
+                        collecting = (int) Math.max(0, (System.currentTimeMillis() - started) / 60000);
+                    }
+                }
+            } catch (Exception ignored) { }
+            final String latest = server;
+            final int minutes = collecting;
+            runOnUiThread(() -> {
+                refreshing = false;
+                showBriefTime(null);
+                String when = latest == null ? "" : Rules.briefTime(latest, System.currentTimeMillis());
+                boolean listening = NewsService.isRunning();
+                String keep = listening ? "\n\n지금 듣는 뉴스는 끊기지 않고 그대로 이어 읽습니다. 새 원고는 다음에 재생할 때부터 씁니다." : "";
+                Sheet s = new Sheet(this);
+                if (latest == null || mine.isEmpty() || latest.compareTo(mine) > 0) {
+                    s.setTitle(latest == null ? "최신 원고를 받을까요?" : "새 원고가 있습니다")
+                            .setMessage((when.isEmpty() ? "서버가 만들어 둔 가장 새 원고를 받습니다 (약 1초)." : when + "에 만든 원고입니다.") + keep)
+                            .setPositiveButton("받기", (d, w) -> refreshBrief())
+                            .setNegativeButton("취소", null);
+                } else if (minutes >= 0) {
+                    s.setTitle("서버가 지금 새 원고를 모으는 중입니다")
+                            .setMessage("모으기 시작한 지 " + minutes + "분 됐습니다. 보통 5~10분 걸립니다. 조금 뒤에 다시 당겨 주세요.\n\n지금 원고: " + when)
+                            .setPositiveButton("확인", null);
+                } else {
+                    s.setTitle("이미 최신 원고입니다")
+                            .setMessage(when + "에 만든 원고입니다. 서버는 평일 새벽과 오후에 새 원고를 모읍니다.")
+                            .setPositiveButton("확인", null);
+                }
+                s.show();
+            });
+        }, "refresh-check").start();
     }
 
     /** 서버의 최신 원고(briefing.json)를 다시 받는다. 읽는 중인 원고는 그대로 (다음 재생부터 새 원고) */

@@ -455,6 +455,8 @@ if (require.main === module) {
     });
     fs.writeFileSync(path.join(out, 'briefing.json'), JSON.stringify(b, null, 1));
     fs.writeFileSync(path.join(out, 'briefing.txt'), speechText(b));
+    // 앱의 '당겨서 새로 받기'가 먼저 확인하는 작은 파일: 원고 시각만 (1.3MB 원고를 받기 전에 새 원고가 있는지 안다)
+    fs.writeFileSync(path.join(out, 'latest.json'), JSON.stringify({ generatedAt: b.generatedAt, edition: b.edition }));
     const kept = await archive(out, b, live, Date.now(), get);
     console.log(`보관한 원고 ${kept.length}일: ${kept.map((d) => d.ymd).join(', ')}`);
     // 아이폰 단축어가 고른 언론사만 읽도록 언론사마다 조각 원고 (쉬는 날에는 모두 빈 파일)
