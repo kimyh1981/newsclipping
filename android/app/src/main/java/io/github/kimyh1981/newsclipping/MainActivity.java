@@ -581,13 +581,27 @@ public class MainActivity extends Activity {
                     boolean go = from[0] >= 0 && e.getActionMasked() == android.view.MotionEvent.ACTION_UP && e.getRawY() - from[0] >= need;
                     from[0] = -1;
                     content.animate().translationY(0).setDuration(150).start();
-                    if (go) refreshBrief(); else showBriefTime(null);
+                    if (go) askRefresh(); else showBriefTime(null);
                     break;
                 default:
                     break;
             }
             return false;
         });
+    }
+
+    /** 당겨서 놓으면 바로 받지 않고 한 번 묻는다: 듣는 중에 손이 닿아 저절로 일이 엉키지 않게 (주인 요청 2026-10-17) */
+    private void askRefresh() {
+        showBriefTime(null);
+        boolean listening = NewsService.isRunning();
+        new Sheet(this)
+                .setTitle("최신 원고를 받을까요?")
+                .setMessage(listening
+                        ? "지금 듣는 뉴스는 끊기지 않고 그대로 이어 읽습니다. 새 원고는 다음에 재생할 때부터 씁니다."
+                        : "서버가 만들어 둔 가장 새 원고를 받습니다 (약 1초).")
+                .setPositiveButton("받기", (d, w) -> refreshBrief())
+                .setNegativeButton("취소", null)
+                .show();
     }
 
     /** 서버의 최신 원고(briefing.json)를 다시 받는다. 읽는 중인 원고는 그대로 (다음 재생부터 새 원고) */
