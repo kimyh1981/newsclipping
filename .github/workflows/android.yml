@@ -1,5 +1,5 @@
-# 안드로이드 앱(APK)을 빌드한다. main에 반영되면 릴리스로 올려 설치 링크
-# https://github.com/kimyh1981/newsclipping/releases/latest/download/newsclipping.apk 가 새 버전을 가리키게 한다.
+# 안드로이드 앱(APK)을 빌드한다. 정식판(newsclipping.apk)과 라이트판(newsclipping-lite.apk)을 함께 만든다.
+# main에 반영되면 릴리스로 올려 설치 링크 .../releases/latest/download/newsclipping.apk (라이트는 newsclipping-lite.apk)가 새 버전을 가리키게 한다.
 name: Android app
 
 on:
@@ -27,20 +27,25 @@ jobs:
           gradle-version: '8.9'
       - name: Unit tests and APK
         working-directory: android
-        run: gradle --no-daemon testReleaseUnitTest assembleRelease
+        run: gradle --no-daemon testFullReleaseUnitTest testLiteReleaseUnitTest assembleRelease
       - name: Rename APK
-        run: cp android/app/build/outputs/apk/release/app-release.apk newsclipping.apk
+        run: |
+          cp android/app/build/outputs/apk/full/release/app-full-release.apk newsclipping.apk
+          cp android/app/build/outputs/apk/lite/release/app-lite-release.apk newsclipping-lite.apk
       - uses: actions/upload-artifact@v4
         with:
           name: newsclipping-apk
-          path: newsclipping.apk
+          path: |
+            newsclipping.apk
+            newsclipping-lite.apk
       - name: Publish release
         if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           tag="v$(tr -d '[:space:]' < android/version.txt)-r${GITHUB_RUN_NUMBER}" # 앱 화면의 버전 + 배포 번호
-          gh release create "$tag" newsclipping.apk --title "뉴스클리핑 $tag" --notes "갤럭시(안드로이드)용 앱. 휴대폰에서 newsclipping.apk를 받아 설치합니다." --latest
+          lite="v$(tr -d '[:space:]' < android/version-lite.txt)" # 라이트 APK의 표시 이름 = 라이트 버전 (라이트 앱은 이게 바뀔 때만 업데이트를 띄운다)
+          gh release create "$tag" newsclipping.apk "newsclipping-lite.apk#$lite" --title "뉴스클리핑 $tag" --notes "갤럭시(안드로이드)용 앱. 정식판은 newsclipping.apk, 제품 공부·농업영어를 뺀 라이트판(뉴스클리핑 라이트 $lite)은 newsclipping-lite.apk를 받아 설치합니다." --latest
 
   # F1 음성: 앱의 엔진 코드(F1Engine·F1Text·Pron)를 PC용 ONNX Runtime으로 그대로 돌려 실제 모델로 소리를 만들고, 받아쓰기로 확인한다
   f1-live:

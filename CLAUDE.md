@@ -8,7 +8,7 @@
 
 - 사용자와는 **한국어**로, 결과부터 쉽게 말합니다.
 - 서버·웹 규칙과 앱 규칙은 쌍으로 바꿉니다: `js/brief.js` ↔ `android/.../Brief.java`, `js/pron.js` ↔ `Pron.java`. `tests/fixtures`로 맞춥니다.
-- 앱을 바꾸는 PR은 `android/version.txt`를 `1.<PR 번호>`로 올립니다.
+- 앱을 바꾸는 PR은 `android/version.txt`를 `1.<PR 번호>`로 올립니다. 배포판이 둘입니다(정식 `full`, 제품 공부·농업영어를 뺀 라이트 `lite`). 라이트에도 해당하는 변경이면 `android/version-lite.txt`도 같은 번호로 올리고, **제품 공부·농업영어만 바꾼 PR은 `version-lite.txt`를 올리지 않습니다**(라이트에 업데이트가 뜨지 않게). 제품 공부·농업영어 기능은 `BuildConfig.LESSONS`로 감쌉니다.
 - 머지 요청·머지 알림에는 항상 `PR #N (v1.N)`과 APK 링크를 씁니다:
   https://github.com/kimyh1981/newsclipping/releases/latest/download/newsclipping.apk
 - "헤드라인" = 언론사 1면 주요 기사. 무료 방식 우선(유료 API 금지). 자동 재생 기본은 평일 06~08시, 공휴일 제외.

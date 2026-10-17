@@ -3,9 +3,10 @@
 다른 Claude 계정(또는 다른 개발자)이 이 저장소에서 바로 이어서 개발할 수 있도록 정리한 문서입니다.
 기능 설명·설치·설정 방법은 [README.md](README.md)에 자세히 있고, 이 문서는 **개발을 이어받는 데 필요한 것**만 모았습니다.
 
-- 현재 버전: **v1.49** (PR #49, `android/version.txt` = `1.49`)
+- 현재 버전: **v1.56** (정식 `android/version.txt`, 라이트 `android/version-lite.txt`)
 - 웹: https://kimyh1981.github.io/newsclipping/
 - APK: https://github.com/kimyh1981/newsclipping/releases/latest/download/newsclipping.apk
+- 라이트 APK(제품 공부·농업영어 없음, '뉴스클리핑 라이트'): https://github.com/kimyh1981/newsclipping/releases/latest/download/newsclipping-lite.apk
 - 주인: GitHub `kimyh1981` (바이오플랜). 머지는 주인이 직접 합니다.
 
 ## 1. 새 계정에서 처음 할 일
@@ -47,10 +48,11 @@ GitHub Actions (새벽·오후)                     폰/웹
 |---|---|
 | `pages.yml` | 테스트 → 수집 → 녹음 → Pages 배포. 새벽 cron(04:30~06:00 KST)·오후 cron(16:20~17:20 KST), push, dispatch. `concurrency: pages`, cancel-in-progress, 30분 타임아웃 |
 | `alarm.yml` | 전날 밤 깨어 기다렸다가 04:40·05:50 KST에 pages.yml을 dispatch |
-| `android.yml` | 앱 단위 테스트·APK 빌드. main이면 릴리스 `v<version.txt>-r<run번호>` 생성 → APK 링크 갱신 |
+| `android.yml` | 정식·라이트 앱 단위 테스트·APK 빌드. main이면 릴리스 `v<version.txt>-r<run번호>`에 `newsclipping.apk`와 `newsclipping-lite.apk`(표시 이름 = `v<version-lite.txt>`)를 올림 |
 | `news-check.yml` | PR마다 실제 출처를 불러 원고를 로그로 보여 줌 (샌드박스에서 뉴스 사이트에 못 들어가므로 여기서 실제 결과 확인) |
 
-- **앱 버전 규칙**: 앱을 바꾸는 PR마다 `android/version.txt`를 `1.<PR 번호>`로 올립니다. `versionCode`는 Actions run 번호라서 자동으로 증가합니다. 서버만 바꾸는 PR은 올리지 않아도 됩니다.
+- **배포판 두 가지** (주인 요청 2026-10-17): `build.gradle`의 productFlavors. `full` = 지금 앱 그대로, `lite` = '뉴스클리핑 라이트'(앱 ID `io.github.kimyh1981.newsclipping.lite`라 정식판과 따로 설치). 라이트는 `BuildConfig.LESSONS=false`로 제품 공부·농업영어 화면·탭·재생을 뺍니다. 공통 수정은 같은 코드라 두 앱에 똑같이 들어갑니다.
+- **앱 버전 규칙**: 앱을 바꾸는 PR마다 `android/version.txt`를 `1.<PR 번호>`로 올립니다. 라이트에도 해당하면 `android/version-lite.txt`도 같은 번호로 올립니다. **제품 공부·농업영어만 바꾼 PR은 `version-lite.txt`를 그대로 둡니다**: 라이트 앱은 릴리스의 라이트 APK 표시 이름(라이트 버전)이 자기 버전과 다를 때만 업데이트를 띄웁니다(`Updater.isNewer`). `versionCode`는 Actions run 번호라서 자동으로 증가합니다. 서버만 바꾸는 PR은 올리지 않아도 됩니다.
 - **서명 키**: `android/app/release.keystore` (저장소에 공개, 기본 비밀번호는 build.gradle 참고). 같은 키여야 기존 앱 위에 업데이트됩니다. 바꾸면 사용자가 앱을 지우고 다시 깔아야 합니다.
 - **앱 내 업데이트**: `Updater.java`가 releases/latest 태그의 버전과 설치된 versionCode를 비교해 PackageInstaller로 설치합니다.
 
@@ -93,6 +95,11 @@ Pages Source는 **GitHub Actions**로 설정되어 있어야 합니다.
 | #47 | 1.47 | 서버 음성 현수 다국어(영어는 미국식), 나라별 화폐 읽기 |
 | #48 | 1.48 | 하루 두 번(오후판: 네이버 많이 본 뉴스, 저녁 인사, 공부는 오전만), 본문 재시도·다른 언론사 대체 |
 | #49 | 1.49 | 해외 키워드 뉴스 나라 간 중복 제거·현지 기사 우선, 해외 기사는 나라 이름으로 시작, 제미나이 닫히면 자동 이어 읽기 |
+| #51 | | 영농자재신문·한국무역신문 추가, 같은 제목 3번 이상(사이트 화면 제목) 거르기 |
+| #53 | 1.53 | F1 음성: 폰에서 실시간으로 만들어 읽기(Supertonic-3, 약 400MB 받기, 기본 꺼짐) |
+| #54 | 1.54 | 앱이 꺼진 이유 보여 주기, F1을 쓰다 꺼지면 F1 자동 끄기 |
+| #55 | | 영농자재신문·한국무역신문을 비료 섹션으로(비료 기사만), RSS 시간 초과 시 재시도 |
+| #56 | 1.56 | 배포판 두 가지: 정식 + 뉴스클리핑 라이트(제품 공부·농업영어 없음) |
 
 자세한 내용은 각 PR 설명과 커밋 메시지를 보세요.
 
