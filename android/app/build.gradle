@@ -24,6 +24,28 @@ android {
         buildConfig true
     }
 
+    // 업데이트 설치가 되려면 항상 같은 키로 서명해야 한다.
+    //  release: 정식판. release.keystore (저장소에 공개, 비밀번호는 환경 변수로 바꿀 수 있다). 바꾸면 기존 사용자가 지우고 다시 깔아야 해서 그대로 둔다
+    //  lite: 라이트판은 회사 밖에도 나눠 주므로 비공개 키 (2026-10-17). 저장소 비밀값 LITE_KEYSTORE_B64·LITE_KEYSTORE_PASSWORD를
+    //        android.yml이 파일로 풀어 LITE_KEYSTORE에 넘긴다. 없으면(로컬 빌드) 정식판 키로 서명하고, main 배포는 막는다
+    signingConfigs {
+        release {
+            storeFile file('release.keystore')
+            storePassword System.getenv('KEYSTORE_PASSWORD') ?: 'newsclipping'
+            keyAlias 'newsclipping'
+            keyPassword System.getenv('KEYSTORE_PASSWORD') ?: 'newsclipping'
+        }
+        if (System.getenv('LITE_KEYSTORE')) {
+            lite {
+                storeFile file(System.getenv('LITE_KEYSTORE'))
+                storeType 'pkcs12'
+                storePassword System.getenv('LITE_KEYSTORE_PASSWORD')
+                keyAlias 'lite'
+                keyPassword System.getenv('LITE_KEYSTORE_PASSWORD')
+            }
+        }
+    }
+
     // 배포판 두 가지 (주인 요청 2026-10-17). 같은 코드로 함께 빌드해서 공통 수정은 두 앱에 똑같이 들어간다.
     //  full: 지금 쓰는 앱 그대로 (바이오플랜 제품 공부·농업영어 포함)
     //  lite: '뉴스클리핑 라이트'. 제품 공부·농업영어를 뺀다. 앱 ID가 달라 정식판과 따로 설치된다.
@@ -35,6 +57,7 @@ android {
             manifestPlaceholders = [appLabel: '뉴스클리핑']
             buildConfigField 'boolean', 'LESSONS', 'true'
             buildConfigField 'String', 'APK_NAME', '"newsclipping.apk"'
+            signingConfig signingConfigs.release
         }
         lite {
             dimension 'edition'
@@ -43,23 +66,13 @@ android {
             manifestPlaceholders = [appLabel: '뉴스클리핑 라이트']
             buildConfigField 'boolean', 'LESSONS', 'false'
             buildConfigField 'String', 'APK_NAME', '"newsclipping-lite.apk"'
-        }
-    }
-
-    // 업데이트 설치가 되려면 항상 같은 키로 서명해야 한다 (release.keystore, 비밀번호는 환경 변수로 바꿀 수 있다)
-    signingConfigs {
-        release {
-            storeFile file('release.keystore')
-            storePassword System.getenv('KEYSTORE_PASSWORD') ?: 'newsclipping'
-            keyAlias 'newsclipping'
-            keyPassword System.getenv('KEYSTORE_PASSWORD') ?: 'newsclipping'
+            signingConfig System.getenv('LITE_KEYSTORE') ? signingConfigs.lite : signingConfigs.release
         }
     }
 
     buildTypes {
         release {
             minifyEnabled false
-            signingConfig signingConfigs.release
         }
     }
 
