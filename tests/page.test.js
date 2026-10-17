@@ -23,7 +23,8 @@ test('화면이 참조하는 파일이 모두 있고, 배포 작업이 그 파�
   const refs = [...html.matchAll(/(?:src|href)="([^"#:]+)"/g)].map((m) => m[1]);
   for (const r of refs) assert.ok(fs.existsSync(path.join(root, r)), r);
   const wf = read('.github/workflows/pages.yml');
-  assert.match(wf, /cp -r index\.html manifest\.webmanifest js icons _site\//);
+  assert.match(wf, /cp -r index\.html manifest\.webmanifest js icons lite _site\//); // lite/: 라이트판 받기 페이지
+  assert.ok(fs.existsSync(path.join(root, 'lite', 'index.html')), 'lite/index.html');
   assert.match(wf, /node tools\/collect\.js _site/);
   assert.match(wf, /cron: '\d+ 20 \* \* \*'/, '한국 시간 새벽 5시대에 브리핑을 만든다');
 });
