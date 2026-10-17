@@ -117,6 +117,7 @@ public class MainActivity extends Activity {
         col.setPadding(dp(16), dp(8), dp(16), dp(16));
         briefLine = text("", 13, secondary);
         briefLine.setGravity(Gravity.CENTER);
+        briefLine.setVisibility(View.GONE); // 평소엔 숨기고, 당기는 중·받는 중에만 (원고 시각은 새로고침 팝업에서, 주인 요청 2026-10-17)
         LinearLayout.LayoutParams bt = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
         bt.bottomMargin = dp(8);
         col.addView(briefLine, bt);
@@ -201,10 +202,7 @@ public class MainActivity extends Activity {
         LinearLayout outlets = new LinearLayout(this);
         outlets.setOrientation(LinearLayout.VERTICAL);
         outlets.setBackground(rounded(card, dp(20)));
-        outlets.setPadding(dp(8), dp(12), dp(8), dp(8));
-        TextView outletsTitle = text("듣는 언론사", 13, secondary);
-        outletsTitle.setPadding(dp(8), 0, dp(8), 0);
-        outlets.addView(outletsTitle);
+        outlets.setPadding(dp(8), dp(8), dp(8), dp(8));
         logos = new LogoWall(this, dark, separator);
         outlets.addView(logos, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f));
         LinearLayout.LayoutParams ol = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f);
@@ -626,12 +624,24 @@ public class MainActivity extends Activity {
 
     /** 홈 화면 맨 위 줄에 원고 시각. head: 앞에 붙일 말(없으면 null) */
     private void showBriefTime(String head) {
-        String when = "";
-        try {
-            if (briefJson != null) when = Rules.briefTime(new org.json.JSONObject(briefJson).optString("generatedAt"), System.currentTimeMillis());
-        } catch (Exception ignored) { }
-        String body = when.isEmpty() ? "아래로 당기면 최신 원고를 받습니다" : "원고: " + when;
-        briefLine.setText(head == null ? body : head + " · " + body);
+        briefLine.removeCallbacks(hideStatus);
+        if (head == null) { briefLine.setVisibility(View.GONE); return; }
+        status(head);
+        briefLine.postDelayed(hideStatus, 3000); // 잠깐 알리고 숨긴다
+    }
+
+    /** 맨 위 한 줄에 지금 하는 일을 보여 준다 (당기는 중, 확인 중, 받는 중 %) */
+    private void status(String text) {
+        briefLine.removeCallbacks(hideStatus);
+        briefLine.setText(text);
+        briefLine.setVisibility(View.VISIBLE);
+    }
+
+    private final Runnable hideStatus = () -> briefLine.setVisibility(View.GONE);
+
+    /** 가진 원고를 만든 시각 ('오늘 오후 3:34'), 모르면 "" */
+    private String myBriefTime() {
+        return briefJson == null ? "" : Rules.briefTime(generatedAt(briefJson), System.currentTimeMillis());
     }
 
     /** 홈 화면을 맨 위에서 아래로 당겼다 놓으면 서버의 최신 원고를 다시 받는다 (받는 동안 맨 위에 %) */
@@ -650,7 +660,7 @@ public class MainActivity extends Activity {
                     float dy = e.getRawY() - from[0];
                     if (dy <= 0 || sv.getScrollY() > 0) { content.setTranslationY(0); break; }
                     content.setTranslationY(Math.min(dy, need * 1.5f) * 0.5f);
-                    briefLine.setText(dy >= need ? "놓으면 최신 원고를 받습니다" : "↓ 더 당기면 새로 받기");
+                    status(dy >= need ? "놓으면 최신 원고를 받습니다" : "↓ 더 당기면 새로 받기");
                     return true;
                 case android.view.MotionEvent.ACTION_UP:
                 case android.view.MotionEvent.ACTION_CANCEL:
@@ -667,11 +677,25 @@ public class MainActivity extends Activity {
     }
 
     /** 당겨서 놓으면 바로 받지 않고 한 번 묻는다: 듣는 중에 손이 닿아 저절로 일이 엉키지 않게 (주인 요청 2026-10-17) */
+    /** 당겼다 놓으면 먼저 묻는다 (팝업에 지금 원고 시각). '받기'를 누르면 새 원고가 있는지 확인하고 받는다 (주인 요청 2026-10-17) */
     private void askRefresh() {
-        // 먼저 서버에 새 원고가 있는지(작은 latest.json), 서버가 지금 모으는 중인지(GitHub 공개 정보) 확인하고 묻는다.
-        // 이미 받은 원고를 또 받고 나서야 '같은 원고'라고 알던 것을 없앤다 (주인 요청 2026-10-17)
+        showBriefTime(null);
+        String when = myBriefTime();
+        boolean listening = NewsService.isRunning();
+        new Sheet(this)
+                .setTitle("최신 원고를 받을까요?")
+                .setMessage((when.isEmpty() ? "" : "지금 원고: " + when + "\n\n") + "서버가 만들어 둔 새 원고가 있는지 확인하고, 있으면 받습니다."
+                        + (listening ? "\n\n지금 듣는 뉴스는 끊기지 않고 그대로 이어 읽습니다. 새 원고는 다음에 재생할 때부터 씁니다." : ""))
+                .setPositiveButton("받기", (d, w) -> checkAndFetch())
+                .setNegativeButton("취소", null)
+                .show();
+    }
+
+    /** 새 원고가 있는지(작은 latest.json), 서버가 지금 모으는 중인지(GitHub 공개 정보) 보고, 새 원고면 받는다.
+     *  이미 받은 원고를 또 받고 나서야 '같은 원고'라고 알던 것을 없앤다 */
+    private void checkAndFetch() {
         refreshing = true;
-        briefLine.setText("새 원고가 있는지 확인하는 중…");
+        status("새 원고가 있는지 확인하는 중…");
         String mine = briefJson == null ? "" : generatedAt(briefJson);
         new Thread(() -> {
             String server = null;
@@ -695,21 +719,15 @@ public class MainActivity extends Activity {
                 refreshing = false;
                 showBriefTime(null);
                 String when = latest == null ? "" : Rules.briefTime(latest, System.currentTimeMillis());
-                boolean listening = NewsService.isRunning();
-                String keep = listening ? "\n\n지금 듣는 뉴스는 끊기지 않고 그대로 이어 읽습니다. 새 원고는 다음에 재생할 때부터 씁니다." : "";
+                if (latest == null || mine.isEmpty() || latest.compareTo(mine) > 0) { refreshBrief(); return; } // 새 원고(또는 옛 서버): 바로 받는다
                 Sheet s = new Sheet(this);
-                if (latest == null || mine.isEmpty() || latest.compareTo(mine) > 0) {
-                    s.setTitle(latest == null ? "최신 원고를 받을까요?" : "새 원고가 있습니다")
-                            .setMessage((when.isEmpty() ? "서버가 만들어 둔 가장 새 원고를 받습니다 (약 1초)." : when + "에 만든 원고입니다.") + keep)
-                            .setPositiveButton("받기", (d, w) -> refreshBrief())
-                            .setNegativeButton("취소", null);
-                } else if (minutes >= 0) {
+                if (minutes >= 0) {
                     s.setTitle("서버가 지금 새 원고를 모으는 중입니다")
                             .setMessage("모으기 시작한 지 " + minutes + "분 됐습니다. 보통 5~10분 걸립니다. 조금 뒤에 다시 당겨 주세요.\n\n지금 원고: " + when)
                             .setPositiveButton("확인", null);
                 } else {
                     s.setTitle("이미 최신 원고입니다")
-                            .setMessage(when + "에 만든 원고입니다. 서버는 평일 새벽과 오후에 새 원고를 모읍니다.")
+                            .setMessage(when + "에 만든 원고입니다. 서버는 평일 새벽 5시쯤(출근길 1면)과 오후 5시 30분쯤(퇴근길 많이 본 기사)에 새 원고를 모읍니다.")
                             .setPositiveButton("확인", null);
                 }
                 s.show();
@@ -720,12 +738,12 @@ public class MainActivity extends Activity {
     /** 서버의 최신 원고(briefing.json)를 다시 받는다. 읽는 중인 원고는 그대로 (다음 재생부터 새 원고) */
     private void refreshBrief() {
         refreshing = true;
-        briefLine.setText("최신 원고를 받는 중…");
+        status("최신 원고를 받는 중…");
         String before = briefJson;
         new Thread(() -> {
             String got;
             try {
-                got = NewsService.fetch(BuildConfig.NEWS_URL, p -> runOnUiThread(() -> { if (p >= 0) briefLine.setText("최신 원고를 받는 중 " + p + "%"); }));
+                got = NewsService.fetch(BuildConfig.NEWS_URL, p -> runOnUiThread(() -> { if (p >= 0) status("최신 원고를 받는 중 " + p + "%"); }));
             } catch (Exception e) {
                 got = null;
             }
@@ -736,7 +754,7 @@ public class MainActivity extends Activity {
                 boolean same = before != null && generatedAt(before).equals(generatedAt(json));
                 briefJson = json;
                 showLogos();
-                showBriefTime(same ? "이미 최신 원고" : "새 원고를 받았습니다");
+                showBriefTime(same ? "이미 최신 원고입니다" : "새 원고를 받았습니다 · " + myBriefTime());
             });
         }, "refresh").start();
     }

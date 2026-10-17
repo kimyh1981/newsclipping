@@ -3,7 +3,7 @@
 다른 Claude 계정(또는 다른 개발자)이 이 저장소에서 바로 이어서 개발할 수 있도록 정리한 문서입니다.
 기능 설명·설치·설정 방법은 [README.md](README.md)에 자세히 있고, 이 문서는 **개발을 이어받는 데 필요한 것**만 모았습니다.
 
-- 현재 버전: **v1.67** (정식 `android/version.txt`, 라이트 `android/version-lite.txt`)
+- 현재 버전: **v1.71** (정식 `android/version.txt`, 라이트 `android/version-lite.txt`)
 - 웹: https://kimyh1981.github.io/newsclipping/
 - APK: https://github.com/kimyh1981/newsclipping/releases/latest/download/newsclipping.apk
 - 라이트 APK(제품 공부·농업영어 없음, '뉴스클리핑 라이트'): https://github.com/kimyh1981/newsclipping/releases/latest/download/newsclipping-lite.apk
@@ -117,6 +117,7 @@ Pages Source는 **GitHub Actions**로 설정되어 있어야 합니다.
 | #68 | 라이트 1.68 | 라이트판을 정식판과 같은 최신 기능으로 올림, 라이트 받기 페이지 `lite/` (설치 방법·막힐 때·기능 소개, 최신 버전 표시) |
 | #69 | | 배포 멈춤 고침: 사이트 파일 테스트에 lite/ 반영 |
 | #70 | | 정식판 받기 페이지 `app/` (직원용, 제품 공부·농업영어·F1 소개) |
+| #71 | 1.71 | 새로고침: 당기면 먼저 묻고(팝업에 지금 원고 시각) → 받기 누르면 확인 후 새 원고면 받음. 맨 위 원고 시각 줄은 평소 숨김. 홈의 '듣는 언론사' 글귀 뺌, 로고가 넘치면 위부터 채워 아래에서 잘림 |
 
 자세한 내용은 각 PR 설명과 커밋 메시지를 보세요.
 
