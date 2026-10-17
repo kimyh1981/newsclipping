@@ -3,7 +3,7 @@
 다른 Claude 계정(또는 다른 개발자)이 이 저장소에서 바로 이어서 개발할 수 있도록 정리한 문서입니다.
 기능 설명·설치·설정 방법은 [README.md](README.md)에 자세히 있고, 이 문서는 **개발을 이어받는 데 필요한 것**만 모았습니다.
 
-- 현재 버전: **v1.57** (정식 `android/version.txt`, 라이트 `android/version-lite.txt`)
+- 현재 버전: **v1.60** (정식 `android/version.txt`, 라이트 `android/version-lite.txt`)
 - 웹: https://kimyh1981.github.io/newsclipping/
 - APK: https://github.com/kimyh1981/newsclipping/releases/latest/download/newsclipping.apk
 - 라이트 APK(제품 공부·농업영어 없음, '뉴스클리핑 라이트'): https://github.com/kimyh1981/newsclipping/releases/latest/download/newsclipping-lite.apk
@@ -103,6 +103,8 @@ Pages Source는 **GitHub Actions**로 설정되어 있어야 합니다.
 | #56 | 1.56 | 배포판 두 가지: 정식 + 뉴스클리핑 라이트(제품 공부·농업영어 없음) |
 | #57 | 1.57 | F1 엔진 ONNX Runtime 1.23.1 → 1.30.0: 최신 스냅드래곤에서 모델을 열다 SIGILL로 앱이 꺼지던 문제 |
 | #58 | 라이트 1.58 | 라이트판만 비공개 서명 키. 정식판 키·버전은 그대로 |
+| #59 | | 비료 섹션: 영농자재신문·한국무역신문 먼저(각 1건), 시간대 없는 RSS 날짜는 한국 시간 |
+| #60 | 1.60 | 말 빠르기: F1을 쓰면 빠르기 미리 듣기도 F1으로, 듣는 중 바꾸면 다음 줄부터 새 빠르기. f1-live가 빠르기별 길이를 잰다 |
 
 자세한 내용은 각 PR 설명과 커밋 메시지를 보세요.
 

@@ -560,14 +560,15 @@ public class NewsService extends Service {
     private Future<File> f1Job(Step s) {
         if (s.silence > 0 || s.text.isEmpty() || f1Pool == null || f1Pool.isShutdown()) return null;
         boolean en = isEnglish(s);
-        String key = (en ? "en|" : "ko|") + s.text;
+        int rate = new Prefs(this).rate(); // 듣는 중에 빠르기를 바꾸면 미리 만든 소리 대신 새 빠르기로 다시 만든다
+        String key = rate + "|" + (en ? "en|" : "ko|") + s.text;
         return f1Jobs.computeIfAbsent(key, k -> f1Pool.submit(() -> {
             F1Engine e = F1Voice.engine(this);
             if (e == null || stopped) return null;
             File out = new File(f1Dir, Brief.audioId(k) + ".wav");
             if (out.exists()) return out;
             long t = System.currentTimeMillis();
-            float[] pcm = F1Voice.synth(this, e, en ? s.text : Pron.say(s.text), en ? "en" : "ko", F1Voice.speed(new Prefs(this).rate()));
+            float[] pcm = F1Voice.synth(this, e, en ? s.text : Pron.say(s.text), en ? "en" : "ko", F1Voice.speed(rate));
             F1Engine.writeWav(pcm, e.sampleRate, out);
             float x = pcm.length / (float) e.sampleRate / Math.max(0.001f, (System.currentTimeMillis() - t) / 1000f);
             new Prefs(this).setF1Speed(x);
