@@ -67,6 +67,7 @@ GitHub Actions (새벽·오후)                     폰/웹
 | Variable | `TTS_ENGINE` | `off`면 녹음 안 함 |
 | Variable | `SUMMARY_MODE` | 기본 `lead`(본문 첫 문장) |
 | (선택) | `KEYSTORE_PASSWORD` | 서명 키 비밀번호를 바꿀 때 |
+| Secret | `LITE_KEYSTORE_B64`, `LITE_KEYSTORE_PASSWORD` | 라이트판 비공개 서명 키(PKCS12, 별칭 `lite`). 없으면 main 배포가 멈춤. **원본은 주인 PC `H:\Newscliping\_keys\`(git 제외). 잃어버리면 라이트 사용자가 앱을 지우고 다시 깔아야 함** |
 
 Pages Source는 **GitHub Actions**로 설정되어 있어야 합니다.
 
@@ -101,6 +102,7 @@ Pages Source는 **GitHub Actions**로 설정되어 있어야 합니다.
 | #55 | | 영농자재신문·한국무역신문을 비료 섹션으로(비료 기사만), RSS 시간 초과 시 재시도 |
 | #56 | 1.56 | 배포판 두 가지: 정식 + 뉴스클리핑 라이트(제품 공부·농업영어 없음) |
 | #57 | 1.57 | F1 엔진 ONNX Runtime 1.23.1 → 1.30.0: 최신 스냅드래곤에서 모델을 열다 SIGILL로 앱이 꺼지던 문제 |
+| #58 | 라이트 1.58 | 라이트판만 비공개 서명 키. 정식판 키·버전은 그대로 |
 
 자세한 내용은 각 PR 설명과 커밋 메시지를 보세요.
 

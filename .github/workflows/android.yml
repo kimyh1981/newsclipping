@@ -25,8 +25,21 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.9'
+      - name: Lite signing key
+        # 라이트판 비공개 서명 키 (저장소 비밀값). 없으면 정식판 키로 서명되고, main 배포 단계에서 멈춘다
+        env:
+          LITE_KEYSTORE_B64: ${{ secrets.LITE_KEYSTORE_B64 }}
+        run: |
+          if [ -n "$LITE_KEYSTORE_B64" ]; then
+            echo "$LITE_KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/lite.p12"
+            echo "LITE_KEYSTORE=$RUNNER_TEMP/lite.p12" >> "$GITHUB_ENV"
+          else
+            echo "라이트판 서명 키 비밀값이 없습니다 (정식판 키로 서명)"
+          fi
       - name: Unit tests and APK
         working-directory: android
+        env:
+          LITE_KEYSTORE_PASSWORD: ${{ secrets.LITE_KEYSTORE_PASSWORD }}
         run: gradle --no-daemon testFullReleaseUnitTest testLiteReleaseUnitTest assembleRelease
       - name: Rename APK
         run: |
@@ -43,6 +56,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          [ -n "$LITE_KEYSTORE" ] || { echo "라이트판 서명 키 비밀값(LITE_KEYSTORE_B64)이 없어 배포하지 않습니다"; exit 1; }
           tag="v$(tr -d '[:space:]' < android/version.txt)-r${GITHUB_RUN_NUMBER}" # 앱 화면의 버전 + 배포 번호
           lite="v$(tr -d '[:space:]' < android/version-lite.txt)" # 라이트 APK의 표시 이름 = 라이트 버전 (라이트 앱은 이게 바뀔 때만 업데이트를 띄운다)
           gh release create "$tag" newsclipping.apk "newsclipping-lite.apk#$lite" --title "뉴스클리핑 $tag" --notes "갤럭시(안드로이드)용 앱. 정식판은 newsclipping.apk, 제품 공부·농업영어를 뺀 라이트판(뉴스클리핑 라이트 $lite)은 newsclipping-lite.apk를 받아 설치합니다." --latest
