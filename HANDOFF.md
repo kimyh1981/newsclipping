@@ -3,7 +3,7 @@
 다른 Claude 계정(또는 다른 개발자)이 이 저장소에서 바로 이어서 개발할 수 있도록 정리한 문서입니다.
 기능 설명·설치·설정 방법은 [README.md](README.md)에 자세히 있고, 이 문서는 **개발을 이어받는 데 필요한 것**만 모았습니다.
 
-- 현재 버전: **v1.64** (정식 `android/version.txt`, 라이트 `android/version-lite.txt`)
+- 현재 버전: **v1.66** (정식 `android/version.txt`, 라이트 `android/version-lite.txt`)
 - 웹: https://kimyh1981.github.io/newsclipping/
 - APK: https://github.com/kimyh1981/newsclipping/releases/latest/download/newsclipping.apk
 - 라이트 APK(제품 공부·농업영어 없음, '뉴스클리핑 라이트'): https://github.com/kimyh1981/newsclipping/releases/latest/download/newsclipping-lite.apk
@@ -108,6 +108,7 @@ Pages Source는 **GitHub Actions**로 설정되어 있어야 합니다.
 | #62 | 1.62 | F1: 우리말 숫자를 천·백 단위마다 띄워 넘김(삼천 사백 오십육억). 긴 숫자에서 한 글자 건너뛰던 문제 |
 | #63 | 1.63 | 홈 화면 진행바: 섹션마다 끊어 그림, 지금 읽는 언론사 로고가 커짐, 끌면 그 언론사 로고가 커지고 놓으면 거기부터 읽음 (`Chapters`, `ChapterBar`, `LogoWall.setFocus`) |
 | #64 | 1.64 | 홈 화면 당겨서 새로 받기(놓으면 한 번 묻고 받음): 맨 위에 원고 시각, 받는 중 %. 서버의 최신 briefing.json을 다시 받음(읽는 중인 원고는 그대로) |
+| #66 | 1.66 | 당겨서 새로 받기: 먼저 `latest.json`(원고 시각만)과 서버 원고 만들기 실행 상태(공개 API)를 확인 → 새 원고 있음/서버가 모으는 중/이미 최신을 나눠 안내 |
 
 자세한 내용은 각 PR 설명과 커밋 메시지를 보세요.
 
