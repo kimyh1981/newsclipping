@@ -81,6 +81,7 @@ public class MainActivity extends Activity {
     @Override
     protected void onCreate(Bundle b) {
         super.onCreate(b);
+        Crash.install(this);
         prefs = new Prefs(this);
         NewsService.ensureChannel(this);
         dark = (getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES;
@@ -254,6 +255,21 @@ public class MainActivity extends Activity {
             installUpdate();
         }
         showInstallError();
+        showLastExit();
+    }
+
+    /** 지난번 앱이 갑자기 꺼졌으면 그 이유를 한 번 보여 준다 (캡처해서 보내 달라고) */
+    private void showLastExit() {
+        boolean f1 = Crash.f1Crashed(this, prefs);
+        String r = Crash.lastReport(this, prefs);
+        if (r == null && !f1) return;
+        new Sheet(this)
+                .setTitle(f1 ? "F1 음성을 쓰다 앱이 꺼졌습니다" : "지난번 앱이 갑자기 꺼졌습니다")
+                .setMessage((f1 ? "다시 꺼지지 않게 F1 음성을 껐습니다. 뉴스는 예전처럼 읽습니다.\n\n" : "")
+                        + "이 화면을 캡처해서 보내 주시면 고치는 데 씁니다.\n\n" + (r == null ? "(자세한 기록 없음)" : r))
+                .setPositiveButton("확인", null)
+                .show();
+        refresh();
     }
 
     /** 설치가 막혔으면 이유에 맞는 해결 방법을 띄운다 (한 번만) */
@@ -1297,7 +1313,7 @@ public class MainActivity extends Activity {
                 F1Engine e = F1Voice.engine(this);
                 if (e == null) throw new IllegalStateException(F1Voice.error);
                 long t = System.currentTimeMillis();
-                float[] pcm = e.synth(Pron.say(Voices.SAMPLE), "ko", F1Voice.speed(prefs.rate()));
+                float[] pcm = F1Voice.synth(this, e, Pron.say(Voices.SAMPLE), "ko", F1Voice.speed(prefs.rate()));
                 float x = pcm.length / (float) e.sampleRate / Math.max(0.001f, (System.currentTimeMillis() - t) / 1000f);
                 prefs.setF1Speed(x);
                 java.io.File f = new java.io.File(getCacheDir(), "f1-preview.wav");

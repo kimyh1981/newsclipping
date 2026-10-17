@@ -27,6 +27,8 @@ final class F1Voice {
     static volatile int progress = -1;
     static volatile String error = "";
     private static F1Engine engine;
+    /** 이 프로세스에서 F1을 쓰기 시작했다: 그러면 남은 '만드는 중' 표시는 지금 것이다 (지난번 것이 아니다) */
+    static volatile boolean touched;
 
     private F1Voice() {}
 
@@ -99,8 +101,11 @@ final class F1Voice {
 
     /** 엔진 (처음 부를 때 띄운다, 몇 초 걸린다). 모델이 없거나 못 띄우면 null */
     static synchronized F1Engine engine(Context c) {
+        touched = true;
         if (engine != null) return engine;
         if (!ready(c)) return null;
+        Prefs p = new Prefs(c);
+        p.setF1Busy(true); // 엔진 안(네이티브)에서 터지면 자바로 못 잡는다: 다음 실행 때 이 표시로 알아챈다
         try {
             long t = System.currentTimeMillis();
             engine = new F1Engine(dir(c));
@@ -109,7 +114,19 @@ final class F1Voice {
             Log.w(TAG, "F1 엔진을 띄우지 못함: " + e);
             error = String.valueOf(e.getMessage());
         }
+        p.setF1Busy(false);
         return engine;
+    }
+
+    /** 소리 만들기를 표시해 두고 한다 (그 사이 앱이 꺼지면 다음 실행 때 F1을 끈다) */
+    static float[] synth(Context c, F1Engine e, String text, String lang, float speed) throws Exception {
+        Prefs p = new Prefs(c);
+        p.setF1Busy(true);
+        try {
+            return e.synth(text, lang, speed);
+        } finally {
+            p.setF1Busy(false);
+        }
     }
 
     /** 받은 모델을 지운다 (끄고 공간을 돌려받을 때) */
