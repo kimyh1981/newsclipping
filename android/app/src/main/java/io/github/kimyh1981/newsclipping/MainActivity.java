@@ -1251,7 +1251,12 @@ public class MainActivity extends Activity {
         final Voice voice = current;
         new Sheet(this)
                 .setTitle("말 빠르기 (누르면 들려 드립니다)")
-                .setSingleChoiceItems(Rules.RATE_LABELS, choice[0], (d, i) -> { choice[0] = i; say(voice, Rules.RATES[i]); })
+                .setSingleChoiceItems(Rules.RATE_LABELS, choice[0], (d, i) -> {
+                    choice[0] = i;
+                    // F1을 쓰면 F1으로 들려준다 (예전엔 폰 음성으로만 들려줘서 F1 빠르기는 안 바뀌는 것처럼 들렸다, 2026-10-17)
+                    if (prefs.f1On() && F1Voice.ready(this)) previewF1(Rules.RATES[i]);
+                    else say(voice, Rules.RATES[i]);
+                })
                 .setPositiveButton("저장", (d, w) -> { preview.stop(); prefs.setRate(Rules.RATES[choice[0]]); refresh(); })
                 .setNegativeButton("취소", (d, w) -> preview.stop())
                 .show();
@@ -1307,25 +1312,33 @@ public class MainActivity extends Activity {
         if (F1Voice.progress >= 0) f1Val.postDelayed(this::tickF1, 1000);
     }
 
-    /** 견본 한 문장을 F1으로 만들어 들려주고 이 폰의 속도를 잰다 */
-    private void previewF1() {
+    /** F1 미리 듣기는 한 번에 하나씩 (말 빠르기를 연달아 눌러도 차례로), 앞의 소리는 멈춘다 */
+    private final java.util.concurrent.ExecutorService f1Preview = java.util.concurrent.Executors.newSingleThreadExecutor();
+    private android.media.MediaPlayer f1Player;
+
+    private void previewF1() { previewF1(prefs.rate()); }
+
+    /** 견본 한 문장을 F1으로 만들어 들려주고 이 폰의 속도를 잰다. rate: 말 빠르기 (보통 100) */
+    private void previewF1(int rate) {
         f1Val.setText("준비 중…");
-        new Thread(() -> {
+        f1Preview.execute(() -> {
             String msg;
             try {
                 F1Engine e = F1Voice.engine(this);
                 if (e == null) throw new IllegalStateException(F1Voice.error);
                 long t = System.currentTimeMillis();
-                float[] pcm = F1Voice.synth(this, e, Pron.say(Voices.SAMPLE), "ko", F1Voice.speed(prefs.rate()));
+                float[] pcm = F1Voice.synth(this, e, Pron.say(Voices.SAMPLE), "ko", F1Voice.speed(rate));
                 float x = pcm.length / (float) e.sampleRate / Math.max(0.001f, (System.currentTimeMillis() - t) / 1000f);
                 prefs.setF1Speed(x);
                 java.io.File f = new java.io.File(getCacheDir(), "f1-preview.wav");
                 F1Engine.writeWav(pcm, e.sampleRate, f);
-                android.media.MediaPlayer mp = new android.media.MediaPlayer();
-                mp.setDataSource(f.getPath());
-                mp.setOnCompletionListener(android.media.MediaPlayer::release);
-                mp.prepare();
-                mp.start();
+                synchronized (this) {
+                    if (f1Player != null) { try { f1Player.release(); } catch (Exception ignored) { } }
+                    f1Player = new android.media.MediaPlayer();
+                    f1Player.setDataSource(f.getPath());
+                    f1Player.prepare();
+                    f1Player.start();
+                }
                 msg = null;
             } catch (Throwable ex) {
                 msg = "F1 음성을 만들지 못했습니다: " + ex.getMessage();
@@ -1335,7 +1348,7 @@ public class MainActivity extends Activity {
                 refresh();
                 if (m != null) new Sheet(this).setMessage(m).setPositiveButton("확인", null).show();
             });
-        }).start();
+        });
     }
 
     private TextView text(String s, int sp, int color) {
