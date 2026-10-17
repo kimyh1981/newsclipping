@@ -78,11 +78,17 @@ final class LogoWall extends View {
 
     private void load(String site) {
         bitmaps.put(site, null);
-        File file = new File(new File(getContext().getCacheDir(), "logos"), site.replaceAll("[^a-zA-Z0-9.-]", "_") + ".png");
+        String fileName = site.replaceAll("[^a-zA-Z0-9.-]", "_") + ".png";
+        // logos2: 서버가 모은 선명한 로고로 바꾸며 폰에 남은 옛(흐린) 로고는 쓰지 않는다 (2026-10-17)
+        File file = new File(new File(getContext().getCacheDir(), "logos2"), fileName);
         new Thread(() -> {
             Bitmap b = file.exists() ? BitmapFactory.decodeFile(file.getPath()) : null;
             if (b == null) {
-                b = fetch("https://" + site + "/apple-touch-icon.png", 96);
+                // 1) 서버가 언론사마다 가장 큰 그림을 골라 둔 로고 (최대 512px, tools/logos.py)
+                b = fetch(BuildConfig.NEWS_URL.replace("briefing.json", "logos/") + fileName, 96);
+                // 2) 서버에 없으면(폰에서 직접 넣은 언론사 등) 예전처럼 찾되, 구글 256px 파비콘을 먼저
+                if (b == null) b = fetch("https://t1.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://" + site + "&size=256", 128);
+                if (b == null) b = fetch("https://" + site + "/apple-touch-icon.png", 96);
                 if (b == null && site.split("\\.").length == 2) b = fetch("https://www." + site + "/apple-touch-icon.png", 96);
                 if (b == null) b = fetch("https://www.google.com/s2/favicons?domain=" + site + "&sz=128", 1);
                 if (b != null) {

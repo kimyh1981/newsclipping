@@ -67,6 +67,18 @@ jobs:
           TTS_VOICE: ${{ vars.TTS_VOICE }}
           TTS_CACHE: tts-cache
         run: node tools/collect.js _site
+      # 언론사 로고를 선명한 것으로 모아 logos/에 올린다 (홈 화면에서 커진 로고가 깨지지 않게, 2026-10-17). 실패해도 배포는 계속
+      - uses: actions/cache@v4
+        with:
+          path: logo-cache
+          key: logos-${{ github.run_id }}
+          restore-keys: logos-
+      - name: Sharp logos
+        timeout-minutes: 5
+        continue-on-error: true
+        run: |
+          python3 -m pip install --user -q pillow
+          [ -f _site/briefing.json ] && python3 tools/logos.py _site logo-cache
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
