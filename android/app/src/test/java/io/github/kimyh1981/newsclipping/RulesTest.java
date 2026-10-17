@@ -10,6 +10,17 @@ import java.util.Calendar;
 import org.junit.Test;
 
 public class RulesTest {
+    // 홈 화면 맨 위 '원고 시각' (당겨서 새로 받기, 주인 요청 2026-10-17). 시각은 서울 시간
+    @Test public void briefTimeInPlainKorean() {
+        long now = java.time.Instant.parse("2026-10-17T06:30:00Z").toEpochMilli(); // 10/17 15:30 KST
+        assertEquals("오늘 오후 2:56", Rules.briefTime("2026-10-17T05:56:35.143Z", now));
+        assertEquals("오늘 오전 5:10", Rules.briefTime("2026-10-16T20:10:00Z", now));
+        assertEquals("어제 오후 4:22", Rules.briefTime("2026-10-16T07:22:00Z", now));
+        assertEquals("10월 15일 오후 12:05", Rules.briefTime("2026-10-15T03:05:00Z", now));
+        assertEquals("", Rules.briefTime("", now));
+        assertEquals("", Rules.briefTime("nonsense", now));
+    }
+
     private static final int SIX = 6 * 60, EIGHT = 8 * 60;
 
     @Test public void weekdayMorningWindow() {

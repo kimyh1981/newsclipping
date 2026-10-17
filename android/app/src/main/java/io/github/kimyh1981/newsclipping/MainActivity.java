@@ -68,6 +68,9 @@ public class MainActivity extends Activity {
     /** 홈 화면 언론사 로고와, 로고를 고르려고 받아 둔 오늘 뉴스 목록 */
     private LogoWall logos;
     private String briefJson;
+    /** 홈 화면 맨 위 한 줄: 원고 시각, 당기는 중 안내, 받는 중 % (당겨서 새로 받기, 주인 요청 2026-10-17) */
+    private TextView briefLine;
+    private boolean refreshing;
     private boolean loadingLogos;
     private boolean updating;
     /** '이 출처 허용'을 켜러 설정에 갔다 오면 업데이트를 이어서 한다 */
@@ -101,7 +104,12 @@ public class MainActivity extends Activity {
         LinearLayout col = new LinearLayout(this);
         col.setOrientation(LinearLayout.VERTICAL);
         col.setGravity(Gravity.CENTER_HORIZONTAL);
-        col.setPadding(dp(16), dp(16), dp(16), dp(8));
+        col.setPadding(dp(16), dp(8), dp(16), dp(8));
+        briefLine = text("", 13, secondary);
+        briefLine.setGravity(Gravity.CENTER);
+        LinearLayout.LayoutParams bt = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        bt.bottomMargin = dp(8);
+        col.addView(briefLine, bt);
         updateBar = text("", 16, 0xFFFFFFFF);
         updateBar.setTypeface(Typeface.DEFAULT_BOLD);
         updateBar.setGravity(Gravity.CENTER);
@@ -197,6 +205,7 @@ public class MainActivity extends Activity {
         root.setBackgroundColor(bg);
         android.widget.FrameLayout body = new android.widget.FrameLayout(this);
         pages = new ScrollView[] {scrollOf(col), scrollOf(newsPage), scrollOf(setPage)};
+        pullToRefresh(pages[0], col);
         for (ScrollView sv : pages) body.addView(sv);
         root.addView(body, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f));
         View line = new View(this);
@@ -336,6 +345,7 @@ public class MainActivity extends Activity {
             runOnUiThread(() -> {
                 loadingLogos = false;
                 if (got != null) { briefJson = got; showLogos(); }
+                showBriefTime(null);
             });
         }, "logos").start();
     }
@@ -536,6 +546,76 @@ public class MainActivity extends Activity {
         title.setPadding(dp(4), dp(8), 0, dp(8));
         col.addView(title);
         return col;
+    }
+
+    /** 홈 화면 맨 위 줄에 원고 시각. head: 앞에 붙일 말(없으면 null) */
+    private void showBriefTime(String head) {
+        String when = "";
+        try {
+            if (briefJson != null) when = Rules.briefTime(new org.json.JSONObject(briefJson).optString("generatedAt"), System.currentTimeMillis());
+        } catch (Exception ignored) { }
+        String body = when.isEmpty() ? "아래로 당기면 최신 원고를 받습니다" : "원고: " + when;
+        briefLine.setText(head == null ? body : head + " · " + body);
+    }
+
+    /** 홈 화면을 맨 위에서 아래로 당겼다 놓으면 서버의 최신 원고를 다시 받는다 (받는 동안 맨 위에 %) */
+    private void pullToRefresh(ScrollView sv, View content) {
+        final float need = dp(72);
+        final float[] from = {-1};
+        sv.setOnTouchListener((v, e) -> {
+            if (refreshing) return false;
+            switch (e.getActionMasked()) {
+                case android.view.MotionEvent.ACTION_DOWN:
+                    from[0] = sv.getScrollY() == 0 ? e.getRawY() : -1;
+                    break;
+                case android.view.MotionEvent.ACTION_MOVE:
+                    if (from[0] < 0 && sv.getScrollY() == 0) from[0] = e.getRawY(); // 버튼에서 시작한 끌기
+                    if (from[0] < 0) break;
+                    float dy = e.getRawY() - from[0];
+                    if (dy <= 0 || sv.getScrollY() > 0) { content.setTranslationY(0); break; }
+                    content.setTranslationY(Math.min(dy, need * 1.5f) * 0.5f);
+                    briefLine.setText(dy >= need ? "놓으면 최신 원고를 받습니다" : "↓ 더 당기면 새로 받기");
+                    return true;
+                case android.view.MotionEvent.ACTION_UP:
+                case android.view.MotionEvent.ACTION_CANCEL:
+                    boolean go = from[0] >= 0 && e.getActionMasked() == android.view.MotionEvent.ACTION_UP && e.getRawY() - from[0] >= need;
+                    from[0] = -1;
+                    content.animate().translationY(0).setDuration(150).start();
+                    if (go) refreshBrief(); else showBriefTime(null);
+                    break;
+                default:
+                    break;
+            }
+            return false;
+        });
+    }
+
+    /** 서버의 최신 원고(briefing.json)를 다시 받는다. 읽는 중인 원고는 그대로 (다음 재생부터 새 원고) */
+    private void refreshBrief() {
+        refreshing = true;
+        briefLine.setText("최신 원고를 받는 중…");
+        String before = briefJson;
+        new Thread(() -> {
+            String got;
+            try {
+                got = NewsService.fetch(BuildConfig.NEWS_URL, p -> runOnUiThread(() -> { if (p >= 0) briefLine.setText("최신 원고를 받는 중 " + p + "%"); }));
+            } catch (Exception e) {
+                got = null;
+            }
+            final String json = got;
+            runOnUiThread(() -> {
+                refreshing = false;
+                if (json == null) { showBriefTime("받지 못했습니다. 인터넷 연결을 확인해 주세요"); return; }
+                boolean same = before != null && generatedAt(before).equals(generatedAt(json));
+                briefJson = json;
+                showLogos();
+                showBriefTime(same ? "이미 최신 원고" : "새 원고를 받았습니다");
+            });
+        }, "refresh").start();
+    }
+
+    private static String generatedAt(String json) {
+        try { return new org.json.JSONObject(json).optString("generatedAt"); } catch (Exception e) { return ""; }
     }
 
     private ScrollView scrollOf(LinearLayout col) {

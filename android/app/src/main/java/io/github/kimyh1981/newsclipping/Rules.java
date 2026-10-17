@@ -147,4 +147,18 @@ public final class Rules {
         if (micNow || otherSound || !sawMic) return ASSIST_WAIT;
         return ASSIST_QUIET;
     }
+
+    /** 원고를 만든 시각(ISO, briefing.json의 generatedAt) → '오늘 오후 2:56' · '어제 오전 5:10' · '10월 15일 오후 4:22' (서울 시간). 못 읽으면 "" */
+    public static String briefTime(String iso, long now) {
+        try {
+            java.time.ZoneId seoul = java.time.ZoneId.of("Asia/Seoul");
+            java.time.ZonedDateTime t = java.time.Instant.parse(iso).atZone(seoul);
+            java.time.LocalDate today = java.time.Instant.ofEpochMilli(now).atZone(seoul).toLocalDate();
+            String day = t.toLocalDate().equals(today) ? "오늘" : t.toLocalDate().equals(today.minusDays(1)) ? "어제" : t.getMonthValue() + "월 " + t.getDayOfMonth() + "일";
+            int h = t.getHour();
+            return day + " " + (h < 12 ? "오전 " : "오후 ") + (h % 12 == 0 ? 12 : h % 12) + ":" + String.format(java.util.Locale.ROOT, "%02d", t.getMinute());
+        } catch (Exception e) {
+            return "";
+        }
+    }
 }
