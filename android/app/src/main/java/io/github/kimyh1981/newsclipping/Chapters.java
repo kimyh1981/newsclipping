@@ -15,10 +15,12 @@ final class Chapters {
     private final String[] site;
     /** 줄 i가 시작하는 자리 (0~1), 마지막 칸은 1 */
     private final float[] at;
+    /** 줄 i가 시작하는 무게(글자 수 기준), 마지막 칸은 전체 무게. 시간 = 무게 × 초/무게 */
+    private final float[] raw;
     private final int count;
 
-    private Chapters(int[] chapter, String[] site, float[] at, int count) {
-        this.chapter = chapter; this.site = site; this.at = at; this.count = count;
+    private Chapters(int[] chapter, String[] site, float[] at, float[] raw, int count) {
+        this.chapter = chapter; this.site = site; this.at = at; this.raw = raw; this.count = count;
     }
 
     /** siteOf: 기사의 언론사 누리집 (모르면 "") */
@@ -41,6 +43,7 @@ final class Chapters {
             total += blank ? 2 : l.text.length() + 4;
         }
         at[n] = total;
+        float[] raw = at.clone();
         for (int i = 0; i <= n; i++) at[i] = total > 0 ? at[i] / total : 0;
         // 언론사: 기사 줄은 그 기사의, 'OO 소식입니다.'·섹션 소개는 같은 토막에서 바로 뒤 기사의 언론사
         String next = "";
@@ -54,7 +57,7 @@ final class Chapters {
             site[i] = l.text.isEmpty() ? "" : next;
         }
         // 맺음말·인사처럼 기사가 없는 토막의 줄은 언론사 없음 (위에서 토막이 바뀌면 비웠다)
-        return new Chapters(chapter, site, at, n == 0 ? 0 : ch + 1);
+        return new Chapters(chapter, site, at, raw, n == 0 ? 0 : ch + 1);
     }
 
     int count() { return count; }
@@ -64,6 +67,14 @@ final class Chapters {
     String site(int line) { return line >= 0 && line < site.length ? site[line] : ""; }
 
     float fractionOf(int line) { return at[Math.max(0, Math.min(line, at.length - 1))]; }
+
+    /** 줄 line이 시작하는 무게 */
+    float weightAt(int line) { return raw[Math.max(0, Math.min(line, raw.length - 1))]; }
+
+    /** 줄 line 하나의 무게 */
+    float weightOf(int line) { return line < 0 || line + 1 >= raw.length ? 0 : raw[line + 1] - raw[line]; }
+
+    float totalWeight() { return raw[raw.length - 1]; }
 
     /** 토막 경계 (0, …, 1): 바에서 끊어 그릴 자리 */
     float[] bounds() {

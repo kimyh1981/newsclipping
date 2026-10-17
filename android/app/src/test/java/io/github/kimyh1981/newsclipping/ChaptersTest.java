@@ -67,6 +67,19 @@ public class ChaptersTest {
         assertEquals("", c.site(12)); // 맺음말
     }
 
+    @Test public void weightsGiveTimeAlongTheScript() {
+        Chapters c = chapters();
+        // 줄의 무게 = 글자 수 + 4 (빈 줄은 2). 시간 = 무게 × 초/무게
+        assertEquals("좋은 아침입니다. 10월 6일 화요일, 출근길 뉴스 브리핑입니다.".length() + 4, c.weightOf(0), 1e-6);
+        assertEquals(2, c.weightOf(1), 1e-6);
+        assertEquals(0, c.weightAt(0), 1e-6);
+        assertEquals(c.weightOf(0), c.weightAt(1), 1e-6);
+        float sum = 0;
+        for (int i = 0; i < c.size(); i++) sum += c.weightOf(i);
+        assertEquals(sum, c.totalWeight(), 1e-3);
+        assertEquals(c.fractionOf(5), c.weightAt(5) / c.totalWeight(), 1e-6);
+    }
+
     @Test public void barPositionMapsToLineAndSnapsToOutletStart() {
         Chapters c = chapters();
         for (int i = 0; i < 13; i++) assertEquals(i, c.lineAt(c.fractionOf(i) + 1e-4f));
