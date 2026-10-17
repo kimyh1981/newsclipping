@@ -438,7 +438,7 @@ public class NewsService extends Service {
                 script = Brief.withLesson(script, brief.lesson(prefs.lessonForToday(Lessons.numbers(brief.lessons), true)), prefs.lessonOn(), prefs.englishOn());
             }
         }
-        if (!manual && lessonOnly == 0) new Prefs(this).markPlayed();
+        if (!manual && lessonOnly == 0) new Prefs(this).markPlayed(Brief.evening(System.currentTimeMillis()));
         List<Brief.Line> ready = script;
         // F1을 켰으면 서버 녹음은 받지 않고 폰에서 만든다. 엔진은 여기서(화면 밖 스레드) 미리 띄운다. 못 띄우면 예전처럼
         Crash.f1Crashed(this, new Prefs(this)); // 지난번 F1을 쓰다 앱이 꺼졌으면 F1을 끈다 (차에서 매번 꺼지지 않게)
@@ -663,14 +663,35 @@ public class NewsService extends Service {
     }
 
     /** F1 소리로 튼다. 아직 만드는 중이면 기다렸다가(F1_WAIT_MS까지) 틀고, 못 만들면 false (폰 음성으로) */
+    /** 소리를 기다리는 중 (진행바 아래에 '불러오는 중'): F1이 그 줄을 아직 못 만들었을 때 */
+    private static volatile boolean buffering;
+    private long noticedFor = -1;
+
+    static boolean buffering() { return running != null && buffering; }
+
+    private void setBuffering(boolean on) {
+        if (buffering == on) return;
+        buffering = on;
+        progressChanged();
+    }
+
     private boolean playF1(Step s, int g, long since) {
         Future<File> job = f1Job(s);
-        if (job == null) return false;
+        if (job == null) { endWait(); return false; }
         if (!job.isDone()) {
-            if (System.currentTimeMillis() - since > F1_WAIT_MS) { Log.w(TAG, "F1이 늦어 이 차례는 폰 음성으로"); return false; }
+            long waited = System.currentTimeMillis() - since;
+            if (waited > F1_WAIT_MS) { Log.w(TAG, "F1이 늦어 이 차례는 폰 음성으로"); endWait(); return false; }
+            // 2.5초 넘게 걸리면 한 번 알려 준다: 기다리면 된다는 것을 (주인 요청 2026-10-17). 재생 차례 번호가 없는 말이라 순서는 그대로
+            if (waited > 2500 && noticedFor != since) {
+                noticedFor = since;
+                setBuffering(true);
+                if (phoneEnglish) { tts.setLanguage(Locale.KOREAN); phoneEnglish = false; }
+                tts.speak("기사를 불러오고 있습니다. 잠시만 기다려 주세요.", TextToSpeech.QUEUE_FLUSH, speakParams, "wait");
+            }
             main.postDelayed(() -> { if (g == gen && !stopped && !paused && !playF1(s, g, since)) speakPhone(s); }, 80);
             return true;
         }
+        endWait();
         try {
             File f = job.get();
             return f != null && playClip(f);
@@ -678,6 +699,13 @@ public class NewsService extends Service {
             Log.w(TAG, "F1 만들기 실패, 폰 음성으로: " + e);
             return false;
         }
+    }
+
+    /** 기다림이 끝났다: 안내 말을 멈추고 '불러오는 중'을 지운다 */
+    private void endWait() {
+        if (!buffering) return;
+        if (tts != null) tts.stop();
+        setBuffering(false);
     }
 
     /** 폰 음성이 지금 영어로 맞춰져 있나 */
@@ -1164,7 +1192,7 @@ public class NewsService extends Service {
         if (audio != null && playbackWatch != null) audio.unregisterAudioPlaybackCallback(playbackWatch);
         if (audio != null && modeWatch != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) audio.removeOnModeChangedListener((AudioManager.OnModeChangedListener) modeWatch);
         if (audio != null && focus != null) audio.abandonAudioFocusRequest(focus);
-        if (running == this) { running = null; chapters = null; progressLine = -1; progressChanged(); }
+        if (running == this) { running = null; chapters = null; progressLine = -1; buffering = false; progressChanged(); }
         caption = null;
         stateChanged();
         stopForeground(STOP_FOREGROUND_REMOVE);

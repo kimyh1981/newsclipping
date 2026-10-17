@@ -27,8 +27,8 @@ public class CarReceiver extends BroadcastReceiver {
         if (!BluetoothDevice.ACTION_ACL_CONNECTED.equals(intent.getAction())) return;
         Calendar now = Calendar.getInstance();
         int minute = now.get(Calendar.HOUR_OF_DAY) * 60 + now.get(Calendar.MINUTE);
-        if (!prefs.enabled() || prefs.playedToday()
-                || !Rules.inWindow(now.get(Calendar.DAY_OF_WEEK), minute, prefs.start(), prefs.end(), prefs.weekdaysOnly())) {
+        if (!prefs.enabled() || Rules.autoPlay(now.get(Calendar.DAY_OF_WEEK), minute, prefs.start(), prefs.end(), prefs.weekdaysOnly(),
+                prefs.eveningOn(), prefs.playedToday(), prefs.playedEveningToday()) == Rules.NONE) {
             Log.i(TAG, "연결됨, 재생 조건 아님");
             return;
         }

@@ -9,6 +9,18 @@ public final class Rules {
     private Rules() {}
 
     /** 자동 재생 시간대인가: dayOfWeek는 Calendar.SUNDAY~SATURDAY, 분은 하루 중 분(0~1439). 끝은 포함하지 않는다. */
+    /** 퇴근길 자동 재생 시간: 오후 6시~8시 (주인 요청 2026-10-17: 아침은 그날 1면 헤드라인, 퇴근길은 그날 많이 본 기사) */
+    public static final int EVENING_START = 18 * 60, EVENING_END = 20 * 60;
+    public static final int NONE = 0, MORNING = 1, EVENING = 2;
+
+    /** 차에 탔을 때 자동으로 읽을지: 아침 창이면 MORNING, 퇴근길 창이면 EVENING, 아니면 NONE. 판마다 하루 한 번 */
+    public static int autoPlay(int dayOfWeek, int minuteOfDay, int startMinute, int endMinute, boolean weekdaysOnly,
+                               boolean eveningOn, boolean playedMorning, boolean playedEvening) {
+        if (!playedMorning && inWindow(dayOfWeek, minuteOfDay, startMinute, endMinute, weekdaysOnly)) return MORNING;
+        if (eveningOn && !playedEvening && inWindow(dayOfWeek, minuteOfDay, EVENING_START, EVENING_END, weekdaysOnly)) return EVENING;
+        return NONE;
+    }
+
     public static boolean inWindow(int dayOfWeek, int minuteOfDay, int startMinute, int endMinute, boolean weekdaysOnly) {
         if (weekdaysOnly && (dayOfWeek == Calendar.SATURDAY || dayOfWeek == Calendar.SUNDAY)) return false;
         if (startMinute == endMinute) return true; // 같은 시각이면 하루 종일
