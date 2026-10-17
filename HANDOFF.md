@@ -7,6 +7,7 @@
 - 웹: https://kimyh1981.github.io/newsclipping/
 - APK: https://github.com/kimyh1981/newsclipping/releases/latest/download/newsclipping.apk
 - 라이트 APK(제품 공부·농업영어 없음, '뉴스클리핑 라이트'): https://github.com/kimyh1981/newsclipping/releases/latest/download/newsclipping-lite.apk
+- 정식판 받기 페이지(바이오플랜 직원에게 나눠 줄 주소): https://kimyh1981.github.io/newsclipping/app/ (`app/index.html`, 라이트 페이지와 같은 구조·색)
 - 라이트 받기 페이지(사람들에게 나눠 줄 주소, 설치 안내 포함): https://kimyh1981.github.io/newsclipping/lite/ (`lite/index.html`)
 - 주인: GitHub `kimyh1981` (바이오플랜). 머지는 주인이 직접 합니다.
 
@@ -114,6 +115,8 @@ Pages Source는 **GitHub Actions**로 설정되어 있어야 합니다.
 | #66 | 1.66 | 당겨서 새로 받기: 먼저 `latest.json`(원고 시각만)과 서버 원고 만들기 실행 상태(공개 API)를 확인 → 새 원고 있음/서버가 모으는 중/이미 최신을 나눠 안내 |
 | #67 | 1.67 | 퇴근길 자동 재생(평일 18~20시, 오후판=많이 본 기사, 설정 스위치 기본 켬), 오후 알람 17:00·17:35, F1이 2.5초 넘게 늦으면 "기사를 불러오고 있습니다" 안내 |
 | #68 | 라이트 1.68 | 라이트판을 정식판과 같은 최신 기능으로 올림, 라이트 받기 페이지 `lite/` (설치 방법·막힐 때·기능 소개, 최신 버전 표시) |
+| #69 | | 배포 멈춤 고침: 사이트 파일 테스트에 lite/ 반영 |
+| #70 | | 정식판 받기 페이지 `app/` (직원용, 제품 공부·농업영어·F1 소개) |
 
 자세한 내용은 각 PR 설명과 커밋 메시지를 보세요.
 
