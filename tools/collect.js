@@ -21,7 +21,7 @@ const UA = 'Mozilla/5.0 (compatible; news-briefing/1.0; +https://github.com/kimy
 // 구글 뉴스 검색. lang에 따라 그 나라판(그 나라 말 기사)에서 찾는다. 같은 말을 쓰는 다른 나라는 출처의 edition(IN, GB, BR)으로
 const EDITIONS = {
   ko: ['ko', 'KR', 'KR:ko'], vi: ['vi', 'VN', 'VN:vi'], en: ['en-US', 'US', 'US:en'], ja: ['ja', 'JP', 'JP:ja'], zh: ['zh-CN', 'CN', 'CN:zh-Hans'],
-  pt: ['pt-BR', 'BR', 'BR:pt-419'], ru: ['ru', 'RU', 'RU:ru'], id: ['id', 'ID', 'ID:id'], th: ['th', 'TH', 'TH:th'], IN: ['en-IN', 'IN', 'IN:en'], GB: ['en-GB', 'GB', 'GB:en'], BR: ['pt-BR', 'BR', 'BR:pt-419'],
+  pt: ['pt-BR', 'BR', 'BR:pt-419'], ru: ['ru', 'RU', 'RU:ru'], id: ['id', 'ID', 'ID:id'], th: ['th', 'TH', 'TH:th'], IN: ['en-IN', 'IN', 'IN:en'], GB: ['en-GB', 'GB', 'GB:en'], MY: ['en-MY', 'MY', 'MY:en'], BR: ['pt-BR', 'BR', 'BR:pt-419'],
 };
 
 function googleUrl(q, when = '1d', lang = 'ko') {
