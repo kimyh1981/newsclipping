@@ -143,20 +143,21 @@ final class LogoWall extends View {
             float y = top + row * (s + gap);
             RectF r = new RectF(left, y, left + s, y + s);
             if (i == focused) { big = r; continue; } // 키울 로고는 맨 위에 덮어 그린다
-            drawTile(c, r, shown.get(i), focused >= 0 ? 110 : 255);
+            drawTile(c, r, shown.get(i), focused >= 0 ? 90 : 255, 0.14f);
         }
         if (big != null) {
-            // 그 자리에서 커진다 (최대 1.5배), 화면 밖으로 나가지 않게 안쪽으로 민다
-            float k = 1f + 0.5f * grow, half = s * k / 2;
+            // 그 자리에서 크게: 칸의 2.4배, 적어도 140dp(글자 로고가 읽히게, 주인 요청 2026-10-17), 칸 안을 넘지 않게. 밖으로 나가지 않게 안쪽으로 민다
+            float target = Math.min(Math.max(s * 2.4f, 140 * density), Math.min(getWidth(), getHeight()) * 0.92f);
+            float half = (s + (target - s) * grow) / 2;
             float cx = Math.max(half, Math.min(getWidth() - half, big.centerX()));
             float cy = Math.max(half, Math.min(getHeight() - half, big.centerY()));
-            drawTile(c, new RectF(cx - half, cy - half, cx + half, cy + half), focus, 255);
+            drawTile(c, new RectF(cx - half, cy - half, cx + half, cy + half), focus, 255, 0.14f - 0.06f * grow);
         }
     }
 
-    /** 흰 칸 하나와 그 안의 로고. alpha: 다른 로고를 키울 때 흐리게 */
-    private void drawTile(Canvas c, RectF r, String site, int alpha) {
-        float s = r.width(), radius = s * 0.22f, inset = s * 0.14f;
+    /** 흰 칸 하나와 그 안의 로고. alpha: 다른 로고를 키울 때 흐리게. pad: 칸 안쪽 여백 비율 (커진 로고는 꽉 채운다) */
+    private void drawTile(Canvas c, RectF r, String site, int alpha, float pad) {
+        float s = r.width(), radius = s * 0.22f, inset = s * pad;
         tile.setAlpha(alpha);
         pic.setAlpha(alpha);
         c.drawRoundRect(r, radius, radius, tile);
