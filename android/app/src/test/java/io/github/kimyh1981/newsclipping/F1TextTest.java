@@ -3,6 +3,7 @@ package io.github.kimyh1981.newsclipping;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
+import java.text.Normalizer;
 import java.util.List;
 import org.junit.Test;
 
@@ -24,5 +25,16 @@ public class F1TextTest {
         List<String> commas = F1Text.chunks("가".repeat(70) + ", " + "나".repeat(70) + ", " + "다".repeat(70), 120);
         for (String x : commas) assertTrue(x, x.length() <= 120);
         assertTrue(commas.size() >= 2);
+    }
+
+    // F1이 '삼천사백오십육억'을 '삼천 사 오십육'처럼 한 글자 건너뛰어 읽었다 (주인 폰, 2026-10-17): 단위마다 띄워 넘긴다
+    @Test public void longKoreanNumbersAreSpacedByUnit() {
+        assertEquals("삼천 사백 오십육억 원", F1Text.spaceNumbers("삼천사백오십육억 원"));
+        assertEquals("이천 이십육년", F1Text.spaceNumbers("이천이십육년"));
+        assertEquals("만 이천 삼백 사십오", F1Text.spaceNumbers("만 이천삼백사십오"));
+        assertEquals("천이백 삼십사명", F1Text.spaceNumbers("천이백삼십사명"));
+        // 숫자가 아닌 낱말과 단위가 붙은 말은 그대로
+        assertEquals("천사가 백화점에서 삼천만 원과 오백억", F1Text.spaceNumbers("천사가 백화점에서 삼천만 원과 오백억"));
+        assertEquals("<ko>삼천 사백 오십육억.</ko>", Normalizer.normalize(F1Text.prepare("삼천사백오십육억", "ko"), Normalizer.Form.NFC));
     }
 }

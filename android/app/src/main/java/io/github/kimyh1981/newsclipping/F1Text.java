@@ -19,6 +19,7 @@ final class F1Text {
 
     /** 모델이 읽는 꼴: 한글은 자모로 풀고(NFKD), 기호를 정리하고, 끝에 마침표, <ko>…</ko>로 감싼다 */
     static String prepare(String text, String lang) {
+        if ("ko".equals(lang)) text = spaceNumbers(text);
         text = Normalizer.normalize(text, Normalizer.Form.NFKD);
         StringBuilder b = new StringBuilder();
         text.codePoints().filter(cp -> !emoji(cp)).forEach(b::appendCodePoint);
@@ -31,6 +32,16 @@ final class F1Text {
         text = text.replaceAll("\\s+", " ").trim();
         if (!ENDS.matcher(text).matches()) text += ".";
         return "<" + lang + ">" + text + "</" + lang + ">";
+    }
+
+    private static final Pattern NUMBER_UNIT = Pattern.compile("(?<=[일이삼사오육칠팔구])([천백])(?=[일이삼사오육칠팔구십백])");
+
+    /**
+     * 우리말 숫자를 천·백 단위마다 띄운다: '삼천사백오십육억' → '삼천 사백 오십육억'.
+     * F1이 띄어쓰기 없이 긴 숫자 말을 읽다 가끔 한 글자를 건너뛰었다 (2026-10-17). 앞에 숫자가 있는 천·백 뒤만 띄워서 '천사'·'백화점'·'삼천만'은 그대로
+     */
+    static String spaceNumbers(String text) {
+        return NUMBER_UNIT.matcher(text).replaceAll("$1 ");
     }
 
     private static boolean emoji(int cp) {
