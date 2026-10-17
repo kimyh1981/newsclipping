@@ -1067,17 +1067,27 @@ public class NewsService extends Service {
                 .build());
     }
 
-    static String fetch(String url) throws Exception {
+    static String fetch(String url) throws Exception { return fetch(url, null); }
+
+    /** percent: 받은 만큼(0~100)을 알려 준다 (홈 화면 당겨서 새로 받기). 크기를 알도록 압축 없이 받는다 */
+    static String fetch(String url, java.util.function.IntConsumer percent) throws Exception {
         HttpURLConnection c = (HttpURLConnection) new URL(url + "?t=" + System.currentTimeMillis()).openConnection();
         c.setConnectTimeout(15000);
         c.setReadTimeout(20000);
         c.setUseCaches(false);
+        if (percent != null) c.setRequestProperty("Accept-Encoding", "identity");
         try {
             if (c.getResponseCode() != 200) throw new IllegalStateException("HTTP " + c.getResponseCode());
+            long total = c.getContentLengthLong();
             try (InputStream in = c.getInputStream()) {
                 ByteArrayOutputStream out = new ByteArrayOutputStream();
                 byte[] buf = new byte[8192];
-                for (int n; (n = in.read(buf)) > 0; ) out.write(buf, 0, n);
+                int last = -1;
+                for (int n; (n = in.read(buf)) > 0; ) {
+                    out.write(buf, 0, n);
+                    int p = total > 0 ? (int) Math.min(99, out.size() * 100L / total) : -1;
+                    if (percent != null && p != last) { percent.accept(p); last = p; }
+                }
                 return out.toString(StandardCharsets.UTF_8.name());
             }
         } finally {
