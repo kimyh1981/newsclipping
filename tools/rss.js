@@ -43,7 +43,9 @@ function parseFeed(xml) {
       if (href) link = decodeEntities(href[1]);
     }
     const when = text(tag(b, 'pubDate') || tag(b, 'published') || tag(b, 'updated') || tag(b, 'dc:date'));
-    const t = when ? Date.parse(when) : NaN;
+    // '2026-10-15 19:14:55'처럼 시간대가 없으면 한국 시간 (서버는 UTC라 그대로 읽으면 9시간 늦어진다)
+    const local = /^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}(:\d{2})?$/.test(when) ? when.replace(' ', 'T') + '+09:00' : when;
+    const t = when ? Date.parse(local) : NaN;
     items.push({
       title,
       link,
