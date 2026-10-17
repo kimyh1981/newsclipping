@@ -330,6 +330,21 @@
       "limit": 5,
       "sources": [
         {
+          "id": "newsfm",
+          "name": "영농자재신문",
+          "url": "https://www.newsfm.kr/data/rss/news.xml",
+          "google": "site:newsfm.kr",
+          "when": "2d",
+          "take": 1
+        },
+        {
+          "id": "weeklytrade",
+          "name": "한국무역신문",
+          "google": "site:weeklytrade.co.kr",
+          "when": "2d",
+          "take": 1
+        },
+        {
           "name": "비료 검색",
           "google": "비료",
           "when": "2d",
@@ -364,21 +379,6 @@
           "mix": true,
           "default": false,
           "must": "바이오플랜"
-        },
-        {
-          "id": "newsfm",
-          "name": "영농자재신문",
-          "url": "https://www.newsfm.kr/data/rss/news.xml",
-          "google": "site:newsfm.kr",
-          "when": "2d",
-          "take": 2
-        },
-        {
-          "id": "weeklytrade",
-          "name": "한국무역신문",
-          "google": "site:weeklytrade.co.kr",
-          "when": "2d",
-          "take": 1
         }
       ],
       "hours": 60,

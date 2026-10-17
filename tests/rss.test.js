@@ -167,3 +167,12 @@ test('소수점·날짜의 점에서는 문장을 나누지 않는다', () => {
 test('날짜로 이름 붙인 일(5·18)의 가운뎃점은 남기고, 한자 약칭은 푼다', () => {
   assert.deepStrictEqual(rss.speechSentences('5·18 재조명과 10·15 대책 26년來 최악 1100억弗'), ['5·18 재조명과 10·15 대책 26년래 최악 1100억달러.']);
 });
+
+// 영농자재신문 RSS: <dc:date>2026-10-15 19:14:55</dc:date> 처럼 시간대가 없으면 한국 시간이다.
+// 서버(UTC)가 그대로 읽으면 9시간 늦은 시각이 되어 최근 기사가 '미래 기사'로 버려졌다 (2026-10-17)
+test('시간대 없는 날짜는 한국 시간으로 읽는다', () => {
+  const [it] = rss.parseFeed('<rss><channel><item><title>요소비료 수급</title><link>https://x/1</link><dc:date>2026-10-15 19:14:55</dc:date></item></channel></rss>');
+  assert.equal(it.publishedAt, '2026-10-15T10:14:55.000Z');
+  const [gmt] = rss.parseFeed('<rss><channel><item><title>가</title><link>https://x/2</link><pubDate>Thu, 15 Oct 2026 10:14:55 GMT</pubDate></item></channel></rss>');
+  assert.equal(gmt.publishedAt, '2026-10-15T10:14:55.000Z');
+});
