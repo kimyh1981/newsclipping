@@ -289,7 +289,7 @@ public class NewsService extends Service {
         PendingIntent open = PendingIntent.getActivity(this, tts != null ? 6 : 0, new Intent(this, tts != null ? CaptionActivity.class : MainActivity.class), PendingIntent.FLAG_IMMUTABLE);
         Notification.Builder b = new Notification.Builder(this, CHANNEL)
                 .setSmallIcon(android.R.drawable.ic_lock_silent_mode_off)
-                .setContentTitle("뉴스클리핑")
+                .setContentTitle(getApplicationInfo().loadLabel(getPackageManager()))
                 .setContentText(text)
                 .setContentIntent(open)
                 .setOngoing(true);
@@ -355,7 +355,7 @@ public class NewsService extends Service {
             boolean evening = Brief.evening(now);
             script = brief.linesOf(picked, Brief.koreanDate(now), evening);
             // 평일 아침이면 뉴스 뒤에 제품 공부 한 회 (주말·공휴일은 진도를 넘기지 않는다. 오후 원고에는 붙이지 않는다, 주인 요청 2026-10-14)
-            if (brief.playToday && !evening && (prefs.lessonOn() || prefs.englishOn()) && !brief.lessons.isEmpty()) {
+            if (BuildConfig.LESSONS && brief.playToday && !evening && (prefs.lessonOn() || prefs.englishOn()) && !brief.lessons.isEmpty()) {
                 script = Brief.withLesson(script, brief.lesson(prefs.lessonForToday(Lessons.numbers(brief.lessons), true)), prefs.lessonOn(), prefs.englishOn());
             }
         }

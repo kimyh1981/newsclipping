@@ -53,23 +53,35 @@ final class Updater {
         return r > 0 ? t.substring(0, r) : t;
     }
 
-    static Release parse(String json) throws Exception {
+    /** apkName: 이 앱의 APK 이름 (정식 newsclipping.apk, 라이트 newsclipping-lite.apk).
+     *  라이트 APK의 표시 이름(label)에는 라이트 버전('v1.56')이 붙어 있어 그것을 보이는 버전으로 쓴다 */
+    static Release parse(String json, String apkName) throws Exception {
         JSONObject o = new JSONObject(json);
         String tag = o.optString("tag_name");
-        String apk = "";
+        String apk = "", name = nameOf(tag);
         JSONArray assets = o.optJSONArray("assets");
         if (assets != null) for (int i = 0; i < assets.length(); i++) {
             JSONObject a = assets.getJSONObject(i);
-            if (a.optString("name").endsWith(".apk")) apk = a.optString("browser_download_url");
+            if (!a.optString("name").equals(apkName)) continue;
+            apk = a.optString("browser_download_url");
+            String label = a.isNull("label") ? "" : a.optString("label", "").replaceFirst("^v", "");
+            if (label.matches("\\d+\\.\\d+")) name = label; // 버전 모양일 때만 (표시 이름이 없으면 null)
         }
-        return new Release(nameOf(tag), buildOf(tag), apk);
+        return new Release(name, buildOf(tag), apk);
+    }
+
+    /** 깔린 앱(빌드 번호 code, 보이는 버전 name)보다 새 릴리스인가.
+     *  라이트판은 보이는 버전도 달라야 한다: 제품 공부·농업영어만 바뀐 릴리스는 라이트 버전이 그대로라 건너뛴다 */
+    static boolean isNewer(Release r, int code, String name, boolean lite) {
+        if (r.apk.isEmpty() || r.code <= code) return false;
+        return !lite || !r.name.equals(name);
     }
 
     /** 지금 앱보다 새 릴리스가 있으면 그것, 없거나 못 알아보면 null (네트워크를 쓰므로 화면 스레드 밖에서) */
     static Release newer() {
         try {
-            Release r = parse(NewsService.fetch(LATEST));
-            return r.code > BuildConfig.VERSION_CODE && !r.apk.isEmpty() ? r : null;
+            Release r = parse(NewsService.fetch(LATEST), BuildConfig.APK_NAME);
+            return isNewer(r, BuildConfig.VERSION_CODE, BuildConfig.VERSION_NAME, !BuildConfig.LESSONS) ? r : null;
         } catch (Exception e) {
             Log.w(TAG, "업데이트 확인 실패: " + e);
             return null;
@@ -87,7 +99,7 @@ final class Updater {
         PendingIntent open = PendingIntent.getActivity(c, 9, new Intent(c, MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK), PendingIntent.FLAG_IMMUTABLE);
         Notification n = new Notification.Builder(c, NewsService.CHANNEL)
                 .setSmallIcon(android.R.drawable.stat_sys_download_done)
-                .setContentTitle("뉴스클리핑 새 버전 " + r.name)
+                .setContentTitle(c.getApplicationInfo().loadLabel(c.getPackageManager()) + " 새 버전 " + r.name)
                 .setContentText("눌러서 앱을 열고 '업데이트'를 누르면 설치됩니다.")
                 .setContentIntent(open)
                 .setAutoCancel(true)

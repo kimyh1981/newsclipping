@@ -49,7 +49,7 @@ import java.util.Set;
  */
 public class MainActivity extends Activity {
     private static final String SITE = "https://kimyh1981.github.io/newsclipping/";
-    private static final String APK = "https://github.com/kimyh1981/newsclipping/releases/latest/download/newsclipping.apk";
+    private static final String APK = "https://github.com/kimyh1981/newsclipping/releases/latest/download/" + BuildConfig.APK_NAME;
     private Prefs prefs;
     private TextView footer, permVal, batteryVal, overlayVal, carVal, timeVal, sourcesVal, orderVal, customVal, keywordsVal, fertVal, lessonVal, voiceVal, rateVal, f1Val;
     private Switch enabledSw, weekdaysSw, captionsSw;
@@ -161,8 +161,10 @@ public class MainActivity extends Activity {
         customVal = row(today, "언론사 직접 넣기 (주소)", v -> withBrief(this::showCustom), true);
         keywordsVal = row(today, "국내농업 키워드", v -> showKeywords(), true);
         fertVal = row(today, "해외농업 키워드", v -> withBrief(this::showAbroad), false);
-        LinearLayout study = section(newsPage, "뉴스 뒤에 듣기", "평일 아침 뉴스가 끝나면 제품 공부 한 회와 같은 회의 농업영어를 읽습니다.");
-        lessonVal = row(study, "제품 공부·농업영어 진도", v -> withBrief(this::showLessons), false);
+        if (BuildConfig.LESSONS) { // 라이트판에는 제품 공부·농업영어가 없다
+            LinearLayout study = section(newsPage, "뉴스 뒤에 듣기", "평일 아침 뉴스가 끝나면 제품 공부 한 회와 같은 회의 농업영어를 읽습니다.");
+            lessonVal = row(study, "제품 공부·농업영어 진도", v -> withBrief(this::showLessons), false);
+        }
 
         // ── 설정 탭: 처음 한 번만 · 자동 재생 · 듣기 ──
         LinearLayout setPage = page("설정");
@@ -219,6 +221,7 @@ public class MainActivity extends Activity {
                 else if (at == 2) withBrief(this::showLessons); // 제품 공부·농업영어 진도
                 else showTab(at == 0 ? 0 : at - 2);
             });
+            if (at == 2 && !BuildConfig.LESSONS) t.setVisibility(View.GONE); // 라이트판: '제품공부' 탭 없음
             tabs[i] = t;
             bar.addView(t, new LinearLayout.LayoutParams(0, dp(52), 1f));
         }
@@ -408,7 +411,7 @@ public class MainActivity extends Activity {
         customVal.setText(prefs.custom().isEmpty() ? "없음" : prefs.custom().size() + "곳");
         keywordsVal.setText(prefs.keywords().isEmpty() ? "없음" : String.join(", ", prefs.keywords()));
         fertVal.setText(prefs.abroadCountries().size() + "개국" + (prefs.abroadKeywords().isEmpty() ? "" : " · " + String.join(", ", prefs.abroadKeywords())));
-        lessonVal.setText(!prefs.lessonOn() && !prefs.englishOn() ? "끔" : (prefs.lessonRound() > 1 ? prefs.lessonRound() + "바퀴 · " : "") + prefs.lessonDone().size() + "회 완료");
+        if (lessonVal != null) lessonVal.setText(!prefs.lessonOn() && !prefs.englishOn() ? "끔" : (prefs.lessonRound() > 1 ? prefs.lessonRound() + "바퀴 · " : "") + prefs.lessonDone().size() + "회 완료");
         voiceVal.setText(prefs.voice().isEmpty() ? "자동" : "직접 고름");
         f1Val.setText(f1Label());
         rateVal.setText(Rules.rateLabel(prefs.rate()));
