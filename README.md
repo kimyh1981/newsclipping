@@ -13,7 +13,7 @@
 
 - 설치·기사 목록: https://kimyh1981.github.io/newsclipping/
 - 갤럭시 앱(APK): https://github.com/kimyh1981/newsclipping/releases/latest/download/newsclipping.apk
-- 뉴스클리핑 라이트(바이오플랜 제품 공부·농업영어를 뺀 판, 정식판과 따로 설치): https://github.com/kimyh1981/newsclipping/releases/latest/download/newsclipping-lite.apk
+- 뉴스클리핑 라이트(바이오플랜 제품 공부·농업영어를 뺀 판, 정식판과 따로 설치): https://kimyh1981.github.io/newsclipping/lite/ (받기 페이지)
 - 언론사별 기사: https://kimyh1981.github.io/newsclipping/briefing.json (앱과 웹이 읽는다)
 - 기본 언론사 원고: https://kimyh1981.github.io/newsclipping/briefing.txt (아이폰 단축어가 읽는다, 주말·공휴일에는 빈 파일)
 
