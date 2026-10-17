@@ -140,7 +140,8 @@ final class LogoWall extends View {
         int s = g[0], cols = g[1];
         if (s <= 0) return;
         int rows = (n + cols - 1) / cols;
-        float top = pad + (h - (rows * s + (rows - 1) * gap)) / 2f;
+        // 다 들어가면 가운데, 넘치면 위에서부터 채워 아래에서 잘리게 (위 줄이 잘리지 않게, 주인 요청 2026-10-17)
+        float top = pad + Math.max(0f, (h - (rows * s + (rows - 1) * gap)) / 2f);
         int focused = focus == null ? -1 : shown.indexOf(focus);
         RectF big = null;
         for (int i = 0; i < n; i++) {
