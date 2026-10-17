@@ -265,12 +265,8 @@ public class MainActivity extends Activity {
         if (r == null && !f1) return;
         new Sheet(this)
                 .setTitle(f1 ? "F1 음성을 쓰다 앱이 꺼졌습니다" : "지난번 앱이 갑자기 꺼졌습니다")
-                .setMessage((f1 ? "다시 꺼지지 않게 F1 음성을 껐습니다. 뉴스는 예전처럼 읽습니다.
-
-" : "")
-                        + "이 화면을 캡처해서 보내 주시면 고치는 데 씁니다.
-
-" + (r == null ? "(자세한 기록 없음)" : r))
+                .setMessage((f1 ? "다시 꺼지지 않게 F1 음성을 껐습니다. 뉴스는 예전처럼 읽습니다.\n\n" : "")
+                        + "이 화면을 캡처해서 보내 주시면 고치는 데 씁니다.\n\n" + (r == null ? "(자세한 기록 없음)" : r))
                 .setPositiveButton("확인", null)
                 .show();
         refresh();
