@@ -52,7 +52,7 @@ public class MainActivity extends Activity {
     private static final String APK = "https://github.com/kimyh1981/newsclipping/releases/latest/download/" + BuildConfig.APK_NAME;
     private Prefs prefs;
     private TextView footer, permVal, batteryVal, overlayVal, carVal, timeVal, sourcesVal, orderVal, customVal, keywordsVal, fertVal, lessonVal, voiceVal, rateVal, f1Val;
-    private Switch enabledSw, weekdaysSw, captionsSw;
+    private Switch enabledSw, weekdaysSw, captionsSw, eveningSw;
     private ImageView playBtn;
     private TextToSpeech preview; // 목소리·빠르기를 고를 때 미리 들려준다
     private boolean previewReady;
@@ -235,6 +235,7 @@ public class MainActivity extends Activity {
         enabledSw = switchRow(auto, "차에 타면 자동으로 읽기", on -> prefs.setEnabled(on), true);
         carVal = row(auto, "차 블루투스", v -> pickCar(), true);
         timeVal = row(auto, "재생 시간", v -> pickTime(), true);
+        eveningSw = switchRow(auto, "퇴근길에도 읽기 (오후 6~8시, 그날 많이 본 기사)", on -> prefs.setEveningOn(on), true);
         weekdaysSw = switchRow(auto, "평일에만", on -> prefs.setWeekdaysOnly(on), true);
         captionsSw = switchRow(auto, "자막 화면 띄우기", on -> prefs.setCaptions(on), true);
         overlayVal = row(auto, "다른 앱 위에 표시 (자막 화면용)", v -> startActivity(new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:" + getPackageName()))), false);
@@ -477,7 +478,10 @@ public class MainActivity extends Activity {
         Chapters c = NewsService.chapters();
         int line = NewsService.progressLine();
         float[] t = NewsService.times(this);
-        if (t != null && t[1] > 0) {
+        if (NewsService.buffering()) {
+            timeText.setText("기사를 불러오는 중…");
+            timeText.setVisibility(View.VISIBLE);
+        } else if (t != null && t[1] > 0) {
             timeText.setText(Rules.clock(t[0]) + " / " + Rules.clock(t[1]));
             timeText.setVisibility(View.VISIBLE);
         } else {
@@ -514,6 +518,7 @@ public class MainActivity extends Activity {
         rateVal.setText(Rules.rateLabel(prefs.rate()));
         enabledSw.setChecked(prefs.enabled());
         weekdaysSw.setChecked(prefs.weekdaysOnly());
+        eveningSw.setChecked(prefs.eveningOn());
         captionsSw.setChecked(prefs.captions());
         status(overlayVal, Settings.canDrawOverlays(this));
         String last = prefs.lastPlayed();

@@ -165,7 +165,13 @@ final class Prefs {
 
     static String today() { return new SimpleDateFormat("yyyy-MM-dd", Locale.ROOT).format(new Date()); }
     boolean playedToday() { return today().equals(p.getString("lastPlayed", "")); }
-    void markPlayed() { p.edit().putString("lastPlayed", today()).apply(); }
+    /** 퇴근길(오후판)을 오늘 자동으로 읽었나 */
+    boolean playedEveningToday() { return today().equals(p.getString("lastPlayedEvening", "")); }
+    /** evening: 오후판(퇴근길)을 읽었으면 true */
+    void markPlayed(boolean evening) { p.edit().putString(evening ? "lastPlayedEvening" : "lastPlayed", today()).apply(); }
+    /** 퇴근길(평일 18~20시)에도 자동으로 읽기. 기본 켬 (주인 요청 2026-10-17) */
+    boolean eveningOn() { return p.getBoolean("eveningOn", true); }
+    void setEveningOn(boolean v) { p.edit().putBoolean("eveningOn", v).apply(); }
     String lastPlayed() { return p.getString("lastPlayed", ""); }
 
     /** 마지막으로 받은 차·이어폰 버튼과 시각 (앱 화면 맨 아래에 보인다) */

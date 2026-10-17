@@ -1,0 +1,52 @@
+# 퇴근길 원고 자명종 (주인 요청 2026-10-17: 퇴근길 오후 6~8시에는 그날 가장 많이 본 기사).
+# GitHub 예약 실행은 몇 시간씩 늦게 와서, 낮에 미리 깨어나 기다렸다가 한국 시간 오후 5시와 5시 35분에 'Deploy news site'를 직접 돌린다.
+# 첫 번째는 새로 녹음할 줄이 많아 약 14분, 두 번째는 순위만 새로 고쳐 약 6분 (10/16 실측) → 6시 전에 끝난다.
+name: Evening alarm
+
+on:
+  schedule:
+    - cron: '17 2 * * 1-5' # 한국 시간 오전 11시 17분 (평일)
+    - cron: '47 3 * * 1-5'
+    - cron: '17 5 * * 1-5'
+  workflow_dispatch:
+
+permissions:
+  actions: write
+
+concurrency:
+  group: alarm-evening
+  cancel-in-progress: true
+
+jobs:
+  wait:
+    runs-on: ubuntu-latest
+    timeout-minutes: 355
+    steps:
+      - name: Wait for the late afternoon, then build the evening briefing
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          start=$(date -u +%s)
+          day=$(date -u +%F)
+          ran=0
+          for at in 08:00 08:35; do # UTC = 한국 17:00, 17:35
+            target=$(date -u -d "$day $at" +%s)
+            now=$(date -u +%s)
+            wait=$((target - now))
+            if [ $((now - start + wait)) -gt $((345 * 60)) ]; then echo "$at UTC까지 너무 멀어 건너뜀"; continue; fi
+            if [ $wait -lt 0 ]; then
+              # 예약이 늦게 와서 시각이 지났으면 한 번만 바로 돌린다. 오후 6시(09:00 UTC)가 넘었으면 오늘 오후판이 없을 때만
+              [ $ran = 1 ] && continue
+              if [ $now -gt $(date -u -d "$day 09:00" +%s) ]; then
+                live=$(curl -fsS "https://kimyh1981.github.io/newsclipping/briefing.json" | jq -r '[.generatedAt, .edition] | @tsv' 2>/dev/null || true)
+                live_day=$( [ -n "$live" ] && TZ=Asia/Seoul date -d "$(echo "$live" | cut -f1)" +%F || true)
+                if [ "$live_day" = "$(TZ=Asia/Seoul date +%F)" ] && [ "$(echo "$live" | cut -f2)" = "evening" ]; then echo "$at UTC가 지났고 오늘 오후판도 있음"; continue; fi
+                echo "$at UTC가 지났지만 오늘 오후판이 없어 지금 만듦"
+              fi
+            else
+              echo "$at UTC까지 $((wait / 60))분 기다림"
+              sleep $wait
+            fi
+            gh workflow run pages.yml --ref main -R "$GITHUB_REPOSITORY"
+            ran=1
+          done

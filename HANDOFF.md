@@ -3,7 +3,7 @@
 다른 Claude 계정(또는 다른 개발자)이 이 저장소에서 바로 이어서 개발할 수 있도록 정리한 문서입니다.
 기능 설명·설치·설정 방법은 [README.md](README.md)에 자세히 있고, 이 문서는 **개발을 이어받는 데 필요한 것**만 모았습니다.
 
-- 현재 버전: **v1.66** (정식 `android/version.txt`, 라이트 `android/version-lite.txt`)
+- 현재 버전: **v1.67** (정식 `android/version.txt`, 라이트 `android/version-lite.txt`)
 - 웹: https://kimyh1981.github.io/newsclipping/
 - APK: https://github.com/kimyh1981/newsclipping/releases/latest/download/newsclipping.apk
 - 라이트 APK(제품 공부·농업영어 없음, '뉴스클리핑 라이트'): https://github.com/kimyh1981/newsclipping/releases/latest/download/newsclipping-lite.apk
@@ -48,6 +48,7 @@ GitHub Actions (새벽·오후)                     폰/웹
 |---|---|
 | `pages.yml` | 테스트 → 수집 → 녹음 → Pages 배포. 새벽 cron(04:30~06:00 KST)·오후 cron(16:20~17:20 KST), push, dispatch. `concurrency: pages`, cancel-in-progress, 30분 타임아웃 |
 | `alarm.yml` | 전날 밤 깨어 기다렸다가 04:40·05:50 KST에 pages.yml을 dispatch |
+| `evening-alarm.yml` | 평일 낮에 깨어 기다렸다가 17:00·17:35 KST에 pages.yml을 dispatch (오후판 = 그날 많이 본 기사, 퇴근길 18~20시) |
 | `android.yml` | 정식·라이트 앱 단위 테스트·APK 빌드. main이면 릴리스 `v<version.txt>-r<run번호>`에 `newsclipping.apk`와 `newsclipping-lite.apk`(표시 이름 = `v<version-lite.txt>`)를 올림 |
 | `news-check.yml` | PR마다 실제 출처를 불러 원고를 로그로 보여 줌 (샌드박스에서 뉴스 사이트에 못 들어가므로 여기서 실제 결과 확인) |
 
@@ -110,6 +111,7 @@ Pages Source는 **GitHub Actions**로 설정되어 있어야 합니다.
 | #64 | 1.64 | 홈 화면 당겨서 새로 받기(놓으면 한 번 묻고 받음): 맨 위에 원고 시각, 받는 중 %. 서버의 최신 briefing.json을 다시 받음(읽는 중인 원고는 그대로) |
 | #65 | 1.65 | 홈 화면: 듣기 카드(단추·진행바·지난 시간/전체 시간)와 듣는 언론사 카드로 나눔, 커진 로고를 칸의 2.4배·최소 140dp로 |
 | #66 | 1.66 | 당겨서 새로 받기: 먼저 `latest.json`(원고 시각만)과 서버 원고 만들기 실행 상태(공개 API)를 확인 → 새 원고 있음/서버가 모으는 중/이미 최신을 나눠 안내 |
+| #67 | 1.67 | 퇴근길 자동 재생(평일 18~20시, 오후판=많이 본 기사, 설정 스위치 기본 켬), 오후 알람 17:00·17:35, F1이 2.5초 넘게 늦으면 "기사를 불러오고 있습니다" 안내 |
 
 자세한 내용은 각 PR 설명과 커밋 메시지를 보세요.
 
@@ -117,7 +119,6 @@ Pages Source는 **GitHub Actions**로 설정되어 있어야 합니다.
 
 - **v1.49 실기기 확인 대기**: 제미나이 닫은 뒤 자동 이어 읽기, 해외 키워드 중복 제거. 주인 피드백을 기다리는 중.
 - **오후판 많이 본 뉴스 페이지 구조**: 샌드박스에서 확인 못 함. 순위를 못 읽으면 1면으로 대신하고 수집 기록에 남기게 되어 있으니 Actions 로그 확인.
-- **퇴근길 자동 재생**: 지금 자동 재생은 아침 6~8시만. 오후판도 차에 타면 자동으로 읽게 할지 주인에게 물어본 상태(답 없음).
 - 엣지 TTS는 비공식이라 언제든 막힐 수 있음. 막히면 edge-tts 버전부터 확인(10월 403은 7.3.1로 해결).
 - 새벽에 원고가 없으면: 먼저 'waiting'에 걸린 pages 실행이 없는지 확인.
 - 아이폰은 블루투스 감지 불가 → 단축어/`?car` 화면 방식 유지.

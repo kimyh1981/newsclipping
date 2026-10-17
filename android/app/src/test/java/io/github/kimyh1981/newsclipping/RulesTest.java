@@ -10,6 +10,18 @@ import java.util.Calendar;
 import org.junit.Test;
 
 public class RulesTest {
+    @Test public void morningAndEveningCommuteEachOncePerDay() {
+        int fiveAm = 5 * 60, eightAm = 8 * 60;
+        assertEquals(Rules.MORNING, Rules.autoPlay(Calendar.TUESDAY, 7 * 60, fiveAm, eightAm, true, true, false, false));
+        assertEquals(Rules.NONE, Rules.autoPlay(Calendar.TUESDAY, 7 * 60, fiveAm, eightAm, true, true, true, false)); // 아침에 이미 읽음
+        assertEquals(Rules.EVENING, Rules.autoPlay(Calendar.TUESDAY, 18 * 60 + 30, fiveAm, eightAm, true, true, true, false)); // 아침에 읽었어도 퇴근길엔 또
+        assertEquals(Rules.NONE, Rules.autoPlay(Calendar.TUESDAY, 18 * 60 + 30, fiveAm, eightAm, true, true, true, true));
+        assertEquals(Rules.NONE, Rules.autoPlay(Calendar.TUESDAY, 18 * 60 + 30, fiveAm, eightAm, true, false, false, false)); // 퇴근길 끔
+        assertEquals(Rules.NONE, Rules.autoPlay(Calendar.TUESDAY, 20 * 60, fiveAm, eightAm, true, true, false, false)); // 8시부터는 아님
+        assertEquals(Rules.NONE, Rules.autoPlay(Calendar.SATURDAY, 18 * 60 + 30, fiveAm, eightAm, true, true, false, false)); // 평일에만
+        assertEquals(Rules.NONE, Rules.autoPlay(Calendar.TUESDAY, 12 * 60, fiveAm, eightAm, true, true, false, false));
+    }
+
     // 홈 화면 맨 위 '원고 시각' (당겨서 새로 받기, 주인 요청 2026-10-17). 시각은 서울 시간
     @Test public void clockLikeAVideoPlayer() {
         assertEquals("0:00", Rules.clock(0));
