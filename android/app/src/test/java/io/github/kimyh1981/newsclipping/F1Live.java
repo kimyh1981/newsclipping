@@ -24,6 +24,11 @@ public final class F1Live {
             System.out.printf("소리 %.1f초 · 만든 시간 %.1f초 · 실시간의 %.1f배 · 크기(RMS) %.3f%n", sec, took, sec / took, rms);
             F1Engine.writeWav(pcm, e.sampleRate, new File(args[1]));
             if (sec < 2 || rms < 0.01) throw new IllegalStateException("소리가 너무 짧거나 작다");
+            // 말 빠르기: 앱의 '조금 느리게'(85)·'빠르게'(130)를 F1Voice.speed와 같은 식(1.05 × 빠르기 ÷ 100)으로 넣어 길이를 잰다
+            double slow = e.synth(said, "ko", 1.05f * 85 / 100).length / (double) e.sampleRate;
+            double fast = e.synth(said, "ko", 1.05f * 130 / 100).length / (double) e.sampleRate;
+            System.out.printf("말 빠르기: 조금 느리게 %.1f초 · 보통 %.1f초 · 빠르게 %.1f초 (보통 대비 빠르게 %.0f%%)%n", slow, sec, fast, fast / sec * 100);
+            if (fast > sec * 0.9 || slow < sec * 1.05) throw new IllegalStateException("말 빠르기가 F1 길이에 거의 반영되지 않는다");
         }
     }
 }
