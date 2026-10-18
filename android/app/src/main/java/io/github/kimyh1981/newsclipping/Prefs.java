@@ -22,6 +22,10 @@ final class Prefs {
         Brief.lessonCode = lessonCode(); // 원고를 읽기 전에 늘 Prefs를 만들므로 여기서 넣어 둔다
     }
 
+    /** 사내 코드를 물었던 잠금 표시: 같은 잠금이면 다시 묻지 않는다 (설치 후 한 번, 코드가 바뀌면 한 번 더) */
+    String codeAskedSeal() { return p.getString("codeAskedSeal", ""); }
+    void setCodeAskedSeal(String s) { p.edit().putString("codeAskedSeal", s).apply(); }
+
     /** 제품 공부를 여는 사내 코드 (정식판, 퇴사자가 나오면 회사가 바꾼다) */
     String lessonCode() { return p.getString("lessonCode", ""); }
     void setLessonCode(String code) { p.edit().putString("lessonCode", code.trim()).apply(); Brief.lessonCode = code.trim(); }

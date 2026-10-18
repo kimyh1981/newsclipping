@@ -424,8 +424,11 @@ public class MainActivity extends Activity {
         List<String> sites = b.sites(prefs.sources(), prefs.order());
         prefs.setLogoSites(sites);
         logos.setSites(sites);
-        if (BuildConfig.LESSONS && b.lessonsLocked && !codeAsked) { // 앱을 켤 때 묻는다 (주인 요청 2026-10-18)
+        // 앱을 켤 때 묻는다 (주인 요청 2026-10-18): 설치 후 한 번, 사내 코드가 바뀌면 한 번 더. 뉴스를 읽는 중(차에서 듣는 중)이면 묻지 않고 다음으로 미룬다.
+        if (BuildConfig.LESSONS && b.lessonsLocked && !codeAsked && (prefs.lessonOn() || prefs.englishOn())
+                && !b.lessonsSeal.equals(prefs.codeAskedSeal()) && !NewsService.isRunning()) {
             codeAsked = true;
+            prefs.setCodeAskedSeal(b.lessonsSeal);
             String why = prefs.lessonCode().isEmpty() ? null : "사내 코드가 바뀌었습니다. 새 코드를 넣어 주세요.";
             if (splashing) afterSplash = () -> askLessonCode(why, false); else askLessonCode(why, false);
         }
@@ -1108,7 +1111,7 @@ public class MainActivity extends Activity {
                         else android.widget.Toast.makeText(this, "제품 공부가 열렸습니다", android.widget.Toast.LENGTH_SHORT).show();
                     });
                 })
-                .setNegativeButton("취소", null)
+                .setNegativeButton("취소", null) // 넘기면 뉴스만. 일부러 안 듣는 단추는 두지 않는다 (주인 2026-10-18): 차에서 아침마다 코드를 넣으라고 알린다
                 .show();
     }
 
