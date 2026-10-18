@@ -220,7 +220,8 @@ public class MainActivity extends Activity {
         fertVal = row(today, "해외농업 키워드", v -> withBrief(this::showAbroad), false);
         if (BuildConfig.LESSONS) { // 라이트판에는 제품 공부·농업영어가 없다
             LinearLayout study = section(newsPage, "뉴스 뒤에 듣기", "평일 아침 뉴스가 끝나면 제품 공부 한 회와 같은 회의 농업영어를 읽습니다.");
-            lessonVal = row(study, "제품 공부·농업영어 진도", v -> withBrief(this::showLessons), false);
+            lessonVal = row(study, "제품 공부·농업영어 진도", v -> withBrief(this::showLessons), true);
+            row(study, "사내 코드 (제품 공부 열기)", v -> askLessonCode(null), false).setText("");
         }
 
         // ── 설정 탭: 처음 한 번만 · 자동 재생 · 듣기 ──
@@ -1008,6 +1009,27 @@ public class MainActivity extends Activity {
 
     /** 언론사 체크 목록: 오늘 브리핑에 든 언론사 전체를 섹션별로 보여 주고, 고른 것만 읽는다 */
     /** 오늘 브리핑(섹션·언론사 목록)을 받아 next를 화면에서 실행한다. 직접 넣은 언론사도 목록에 넣는다 */
+    /** 사내 코드를 묻는다: 맞으면 제품 공부를 연다 (퇴사자가 못 보게 잠가 둠, 2026-10-17). why: 다시 묻는 까닭 (처음이면 null) */
+    private void askLessonCode(String why) {
+        android.widget.EditText in = new android.widget.EditText(this);
+        in.setHint("예: BP-XXXX-XXXX-XXXX");
+        in.setSingleLine(true);
+        in.setText(prefs.lessonCode());
+        LinearLayout box = new LinearLayout(this);
+        box.setPadding(dp(16), dp(8), dp(16), dp(8));
+        box.addView(in, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
+        new Sheet(this)
+                .setTitle("사내 코드")
+                .setMessage((why == null ? "" : why + "\n\n") + "바이오플랜 제품 공부는 직원만 들을 수 있습니다. 회사에서 받은 사내 코드를 넣어 주세요.")
+                .setView(box)
+                .setPositiveButton("확인", (d, w) -> {
+                    prefs.setLessonCode(in.getText().toString());
+                    withBrief(this::showLessons); // 새 코드로 다시 읽어 연다 (틀리면 다시 묻는다)
+                })
+                .setNegativeButton("취소", null)
+                .show();
+    }
+
     private void withBrief(java.util.function.Consumer<Brief> next) {
         if (loadingSources) return;
         loadingSources = true;
@@ -1200,6 +1222,7 @@ public class MainActivity extends Activity {
 
     /** 제품 공부 진도: 오늘 회, 남은 회(예정 날짜), 완료한 회(누르면 다시 듣기·다시 듣기 표시) */
     private void showLessons(Brief b) {
+        if (b.lessonsLocked) { askLessonCode(prefs.lessonCode().isEmpty() ? null : "사내 코드가 맞지 않습니다. 바뀐 코드를 받았으면 새로 넣어 주세요."); return; }
         if (b.lessons.isEmpty()) {
             new Sheet(this).setMessage("제품 공부 원고가 아직 서버에 없습니다. 내일 아침 원고부터 들어옵니다.").setPositiveButton("확인", null).show();
             return;

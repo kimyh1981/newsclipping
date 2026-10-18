@@ -1,6 +1,7 @@
 package io.github.kimyh1981.newsclipping;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.nio.charset.StandardCharsets;
@@ -52,9 +53,10 @@ public class LessonsTest {
 
     @Test public void lessonGoesBetweenNewsAndClosing() throws Exception {
         JSONObject j = new JSONObject(read("tests/fixtures/briefing.json"));
-        j.put("lessons", new JSONObject().put("product", new JSONObject(read("lessons/product.json"))));
+        JSONObject sample = new JSONObject(read("tests/fixtures/lessons-sample.json")); // 진짜 원고는 잠겨 있어 시험용 샘플로
+        j.put("lessons", new JSONObject().put("product", sample.getJSONObject("product")));
         Brief b = Brief.parse(j.toString());
-        assertEquals(20, b.lessons.size());
+        assertEquals(4, b.lessons.size());
         Brief.Lesson l = b.lesson(1);
         List<Brief.Line> news = b.lines(null);
         List<Brief.Line> all = Brief.withLesson(news, l);
@@ -67,10 +69,10 @@ public class LessonsTest {
         assertEquals(0, all.get(all.size() - 1).lesson);
         // 같은 회의 농업영어가 제품 공부 뒤에 이어진다: 영어 줄은 en, 따라 말할 틈은 pause
         JSONObject k = new JSONObject(read("tests/fixtures/briefing.json"));
-        k.put("lessons", new JSONObject().put("product", new JSONObject(read("lessons/product.json"))).put("english", new JSONObject(read("lessons/english.json"))));
+        k.put("lessons", sample);
         Brief e = Brief.parse(k.toString());
         Brief.Lesson four = e.lesson(4);
-        assertTrue(four.english.size() > 20);
+        assertEquals(4, four.english.size());
         List<Brief.Line> both = Brief.withLesson(news, four, true, true);
         assertEquals(news.size() + 1 + (1 + four.lines.size()) + 1 + four.english.size(), both.size()); // 빈 줄, 소개+제품, 빈 줄, 영어
         boolean en = false, pause = false;
@@ -82,5 +84,27 @@ public class LessonsTest {
         assertEquals(news, Brief.withLesson(news, four, false, false));
         // 원고 없는 브리핑(예전 서버)은 그대로
         assertTrue(Brief.parse(read("tests/fixtures/briefing.json")).lessons.isEmpty());
+    }
+
+    // 잠긴 제품 공부: 서버(tools/lessons-crypt.js)가 잠근 시험 원고를 같은 방식으로 푼다
+    @Test public void lockedLessonsOpenOnlyWithCompanyCode() throws Exception {
+        JSONObject j = new JSONObject(read("tests/fixtures/briefing.json"));
+        j.put("lessonsEnc", new JSONObject(read("tests/fixtures/lessons-enc.json")));
+        try {
+            Brief.lessonCode = "";
+            Brief none = Brief.parse(j.toString());
+            assertTrue(none.lessonsLocked);
+            assertTrue(none.lessons.isEmpty());
+            Brief.lessonCode = "wrong-code";
+            assertTrue(Brief.parse(j.toString()).lessonsLocked);
+            Brief.lessonCode = " test-code ";
+            Brief ok = Brief.parse(j.toString());
+            assertFalse(ok.lessonsLocked);
+            assertEquals(4, ok.lessons.size());
+            assertEquals("샘플 제품 1회", ok.lesson(1).title);
+            assertEquals(4, ok.lesson(4).english.size());
+        } finally {
+            Brief.lessonCode = "";
+        }
     }
 }

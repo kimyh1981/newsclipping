@@ -66,6 +66,8 @@ jobs:
           TTS_ENGINE: ${{ vars.TTS_ENGINE }}
           TTS_VOICE: ${{ vars.TTS_VOICE }}
           TTS_CACHE: tts-cache
+          # 제품 공부 원고를 녹음하려고 푸는 사내 코드 (원고 자체는 잠긴 채로 올라간다). 퇴사자가 나오면 바꾼다
+          LESSON_CODE: ${{ secrets.LESSON_CODE }}
         run: node tools/collect.js _site
       # 언론사 로고를 선명한 것으로 모아 logos/에 올린다 (홈 화면에서 커진 로고가 깨지지 않게, 2026-10-17). 실패해도 배포는 계속
       - uses: actions/cache@v4

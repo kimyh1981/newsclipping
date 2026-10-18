@@ -5,3 +5,7 @@ android/.gradle
 android/build
 android/app/build
 android/local.properties
+
+# 제품 공부 원문과 사내 코드·서명 키는 주인 PC에만 (2026-10-17)
+_lessons/
+_keys/

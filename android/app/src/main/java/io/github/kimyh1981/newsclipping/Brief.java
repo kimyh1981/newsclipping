@@ -65,7 +65,7 @@ final class Brief {
         }
     }
 
-    /** 제품 공부 한 회 (서버 lessons/product.json)와 같은 회의 농업영어 (lessons/english.json, 없으면 빈 목록) */
+    /** 제품 공부 한 회와 같은 회의 농업영어 (원고는 잠겨서 온다: lessonsEnc를 사내 코드로 푼다, 없으면 빈 목록) */
     static final class Lesson {
         final int n;
         final String title;
@@ -168,6 +168,10 @@ final class Brief {
     final String audioBase;
     /** 제품 공부 회차들 (옛 briefing.json이면 비어 있다) */
     final List<Lesson> lessons;
+    /** 제품 공부가 잠겨 있는데 사내 코드가 없거나 틀려서 못 풀었다 (앱이 코드를 묻는다) */
+    boolean lessonsLocked;
+    /** 잠긴 제품 공부(lessonsEnc)를 풀 사내 코드. Prefs가 읽어 넣는다 (라이트판은 코드를 넣는 곳이 없어 늘 잠김) */
+    static volatile String lessonCode = "";
 
     private Brief(String dateLabel, boolean playToday, List<Section> sections, Set<String> audioIds, String audioBase, List<Lesson> lessons) {
         this.dateLabel = dateLabel; this.playToday = playToday; this.sections = sections; this.audioIds = audioIds; this.audioBase = audioBase; this.lessons = lessons;
@@ -213,6 +217,17 @@ final class Brief {
         if (ids != null) for (int i = 0; i < ids.length(); i++) audioIds.add(ids.getString(i));
         List<Lesson> lessons = new ArrayList<>();
         JSONObject ls = b.optJSONObject("lessons");
+        // 제품 공부는 잠겨서 온다 (퇴사자가 못 보게, 2026-10-17): 사내 코드로 푼다
+        JSONObject enc = b.optJSONObject("lessonsEnc");
+        boolean locked = false;
+        if (ls == null && enc != null) {
+            try {
+                ls = lessonCode.trim().isEmpty() ? null : LessonLock.open(enc, lessonCode);
+            } catch (Exception e) {
+                ls = null;
+            }
+            locked = ls == null;
+        }
         JSONObject product = ls == null ? null : ls.optJSONObject("product");
         JSONArray eps = product == null ? null : product.optJSONArray("episodes");
         if (eps != null) for (int i = 0; i < eps.length(); i++) {
@@ -235,7 +250,9 @@ final class Brief {
                 if (!t.isEmpty()) l.english.add(new Line(t, null, false, n, true, en, (int) Math.round(o.optDouble("pause", 0) * 1000)));
             }
         }
-        return new Brief(b.getString("dateLabel"), auto == null || auto.optBoolean("play", true), sections, audioIds, audio == null ? "audio/" : audio.optString("base", "audio/"), lessons);
+        Brief out = new Brief(b.getString("dateLabel"), auto == null || auto.optBoolean("play", true), sections, audioIds, audio == null ? "audio/" : audio.optString("base", "audio/"), lessons);
+        out.lessonsLocked = locked;
+        return out;
     }
 
     Set<String> defaults() {

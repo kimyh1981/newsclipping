@@ -124,18 +124,19 @@ test('녹음 다듬기: 한쪽 채널(모노) 녹음을 양쪽 스피커로 나�
 });
 
 test('제품 공부와 농업영어: 영어 줄은 영어 목소리로, 한국어 읽기 규칙 없이 녹음한다', async () => {
-  const b = { ...B, lessons: require('../tools/collect.js').lessons() };
+  // 시험용 샘플 원고 (진짜 제품 공부 원고는 잠겨 있다)
+  const b = { ...B, lessons: JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'lessons-sample.json'), 'utf8')) };
   const all = wanted(b);
   const en = all.filter(([, , e]) => e);
-  assert.ok(en.length > 100);
-  assert.ok(en.some(([t]) => t.includes('Ek-toh-sheen')));
+  assert.equal(en.length, 2); // 네 회 모두 같은 영어 두 줄 (겹치면 한 번만 녹음)
+  assert.ok(en.some(([t]) => t.includes('Sample')));
   let jobs = [];
   const batch = (js) => { jobs = js; for (const j of js) fs.writeFileSync(j.file, 'x'); return {}; };
   const a = await record(b, { out: tmp(), engine: 'edge', voice: 'v', log: [], run, batch });
-  const job = jobs.find((j) => j.text === 'What is Ek-toh-sheen made of?');
+  const job = jobs.find((j) => j.text === 'What is Sample made of?');
   assert.equal(job.voice, 'en-US-AndrewNeural');
   assert.equal(job.rate, '-10%');
-  assert.ok(a.ids.includes(audioId('What is Ek-toh-sheen made of?')));
+  assert.ok(a.ids.includes(audioId('What is Sample made of?')));
   const ko = jobs.find((j) => j.id === audioId(brief.lessonIntro(1, b.lessons.product.episodes[0].title)));
   assert.equal(ko.voice, undefined);
 });
