@@ -22,6 +22,9 @@ final class Brief {
         final List<String> say;
         /** 폰이 직접 가져온 기사(직접 넣은 언론사, 농업 키워드): 서버 녹음이 없어 폰 음성으로 읽는다 */
         final boolean local;
+        /** 원문 기사 주소 ('전체 듣기' 때 폰이 이 페이지를 열어 본문을 읽는다). 모르면 "" */
+        String link = "";
+        Item link(String l) { link = l == null ? "" : l; return this; }
         Item(String title, String spoken, String source, String group, String summary, String body) {
             this(title, spoken, source, group, summary, body, Collections.<String>emptyList());
         }
@@ -206,7 +209,7 @@ final class Brief {
                 for (int k = 0; k < its.length(); k++) {
                     JSONObject it = its.getJSONObject(k);
                     items.add(new Item(it.optString("title", it.getString("spoken")), it.getString("spoken"), it.optString("source", src.getString("name")),
-                            it.optString("group", "i" + i + "-" + j + "-" + k), it.optString("summary", ""), it.optString("body", ""), strings(it.optJSONArray("say"))));
+                            it.optString("group", "i" + i + "-" + j + "-" + k), it.optString("summary", ""), it.optString("body", ""), strings(it.optJSONArray("say"))).link(it.optString("link", "")));
                 }
                 sources.add(new Source(src.getString("id"), src.getString("name"), src.optString("lang", "ko"), src.optBoolean("default", true), src.optInt("take", 3), items).site(src.optString("site", "")).country(src.optString("country", "")));
             }

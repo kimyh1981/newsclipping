@@ -315,7 +315,7 @@ public class NewsService extends Service {
     private void handle(String action) {
         if (running != this || tts == null) return;
         switch (action) {
-            case ACTION_PREV: jump(prevTarget()); break;
+            case ACTION_PREV: jump(inFull() ? nextTarget() : prevTarget()); break; // 전체 듣기 중 오른쪽 쓸기: 본문을 멈추고 헤드라인으로 돌아와 다음 기사부터 (주인 요청 2026-10-18)
             case ACTION_NEXT: jump(nextTarget()); break;
             case ACTION_MORE: full(); break;
             case ACTION_SKIP_LESSON: skipLesson(); break;
@@ -808,6 +808,22 @@ public class NewsService extends Service {
 
     private boolean inLesson() { return current < lines.size() && lines.get(current).lesson > 0; }
 
+    /** 지금 '전체 듣기' 본문을 읽는 중 (원문을 가져오는 중 포함) */
+    private boolean inFull() {
+        if (buffering) return true;
+        return pos > 0 && pos <= queue.size() && queue.get(pos - 1).id.startsWith("S");
+    }
+
+    /** 자막 화면 '원문 보기': 지금(또는 방금) 읽은 기사의 원문 주소. 없으면 "" */
+    static String currentLink() {
+        NewsService s = running;
+        if (s == null || s.lines.isEmpty()) return "";
+        int i = Math.min(s.current, s.lines.size() - 1);
+        while (i > 0 && s.lines.get(i).item == null) i--;
+        Brief.Item it = s.lines.get(i).item;
+        return it == null ? "" : it.link;
+    }
+
     /** 줄마다 제품 공부(1)·농업영어(2)·그 밖(0), 빈 줄은 -1 */
     private int[] lessonOf() {
         int[] f = new int[lines.size()];
@@ -835,6 +851,7 @@ public class NewsService extends Service {
 
     /** 기사 줄 i부터 다시 읽는다. 앞줄이 'OO 소식입니다.'면 그 줄부터 */
     private void jump(int i) {
+        fullGen++; // 원문을 가져오는 중이면 그 결과는 버린다
         if (i >= lines.size()) i = Math.max(0, lines.size() - 1); // 다음 기사가 없으면 맺음말
         int start = i;
         if (i > 0 && lines.get(i).item != null && lines.get(i - 1).item == null && lines.get(i - 1).text.endsWith("소식입니다.")) start = i - 1;
@@ -855,9 +872,47 @@ public class NewsService extends Service {
         while (i > 0 && lines.get(i).item == null) i--;
         Brief.Item it = lines.get(i).item;
         List<String> sentences = it == null ? new ArrayList<>() : new ArrayList<>(it.fullSentences());
-        if (sentences.isEmpty()) sentences.add(it == null ? "전체로 들을 기사가 아직 없습니다." : "이 기사는 본문을 가져오지 못했습니다.");
         current = i;
         if (paused) unpause();
+        if (sentences.isEmpty() && it != null && !it.link.isEmpty()) { readOriginal(i, it); return; } // 서버는 본문을 주지 않는다: 폰이 원문을 열어 읽는다
+        if (sentences.isEmpty()) sentences.add(it == null ? "전체로 들을 기사가 아직 없습니다." : "이 기사는 본문을 가져오지 못했습니다.");
+        playFull(i, sentences);
+    }
+
+    /** 원문 사이트에서 이 기사 페이지를 열어 본문 문장만 뽑아 읽는다 (주인 결정 2026-10-18: 서버에 본문 사본을 두지 않는다).
+     *  뽑는 동안 늦어지면 '기사를 불러오고 있습니다'를 한 번 말하고, 못 뽑으면 그렇게 말하고 다음 헤드라인으로 */
+    private void readOriginal(int i, Brief.Item it) {
+        int g = ++fullGen;
+        halt(); // 읽던 헤드라인을 멈추고 본문을 기다린다
+        setBuffering(true);
+        main.postDelayed(() -> {
+            if (g != fullGen || stopped || !buffering) return;
+            if (phoneEnglish) { tts.setLanguage(Locale.KOREAN); phoneEnglish = false; }
+            tts.speak("기사를 불러오고 있습니다.", TextToSpeech.QUEUE_FLUSH, speakParams, "wait"); // 차례 번호가 없는 말이라 순서는 그대로
+        }, 1500);
+        new Thread(() -> {
+            List<String> got;
+            try {
+                got = ArticleReader.sentences(Extras.get(it.link));
+            } catch (Exception e) {
+                Log.w(TAG, "원문을 열지 못함: " + e);
+                got = new ArrayList<>();
+            }
+            List<String> sentences = got;
+            main.post(() -> {
+                if (g != fullGen || stopped || running != this) return; // 그사이 다른 곳으로 옮겼다
+                endWait();
+                if (sentences.isEmpty()) sentences.add("이 기사는 본문을 가져오지 못했습니다.");
+                playFull(i, sentences);
+            });
+        }, "read-original").start();
+    }
+
+    /** '전체 듣기'를 원문에서 가져오는 차례 (다른 곳으로 옮기면 늦게 온 본문은 버린다) */
+    private int fullGen;
+
+    /** 본문 문장들을 읽고, 이어서 다음 헤드라인부터 */
+    private void playFull(int i, List<String> sentences) {
         int max = Math.min(3900, TextToSpeech.getMaxSpeechInputLength());
         List<Step> steps = new ArrayList<>();
         int k = 0;

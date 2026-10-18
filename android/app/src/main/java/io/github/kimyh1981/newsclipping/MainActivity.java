@@ -834,12 +834,6 @@ public class MainActivity extends Activity {
         s.addView(tag);
         android.widget.FrameLayout box = new android.widget.FrameLayout(this);
         box.addView(s, new android.widget.FrameLayout.LayoutParams(android.widget.FrameLayout.LayoutParams.MATCH_PARENT, android.widget.FrameLayout.LayoutParams.MATCH_PARENT));
-        if (BuildConfig.LESSONS) { // 정식판(직원용)에만 회사 이름
-            TextView co = text("바이오플랜", 13, 0xCCFFFFFF);
-            android.widget.FrameLayout.LayoutParams cl = new android.widget.FrameLayout.LayoutParams(android.widget.FrameLayout.LayoutParams.WRAP_CONTENT, android.widget.FrameLayout.LayoutParams.WRAP_CONTENT, Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL);
-            cl.bottomMargin = dp(48);
-            box.addView(co, cl);
-        }
         splashing = true;
         getWindow().setStatusBarColor(BRAND);
         getWindow().setNavigationBarColor(BRAND);
@@ -1100,7 +1094,7 @@ public class MainActivity extends Activity {
         box.addView(in, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
         new Sheet(this)
                 .setTitle("사내 코드")
-                .setMessage((why == null ? "" : why + "\n\n") + "바이오플랜 제품 공부는 직원만 들을 수 있습니다. 회사에서 받은 사내 코드를 넣어 주세요.")
+                .setMessage((why == null ? "" : why + "\n\n") + "제품 공부는 직원만 들을 수 있습니다. 회사에서 받은 사내 코드를 넣어 주세요.")
                 .setView(box)
                 .setPositiveButton("확인", (d, w) -> {
                     prefs.setLessonCode(in.getText().toString());
@@ -1490,7 +1484,7 @@ public class MainActivity extends Activity {
     private void showKeywords() {
         android.widget.EditText words = new android.widget.EditText(this);
         words.setText(String.join(", ", prefs.keywords()));
-        words.setHint("예: 비료, 미생물, 바이오플랜");
+        words.setHint("예: 비료, 미생물, 퇴비");
         LinearLayout box = new LinearLayout(this);
         box.setPadding(dp(16), dp(8), dp(16), dp(8));
         box.setBackground(rounded(card, dp(12)));
