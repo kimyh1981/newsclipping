@@ -893,7 +893,7 @@ public class NewsService extends Service {
         new Thread(() -> {
             List<String> got;
             try {
-                got = ArticleReader.sentences(Extras.get(it.link));
+                got = ArticleReader.read(it.link);
             } catch (Exception e) {
                 Log.w(TAG, "원문을 열지 못함: " + e);
                 got = new ArrayList<>();

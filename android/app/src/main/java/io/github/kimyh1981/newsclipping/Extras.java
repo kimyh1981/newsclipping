@@ -281,17 +281,20 @@ final class Extras {
 
     // ---- 인터넷 ----
 
-    static String get(String url) throws Exception {
+    static String get(String url) throws Exception { return get(url, 8000); }
+
+    /** readMs: 받는 동안 기다릴 시간 (원문 기사 읽기는 15초) */
+    static String get(String url, int readMs) throws Exception {
         HttpURLConnection c = (HttpURLConnection) new URL(url).openConnection();
         c.setConnectTimeout(6000);
-        c.setReadTimeout(8000);
+        c.setReadTimeout(readMs);
         c.setInstanceFollowRedirects(true);
         c.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android) newsclipping");
         try {
             int code = c.getResponseCode();
             if (code / 100 == 3) { // http→https처럼 프로토콜이 바뀌는 이동은 직접 따라간다
                 String to = c.getHeaderField("Location");
-                if (to != null) return get(new URL(new URL(url), to).toString());
+                if (to != null) return get(new URL(new URL(url), to).toString(), readMs);
             }
             if (code != 200) throw new IllegalStateException("HTTP " + code);
             byte[] body;

@@ -33,6 +33,8 @@ public class F1TextTest {
         assertEquals("이천 이십육년", F1Text.spaceNumbers("이천이십육년"));
         assertEquals("만 이천 삼백 사십오", F1Text.spaceNumbers("만 이천삼백사십오"));
         assertEquals("천이백 삼십사명", F1Text.spaceNumbers("천이백삼십사명"));
+        assertEquals("십육억 팔천 백 이만원", F1Text.spaceNumbers("십육억 팔천백이만원"));
+        assertEquals("천백 원", F1Text.spaceNumbers("천백 원")); // 맨 앞 천은 그대로
         // 숫자가 아닌 낱말과 단위가 붙은 말은 그대로
         assertEquals("천사가 백화점에서 삼천만 원과 오백억", F1Text.spaceNumbers("천사가 백화점에서 삼천만 원과 오백억"));
         assertEquals("<ko>삼천 사백 오십육억.</ko>", Normalizer.normalize(F1Text.prepare("삼천사백오십육억", "ko"), Normalizer.Form.NFC));

@@ -4,6 +4,7 @@ import java.text.Normalizer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /** F1(Supertonic-3)에 넣을 글 다듬기와 덩이 나누기. 개발사 예제(Helper.java UnicodeProcessor·chunkText)와 같은 규칙 */
@@ -34,14 +35,19 @@ final class F1Text {
         return "<" + lang + ">" + text + "</" + lang + ">";
     }
 
-    private static final Pattern NUMBER_UNIT = Pattern.compile("(?<=[일이삼사오육칠팔구])([천백])(?=[일이삼사오육칠팔구십백])");
+    private static final Pattern NUMBER_UNIT = Pattern.compile("(?<=[일이삼사오육칠팔구])([천백])(?=[일이삼사오육칠팔구십백])|(?<=천)(백)(?=[일이삼사오육칠팔구십])");
 
     /**
      * 우리말 숫자를 천·백 단위마다 띄운다: '삼천사백오십육억' → '삼천 사백 오십육억'.
      * F1이 띄어쓰기 없이 긴 숫자 말을 읽다 가끔 한 글자를 건너뛰었다 (2026-10-17). 앞에 숫자가 있는 천·백 뒤만 띄워서 '천사'·'백화점'·'삼천만'은 그대로
      */
     static String spaceNumbers(String text) {
-        return NUMBER_UNIT.matcher(text).replaceAll("$1 ");
+        // 팔천백이만 → 팔천 백 이만: F1이 '백' 뒤 글자를 빠뜨렸다 (16억 8102만원 → 8,100만, 10/18 받아쓰기)
+        Matcher m = NUMBER_UNIT.matcher(text);
+        StringBuffer b = new StringBuffer();
+        while (m.find()) m.appendReplacement(b, (m.group(1) != null ? m.group(1) : m.group(2)) + " ");
+        m.appendTail(b);
+        return b.toString();
     }
 
     private static boolean emoji(int cp) {
