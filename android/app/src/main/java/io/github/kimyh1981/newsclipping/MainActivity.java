@@ -818,9 +818,11 @@ public class MainActivity extends Activity {
         s.addView(tile, new LinearLayout.LayoutParams(dp(112), dp(112)));
         TextView name = text(getApplicationInfo().loadLabel(getPackageManager()).toString(), 28, 0xFFFFFFFF);
         name.setTypeface(Typeface.DEFAULT_BOLD);
+        name.setGravity(Gravity.CENTER); // 글자 칸이 화면 너비라서 글자도 가운데로 (1.73에서 왼쪽에 붙었음)
         name.setPadding(0, dp(24), 0, dp(8));
         s.addView(name);
         TextView tag = text("출근길 1면 · 퇴근길 많이 본 뉴스", 15, 0xE6FFFFFF);
+        tag.setGravity(Gravity.CENTER);
         s.addView(tag);
         android.widget.FrameLayout box = new android.widget.FrameLayout(this);
         box.addView(s, new android.widget.FrameLayout.LayoutParams(android.widget.FrameLayout.LayoutParams.MATCH_PARENT, android.widget.FrameLayout.LayoutParams.MATCH_PARENT));
