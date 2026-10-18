@@ -3,7 +3,7 @@ name: News check
 
 on:
   pull_request:
-    paths: ['tools/**', 'feeds.json', 'tests/**', '.github/workflows/news-check.yml', 'android/app/src/main/java/**/Extras.java', 'android/app/src/test/java/**/ExtrasLive.java']
+    paths: ['tools/**', 'feeds.json', 'tests/**', '.github/workflows/news-check.yml', 'android/app/src/main/java/**/Extras.java', 'android/app/src/main/java/**/ArticleReader.java', 'android/app/src/test/java/**/ExtrasLive.java', 'android/app/src/test/java/**/ArticleLive.java']
   workflow_dispatch:
 
 permissions:
