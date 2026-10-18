@@ -46,4 +46,11 @@ jobs:
           curl -sSfo /tmp/json.jar https://repo1.maven.org/maven2/org/json/json/20240303/json-20240303.jar
           J=android/app/src/main/java/io/github/kimyh1981/newsclipping
           javac -encoding UTF-8 -nowarn -d /tmp/ex -cp /tmp/json.jar $J/Brief.java $J/LessonLock.java $J/Extras.java android/app/src/test/java/io/github/kimyh1981/newsclipping/ExtrasLive.java
-          java -cp /tmp/ex:/tmp/json.jar io.github.kimyh1981.newsclipping.ExtrasLive www.nongmin.com https://www.amnews.co.kr https://www.agrinet.co.kr/rss/allArticle.xml www.newsfarm.co.kr 키워드:비료 키워드:바이오플랜 키워드:미생물
+          java -cp /tmp/ex:/tmp/json.jar io.github.kimyh1981.newsclipping.ExtrasLive www.nongmin.com https://www.amnews.co.kr https://www.agrinet.co.kr/rss/allArticle.xml www.newsfarm.co.kr 키워드:비료 키워드:미생물
+      # '전체 듣기': 폰이 원문에서 본문만 뽑는지 실제 기사로 점검 (언론사마다 첫 기사, 앞 두 문장과 마지막 문장을 보여 준다)
+      - name: Phone full article (전체 듣기 본문 뽑기)
+        timeout-minutes: 5
+        run: |
+          J=android/app/src/main/java/io/github/kimyh1981/newsclipping
+          javac -encoding UTF-8 -nowarn -d /tmp/ar -cp /tmp/json.jar $J/Brief.java $J/LessonLock.java $J/Extras.java $J/ArticleReader.java android/app/src/test/java/io/github/kimyh1981/newsclipping/ArticleLive.java
+          java -cp /tmp/ar:/tmp/json.jar io.github.kimyh1981.newsclipping.ArticleLive out/briefing.json 60

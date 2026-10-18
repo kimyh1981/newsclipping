@@ -13,12 +13,13 @@
   https://github.com/kimyh1981/newsclipping/releases/latest/download/newsclipping.apk
 - "헤드라인" = 언론사 1면 주요 기사. 무료 방식 우선(유료 API 금지). 자동 재생 기본은 평일 06~08시, 공휴일 제외.
 - 비밀값의 값은 절대 커밋하거나 출력하지 않습니다.
+- **서버는 기사 본문을 모으거나 녹음·공개하지 않습니다**(저작권, 2026-10-18 주인 결정). 제목·언론사·원문 링크만. 본문은 폰이 '전체 듣기' 때 원문을 열어 읽고 버립니다(`ArticleReader`).
 
 ## 확인 명령
 
 ```
-npm ci                      # 처음 한 번 (없으면 테스트 4개가 실패)
-npm test                    # 서버·웹 테스트 71개 (네트워크 없음)
+npm ci                      # 처음 한 번
+npm test                    # 서버·웹 테스트 75개 (네트워크 없음)
 npm run collect             # 실제 수집 (샌드박스에서는 뉴스 사이트 접속이 막혀 실패할 수 있음)
 cd android && gradle testReleaseUnitTest assembleRelease   # Android SDK 필요 → 보통 CI(android.yml)에 맡김
 ```

@@ -412,6 +412,19 @@ async function collect(config, now = Date.now(), key = '', opts = {}) {
     const toResolve = [...new Set([...brief.select(b), ...brief.select(b, all)].flatMap((s) => s.items))];
     await resolveLinks(toResolve, { get: opts.getPage || getPage, log, run: limiter(6), limit: opts.linkLimit });
   }
+  // 해외 섹션이 아닌 곳에 섞인 해외 언론 기사: 원문 주소가 외국 도메인이면 그 나라를 첫머리에 (해외 섹션은 위에서 이미 붙였다)
+  let tagged = 0;
+  sections.forEach((sec, i) => {
+    if (config.sections[i].region) return;
+    for (const src of sec.sources) for (const it of src.items) {
+      const country = region.countryOfLink(it.link);
+      if (!country || it.spoken.startsWith(country)) continue;
+      it.region = country;
+      it.spoken = region.withRegion(it.spoken, country);
+      tagged++;
+    }
+  });
+  if (tagged) log.push(`해외 언론 기사 ${tagged}건에 나라 이름을 붙임`);
   b.script = brief.script(b); // 기본 언론사로 만든 원고: briefing.txt(아이폰 단축어, 옛 앱)
   return b;
 }

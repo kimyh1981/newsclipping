@@ -24,3 +24,14 @@ test('해외 언론 기사는 제목에 나라가 없어도 언론사 나라로,
     .flatMap((s) => s.sources).filter((x) => !x.country && !/hl=ko/.test(x.url || '')).map((x) => x.id);
   assert.deepStrictEqual(missing, []);
 });
+
+test('원문 주소의 나라 도메인으로 해외 언론 기사의 나라를 안다 (.com·구글 뉴스 주소는 모름)', () => {
+  const { countryOfLink } = require('../tools/region.js');
+  assert.equal(countryOfLink('https://vietnamnews.vn/economy/123.html'), '베트남');
+  assert.equal(countryOfLink('https://www.thehindu.co.in/news/a'), '인도');
+  assert.equal(countryOfLink('https://www.bbc.co.uk/news/x'), '영국');
+  assert.equal(countryOfLink('https://www.chosun.com/x'), '');
+  assert.equal(countryOfLink('https://www.yna.co.kr/x'), '');
+  assert.equal(countryOfLink('https://news.google.com/rss/articles/abc'), '');
+  assert.equal(countryOfLink('not a url'), '');
+});
