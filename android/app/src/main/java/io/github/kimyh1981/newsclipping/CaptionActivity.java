@@ -42,7 +42,18 @@ public class CaptionActivity extends Activity {
     private boolean boosted;
     private final Runnable boostOn = () -> { boosted = true; NewsService.setBoost(holdSpeed >= 3f ? 3f : 2f); };
 
-    private boolean moved(MotionEvent e) { return Math.hypot(e.getX() - downX, e.getY() - downY) > dp(24); }
+    private boolean moved(MotionEvent e) { return Math.hypot(e.getX() - downX, e.getY() - downY) > dp(12); }
+
+    /**
+     * 쓸기는 손을 뗄 때 움직인 거리로 판단한다 (2026-10-18 주인: 위아래 문단 넘기기가 끊긴다).
+     * 예전엔 '빠르게 튕기기'만 쳐서 천천히 쓸면 무시됐고, 손가락이 0.25초 머물면 2배속이 켜져 쓸기가 사라졌다.
+     * 위로 쓸면 다음 문단, 아래로 이전 문단 / 왼쪽으로 다음 기사, 오른쪽으로 이전 기사
+     */
+    private void swipe(float dx, float dy) {
+        if (!NewsService.isRunning() || Math.max(Math.abs(dx), Math.abs(dy)) < dp(60)) return;
+        if (Math.abs(dy) > Math.abs(dx)) NewsService.control(dy < 0 ? NewsService.ACTION_PARA_NEXT : NewsService.ACTION_PARA_PREV);
+        else NewsService.control(dx < 0 ? NewsService.ACTION_NEXT : NewsService.ACTION_PREV);
+    }
     /** 제품 공부 중: 농업영어로 넘기기, 농업영어 중: 이 회 마치기 */
     private Button skip;
     private final Runnable redraw = this::show;
@@ -142,17 +153,6 @@ public class CaptionActivity extends Activity {
                 else NewsService.start(CaptionActivity.this, true);
                 return true;
             }
-            @Override public boolean onFling(MotionEvent a, MotionEvent b, float vx, float vy) {
-                if (a == null || !NewsService.isRunning() || boosted) return false;
-                float dx = b.getX() - a.getX(), dy = b.getY() - a.getY();
-                if (Math.abs(dy) > Math.abs(dx) && Math.abs(dy) >= dp(60)) { // 위로 쓸면 다음 문단, 아래로 쓸면 이전 문단
-                    NewsService.control(dy < 0 ? NewsService.ACTION_PARA_NEXT : NewsService.ACTION_PARA_PREV);
-                    return true;
-                }
-                if (Math.abs(dx) < dp(60) || Math.abs(dx) < Math.abs(dy)) return false;
-                NewsService.control(dx < 0 ? NewsService.ACTION_NEXT : NewsService.ACTION_PREV);
-                return true;
-            }
         });
         content = col;
         col.setOnTouchListener((v, e) -> {
@@ -162,6 +162,7 @@ public class CaptionActivity extends Activity {
             if (act == MotionEvent.ACTION_DOWN) downX = e.getX();
             if (act == MotionEvent.ACTION_DOWN) downY = e.getY();
             boolean r = gestures.onTouchEvent(e);
+            if (act == MotionEvent.ACTION_UP && !boosted) swipe(e.getX() - downX, e.getY() - downY);
             if (act == MotionEvent.ACTION_UP || act == MotionEvent.ACTION_CANCEL) {
                 content.removeCallbacks(boostOn);
                 if (boosted) NewsService.setBoost(1f);
