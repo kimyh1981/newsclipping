@@ -65,7 +65,7 @@
       (b.autoPlay && !b.autoPlay.play ? ` · 오늘은 ${b.autoPlay.reason}이라 차에서 자동 재생은 쉬어요` : '');
     const sections = Brief.select(b, enabled, order);
     $('list').innerHTML = sections.map((s, si) => `<section><h2>${esc(s.title)}</h2>` + (s.items.length
-      ? `<ol>${s.items.map((it, ii) => `<li id="i${si}-${ii}"><a href="${esc(it.link)}" target="_blank" rel="noopener">${esc(it.title)}</a><small>${esc(it.source)}${it.original ? ` · 원문: ${esc(it.original)}` : ''}</small><div class="acts"><button class="go" type="button" data-t="${esc(it.title)}" aria-label="이 기사부터 듣기">▶ 여기부터</button>${it.summary ? `<details><summary>자세히</summary><p class="sum">${esc(it.summary)}</p></details>` : ''}</div></li>`).join('')}</ol>`
+      ? `<ol>${s.items.map((it, ii) => `<li id="i${si}-${ii}"><a href="${esc(it.link)}" target="_blank" rel="noopener">${esc(it.title)}</a><small>${esc(it.source)}${it.original ? ` · 원문: ${esc(it.original)}` : ''}</small><div class="acts"><button class="go" type="button" data-t="${esc(it.title)}" aria-label="이 기사부터 듣기">▶ 여기부터</button>${it.link ? `<a class="orig" href="${esc(it.link)}" target="_blank" rel="noopener">원문 기사 보기 ↗</a>` : ''}</div></li>`).join('')}</ol>`
       : '<p class="empty">새 소식 없음</p>') + '</section>').join('') || '<p class="empty">고른 언론사가 없어요. 아래에서 언론사를 골라 주세요.</p>';
 
     // 원고 줄을 화면의 섹션·기사와 짝지어, 읽는 중인 기사를 표시하고 섹션 단위로 건너뛴다
@@ -75,7 +75,7 @@
       if (hs >= 0) sec = hs;
       const s = sections[sec];
       const ii = s ? s.items.findIndex((it) => text === Brief.sentence(it.spoken)) : -1;
-      return { text, sec, el: ii >= 0 ? $(`i${sec}-${ii}`) : null, summary: ii >= 0 ? s.items[ii].summary || '' : '' };
+      return { text, sec, el: ii >= 0 ? $(`i${sec}-${ii}`) : null, link: ii >= 0 ? s.items[ii].link || '' : '' };
     });
     attachClips(b, queue).catch(() => {}); // 녹음을 못 찾으면 브라우저 음성으로 읽는다
     // 같은 날 원고를 멈췄던 줄이 있으면 거기서 이어 듣는다 (페이지를 다시 열어도)
@@ -192,24 +192,12 @@
     synth.speak(u);
   }
 
-  // '자세히': 지금(또는 방금) 읽은 기사의 요약을 읽고, 다음 헤드라인으로 이어 간다
+  // '원문': 지금(또는 방금) 읽은 기사의 원래 기사를 새 창으로 연다. 서버는 기사 본문을 두지 않는다 (저작권, 2026-10-18)
   function more() {
     let i = pos;
-    while (i > 0 && !queue[i].summary && !queue[i].el) i--;
+    while (i > 0 && !queue[i].el) i--;
     const line = queue[i];
-    if (!synth || !line || !line.summary) return;
-    player.pause();
-    synth.cancel();
-    setPlaying(true);
-    mark(line.el);
-    caption(line.summary);
-    const g = ++gen;
-    const u = new SpeechSynthesisUtterance(Pron.say(line.summary));
-    u.lang = 'ko-KR';
-    if (voice) u.voice = voice;
-    u.rate = rate;
-    u.onend = () => { if (playing && g === gen) { pos = i + 1; speak(); } };
-    synth.speak(u);
+    if (line && line.link) window.open(line.link, '_blank', 'noopener');
   }
 
   function play() {

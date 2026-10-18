@@ -1,37 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { summarize, resolveGoogle, articleText, lead, body } = require('../tools/summarize.js');
-const rss = require('../tools/rss.js');
-
-const ARTICLE = `<html><head><meta name="description" content="요약 설명"><script>var x = "<p>스크립트 속 문단은 빼야 합니다 아주 길게 써 둔 문장</p>";</script></head><body>
-<nav><p>메뉴 메뉴 메뉴 메뉴 메뉴 메뉴 메뉴 메뉴 메뉴 메뉴</p></nav>
-<article><h1>제목</h1>
-<p>[서울=뉴시스] 홍길동 기자 = 정부가 내년부터 화학비료 사용을 줄이는 농가에 직불금을 더 주기로 했다. 농림축산식품부는 6일 이런 내용의 친환경 농업 지원 계획을 발표했다.</p>
-<p>지원 대상은 미생물 비료와 유기질 비료를 함께 쓰는 농가로, 면적당 지원 단가가 30% 오른다. hong@newsis.com</p>
-<p>짧은 줄</p>
-<p>농식품부는 올해 안에 세부 기준을 마련해 현장 설명회를 열 계획이다. 업계는 미생물 비료 수요가 늘 것으로 내다봤다.</p>
-</article><footer><p>저작권자 무단 전재 및 재배포 금지 저작권자 무단 전재</p></footer></body></html>`;
-
-test('기사 페이지에서 본문 문단만 뽑고, 리드는 첫 두세 문장에서 머리말·기자 이름·전자우편을 뺀다', () => {
-  const text = articleText(ARTICLE, rss.decodeEntities);
-  assert.doesNotMatch(text, /스크립트|메뉴|저작권|짧은 줄/);
-  assert.match(text, /^\[서울=뉴시스\]/);
-  const l = lead(text);
-  assert.ok(l.startsWith('정부가 내년부터 화학비료'), l);
-  assert.doesNotMatch(l, /뉴시스|홍길동|@/);
-  assert.ok(l.length <= 480 && l.length >= 60, l);
-  assert.match(l, /발표했다\.$|오른다\.$/);
-});
-
-test('전체 듣기 본문: 문장 단위로 앞에서부터 한도까지, 머리말·전자우편은 뺀다', () => {
-  const text = articleText(ARTICLE, rss.decodeEntities);
-  const b = body(text);
-  assert.ok(b.startsWith('정부가 내년부터 화학비료'), b);
-  assert.match(b, /현장 설명회를 열 계획이다\. 업계는 미생물 비료 수요가 늘 것으로 내다봤다\.$/);
-  assert.doesNotMatch(b, /뉴시스|홍길동|@|저작권/);
-  const short = body(text, 120);
-  assert.ok(short.length <= 160 && /[.]$/.test(short), short);
-});
+const { resolveLinks, resolveGoogle } = require('../tools/summarize.js');
 
 test('구글 뉴스 기사 주소는 서명값으로 원래 기사 주소를 받는다', async (t) => {
   t.mock.method(globalThis, 'fetch', async (url, init) => {
@@ -48,53 +17,28 @@ test('구글 뉴스 기사 주소는 서명값으로 원래 기사 주소를 받
   assert.equal(await resolveGoogle('https://www.yna.co.kr/view/AKR1', get), 'https://www.yna.co.kr/view/AKR1');
 });
 
-test('리드 요약: 키 없이 기사마다 summary를 채우고, 외국 기사는 번역하며, 못 읽은 기사는 기록만 남긴다', async () => {
-  const items = [
-    { title: '친환경 직불금 확대', source: '뉴시스', link: 'https://a/1' },
-    { title: '비료 가격 급등', original: 'Giá phân bón tăng', lang: 'vi', source: '단찌', link: 'https://b/2' },
-    { title: '로그인 필요', source: '가', link: 'https://c/3' },
-  ];
-  const pages = {
-    'https://a/1': ARTICLE,
-    'https://b/2': '<article><p>Giá phân bón tăng mạnh trong tháng 10 do nguồn cung khan hiếm trên thị trường thế giới. Nông dân lo lắng.</p><p>Nhiều đại lý cho biết giá urê đã tăng 15% so với tháng trước, và dự kiến còn tăng tiếp.</p><p>Bộ Nông nghiệp đang theo dõi tình hình thị trường phân bón để có biện pháp bình ổn.</p></article>',
-    'https://c/3': '<p>로그인</p>',
-  };
-  const log = [];
-  await summarize(items, {
-    get: async (u) => pages[u],
-    translate: async (s, lang) => { assert.equal(lang, 'vi'); return '세계 시장 공급 부족으로 10월 비료 가격이 크게 올랐다. 농민들이 걱정하고 있다.'; },
-    decodeEntities: rss.decodeEntities, log, run: (f) => f(), key: 'unused-in-lead-mode',
+test('원래 기사 주소 찾기: 구글 뉴스 기사만 요청하고, 못 찾으면 구글 주소를 그대로 두며, 본문은 붙이지 않는다', async (t) => {
+  t.mock.method(globalThis, 'fetch', async (url, init) => {
+    const id = decodeURIComponent(init.body).match(/\\"(CBMi\w+)\\"/)[1];
+    const inner = JSON.stringify(['garturlres', `https://origin.kr/${id}`, 1]);
+    return new Response(`)]}'\n\n${JSON.stringify([['wrb.fr', 'Fbv4je', inner]])}`);
   });
-  assert.match(items[0].summary, /^정부가 내년부터/);
-  assert.match(items[1].summary, /^세계 시장 공급 부족/);
-  assert.equal(items[2].summary, undefined);
-  assert.ok(log.some((l) => l.includes('본문 없음')));
-  assert.ok(log.includes('요약(lead): 3건 중 2건'));
-});
-
-test('네이버 기사 본문(dic_area)은 <br>로 나뉜 문단을 읽고 사진 설명은 뺀다', () => {
-  const p1 = '정부는 6일 내년도 비료 가격 안정 대책을 발표하고 농가 부담을 줄이기 위한 지원을 늘리기로 했다.';
-  const p2 = '농림축산식품부는 요소비료 수입선을 넓히고 무기질 비료 가격 상승분의 일부를 보전한다고 밝혔다.';
-  const p3 = '업계는 국제 원료 가격이 다시 오르고 있어 지원 규모가 충분하지 않을 수 있다고 우려했다.';
-  const html = `<html><body><div class="menu"><p>메뉴에 있는 아주 긴 문장이 여기 하나 들어 있다고 치자.</p></div>
-<article id="dic_area" class="go_trans _article_content"><span class="end_photo_org"><img src="x.jpg"><em class="img_desc">비료를 싣는 모습. 사진=연합뉴스 제공 설명이 꽤 길다</em></span><br>${p1}<br><br>${p2}<br><br>${p3}</article></body></html>`;
-  assert.equal(articleText(html, rss.decodeEntities), [p1, p2, p3].join('\n'));
-});
-
-test('원래 기사 본문을 못 받으면(유료·차단) 같은 소식을 쓴 다른 언론사 기사에서 받는다', async () => {
-  const items = [{ title: '금값 강세', source: '로이터', link: 'https://paywall/1' }];
+  const asked = [];
   const get = async (url) => {
-    if (url === 'https://paywall/1') { const e = new Error('HTTP 401'); e.status = 401; throw e; }
-    if (url === 'https://other/2') return ARTICLE;
-    throw new Error('없는 주소');
+    asked.push(url);
+    if (url.endsWith('CBMiBAD')) return '<html>서명 없음</html>';
+    return '<div data-n-a-sg="S" data-n-a-ts="1"></div>';
   };
+  const items = [
+    { title: '구글 기사', source: '가', link: 'https://news.google.com/rss/articles/CBMiOK?oc=5' },
+    { title: '막힌 구글 기사', source: '나', link: 'https://news.google.com/rss/articles/CBMiBAD?oc=5' },
+    { title: '네이버 기사', source: '다', link: 'https://n.news.naver.com/article/001/1' },
+  ];
   const log = [];
-  await summarize(items, { get, decodeEntities: rss.decodeEntities, translate: async (t) => t, log, run: (f) => f(), elsewhere: async () => ['https://paywall/1', 'https://other/2'] });
-  assert.ok(items[0].summary.startsWith('정부가 내년부터 화학비료'));
-  assert.match(log.join('\n'), /1건 중 1건 \(다른 언론사 기사로 1건\)/);
-  const none = [{ title: '막힌 기사', source: '로이터', link: 'https://paywall/1' }];
-  const log2 = [];
-  await summarize(none, { get, decodeEntities: rss.decodeEntities, translate: async (t) => t, log: log2, run: (f) => f(), elsewhere: async () => [] });
-  assert.equal(none[0].summary, undefined);
-  assert.match(log2.join('\n'), /요약 실패 \(HTTP 401\) 로이터 막힌 기사/);
+  await resolveLinks(items, { get, log, run: (f) => f() });
+  assert.deepEqual(items.map((i) => i.link), ['https://origin.kr/CBMiOK', 'https://news.google.com/rss/articles/CBMiBAD?oc=5', 'https://n.news.naver.com/article/001/1']);
+  assert.deepEqual(asked, ['https://news.google.com/rss/articles/CBMiOK', 'https://news.google.com/rss/articles/CBMiBAD']);
+  assert.ok(items.every((i) => !('summary' in i) && !('body' in i) && !('say' in i)));
+  assert.match(log.join('\n'), /원래 기사 주소 못 찾음 \(구글 뉴스 서명 없음\) 나 막힌 구글 기사/);
+  assert.ok(log.includes('원래 기사 주소: 구글 뉴스 기사 2건 중 1건'));
 });

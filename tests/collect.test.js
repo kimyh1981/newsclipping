@@ -239,13 +239,13 @@ test('지난 원고 넘겨받기: 같은 날 다시 배포하면 그날 것은 �
   assert.deepEqual(itemKeys({}), []);
 });
 
-test('농업 섹션: 바이오플랜·비료·탄소중립·벼·과수 키워드 기사를 언론사 안에서 앞으로 (앞 키워드일수록 먼저, 나머지는 원래 순서)', async (t) => {
+test('농업 섹션: 비료·탄소중립·벼·과수 키워드 기사를 언론사 안에서 앞으로 (앞 키워드일수록 먼저, 나머지는 원래 순서)', async (t) => {
   const config = JSON.parse(require('fs').readFileSync(require('path').join(__dirname, '..', 'feeds.json'), 'utf8'));
   const farm = config.sections.find((s) => s.id === 'farm');
   const patterns = farm.boost.map((p) => new RegExp(p, 'i'));
-  const titles = ['농협 조합장 선거', '쌀값 하락에 농가 시름', '바이오플랜, 미생물 비료 출시', '한우 수급 점검', '탄소중립 농업 확대'];
+  const titles = ['농협 조합장 선거', '쌀값 하락에 농가 시름', '미생물 비료 신제품 출시', '한우 수급 점검', '탄소중립 농업 확대'];
   assert.deepEqual(boosted(patterns, titles.map((title) => ({ title }))).map((i) => i.title),
-    ['바이오플랜, 미생물 비료 출시', '탄소중립 농업 확대', '쌀값 하락에 농가 시름', '농협 조합장 선거', '한우 수급 점검']);
+    ['미생물 비료 신제품 출시', '탄소중립 농업 확대', '쌀값 하락에 농가 시름', '농협 조합장 선거', '한우 수급 점검']);
   t.mock.method(globalThis, 'fetch', async () => new Response(feed('농협 조합장 선거', '한우 수급 점검', '과수 냉해 대책')));
   const b = await collect({ sections: [{ id: 'farm', title: '농업', boost: farm.boost, limit: 5, sources: [{ id: 'a', name: '가', url: 'https://a', take: 2 }] }] }, NOW);
   assert.deepEqual(b.sections[0].sources[0].items.map((i) => i.title).slice(0, 2), ['과수 냉해 대책', '농협 조합장 선거']);
@@ -271,6 +271,28 @@ test('지난 원고 보관: 오늘 것과 사이트에 있던 지난 날짜를 �
   assert.equal(saved.earlier, undefined);
   assert.equal(JSON.parse(fs.readFileSync(path.join(out, 'archive', 'index.json'), 'utf8')).days[0].label, '10월 6일');
   assert.ok(!fs.existsSync(path.join(out, 'archive', '20260928.json')));
+});
+
+test('지난 원고 보관: 예전 원고에 든 기사 본문(summary·body·say)은 모두 지우고 다시 올린다', async () => {
+  const fs = require('fs');
+  const path = require('path');
+  const out = fs.mkdtempSync(path.join(require('os').tmpdir(), 'arch-'));
+  const site = 'https://kimyh1981.github.io/newsclipping/archive/';
+  const withBody = (d) => ({ dateLabel: d, generatedAt: 'x', sections: [{ id: 's', sources: [{ id: 'a', items: [
+    { title: '옛 기사', link: 'https://a/1', source: '가', group: 'g0', summary: '요약 문장.', body: '본문 문장.', say: ['본문 문장.'], bodyElsewhere: true },
+  ] }] }] });
+  const files = { [`${site}index.json`]: JSON.stringify({ days: [{ ymd: '20261004' }] }), [`${site}20261004.json`]: JSON.stringify(withBody('10월 4일')) };
+  const getText = async (url) => { if (!(url in files)) throw new Error('404'); return files[url]; };
+  const live = { ...withBody('10월 5일'), generatedAt: '2026-10-04T22:00:00Z', audio: {} };
+  const b = { ...withBody('10월 6일'), generatedAt: '2026-10-05T21:00:00Z' };
+  const list = await archive(out, b, live, NOW, getText);
+  assert.deepEqual(list.map((d) => d.ymd), ['20261006', '20261005', '20261004']);
+  for (const d of ['20261006', '20261005', '20261004']) {
+    const text = fs.readFileSync(path.join(out, 'archive', `${d}.json`), 'utf8');
+    assert.doesNotMatch(text, /요약 문장|본문 문장|"summary"|"body"|"say"|bodyElsewhere/, d);
+    assert.deepEqual(JSON.parse(text).sections[0].sources[0].items[0], { title: '옛 기사', link: 'https://a/1', source: '가', group: 'g0' });
+  }
+  assert.ok(b.sections[0].sources[0].items[0].summary, '오늘 원고 객체 자체는 건드리지 않는다');
 });
 
 test('고른 언론사가 섹션 한도보다 많아도 언론사마다 한 건씩은 나온다 (돌아가며 고름)', () => {
@@ -303,15 +325,32 @@ test('국가별 비료 섹션: 같은 말을 쓰는 다른 나라판(edition)에
   assert.deepEqual(b.sections[0].sources[0].items.map((it) => it.title), ['비료값 내린다', '비료값 오른다']);
 });
 
-test('본문을 못 받은 기사는 뒤로 보내고 예비 기사로 채워, 원고에 든 기사는 모두 전체 듣기 본문이 있다', async (t) => {
-  t.mock.method(globalThis, 'fetch', async () => new Response(feed('막힌 기사 하나', '읽히는 기사 둘', '예비 기사 셋', '예비 기사 넷')));
-  const ok = '<article><p>정부가 내년부터 화학비료 사용을 줄이는 농가에 직불금을 더 주기로 했다. 농림축산식품부는 6일 이런 내용의 계획을 발표했다.</p><p>지원 대상은 미생물 비료와 유기질 비료를 함께 쓰는 농가로, 면적당 지원 단가가 30% 오른다고 밝혔다.</p></article>';
-  const getPage = async (url) => { if (url.includes(encodeURIComponent('막힌'))) { const e = new Error('HTTP 403'); e.status = 403; throw e; } return ok; };
-  const b = await collect({ sections: [{ id: 's', title: '농업', limit: 2, sources: [{ id: 'a', name: '가', url: 'https://a', take: 2 }] }] }, NOW, '', { summaryLimit: 50, getPage, elsewhere: null });
-  const picked = brief.select(b)[0].items;
-  assert.deepEqual(picked.map((i) => i.title), ['읽히는 기사 둘', '예비 기사 셋']);
-  assert.ok(picked.every((i) => i.say && i.say.length));
-  assert.match(b.log.join('\n'), /본문을 못 받은 기사 1건을 뒤로 보내고 예비 기사로 채움/);
+test('서버는 기사 본문을 받지 않는다: 제목·언론사·원래 기사 주소만 남기고, 구글 뉴스 주소는 원래 기사 주소로 바꾼다', async (t) => {
+  const g = (id, title) => `<item><title>${title} - 가신문</title><link>https://news.google.com/rss/articles/${id}?oc=5</link><pubDate>Mon, 05 Oct 2026 20:00:00 GMT</pubDate></item>`;
+  const q = googleUrl('비료');
+  t.mock.method(globalThis, 'fetch', async (url, init) => {
+    if (url === 'https://a/rss') return new Response(feed('쌀값 반등 소식', '벼 수확 한창'));
+    if (url === q) return new Response(`<rss><channel>${g('CBMiONE', '비료 가격 안정 대책')}${g('CBMiTWO', '요소비료 수입 확대')}</channel></rss>`);
+    if (url === 'https://news.google.com/_/DotsSplashUi/data/batchexecute') {
+      const id = decodeURIComponent(init.body).match(/\\"(CBMi\w+)\\"/)[1];
+      return new Response(`)]}'\n\n${JSON.stringify([['wrb.fr', 'Fbv4je', JSON.stringify(['garturlres', `https://farm.kr/${id}`, 1])]])}`);
+    }
+    throw new Error('예상 못한 주소 ' + url);
+  });
+  const pages = [];
+  const getPage = async (url) => { pages.push(url); return '<div data-n-a-sg="S" data-n-a-ts="1"></div><article><p>본문은 받아도 쓰지 않는다</p></article>'; };
+  const b = await collect({ sections: [
+    { id: 'farm', title: '농업', limit: 5, sources: [{ id: 'a', name: '가', url: 'https://a/rss', take: 2 }] },
+    { id: 'fert', title: '비료', limit: 5, sources: [{ id: 'f', name: '비료 검색', google: '비료', take: 2 }] },
+  ] }, NOW, '', { linkLimit: 50, getPage });
+  const items = b.sections.flatMap((s) => s.sources.flatMap((x) => x.items));
+  for (const it of items) for (const k of ['summary', 'body', 'say', 'bodyElsewhere']) assert.ok(!(k in it), `${k}가 남음: ${it.title}`);
+  assert.doesNotMatch(JSON.stringify(b), /본문은 받아도/);
+  assert.deepEqual(b.sections[1].sources[0].items.map((i) => i.link), ['https://farm.kr/CBMiONE', 'https://farm.kr/CBMiTWO']);
+  assert.deepEqual(b.sections[0].sources[0].items.map((i) => i.link), ['https://x/' + encodeURIComponent('쌀값 반등 소식'), 'https://x/' + encodeURIComponent('벼 수확 한창')]);
+  assert.ok(pages.every((u) => u.startsWith('https://news.google.com/rss/articles/')), '구글 뉴스 기사만 요청한다');
+  assert.equal(pages.length, 2);
+  assert.ok(b.log.includes('원래 기사 주소: 구글 뉴스 기사 2건 중 2건'));
 });
 
 test('오후 원고(서울 낮 12시 이후): 네이버 언론사는 많이 본 뉴스로, 섹션 이름·인사도 저녁으로', async (t) => {
