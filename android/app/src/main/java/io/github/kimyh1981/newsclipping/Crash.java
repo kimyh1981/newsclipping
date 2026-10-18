@@ -114,7 +114,7 @@ final class Crash {
                 String[] t = new String(Files.readAllBytes(f.toPath()), StandardCharsets.UTF_8).split("\n", 3);
                 when = Long.parseLong(t[0].trim());
                 if (when > seen) msg.append("앱 오류로 꺼짐 (자바, ").append(t.length > 1 ? t[1] : "").append(")\n\n")
-                        .append(String.join("\n", firstLines(t.length > 2 ? t[2] : "", 12)));
+                        .append(String.join("\n", stackLines(t.length > 2 ? t[2] : "")));
             } catch (Exception ignored) { }
             f.delete();
         }
@@ -147,6 +147,15 @@ final class Crash {
         prefs.setCrashSeen(Math.max(when, seen));
         String at = new SimpleDateFormat("M월 d일 HH:mm", Locale.KOREA).format(new Date(when));
         return at + "\n" + msg + "\n\n버전 " + BuildConfig.VERSION_NAME;
+    }
+
+    /** 오류 기록에서 보여 줄 줄: 맨 앞 4줄과, 진짜 원인('Caused by')부터 6줄 (예전엔 앞 12줄만이라 원인이 잘렸다, 2026-10-18) */
+    static List<String> stackLines(String s) {
+        List<String> all = firstLines(s, 400), out = new ArrayList<>(all.subList(0, Math.min(4, all.size())));
+        int cause = -1;
+        for (int i = 0; i < all.size(); i++) if (all.get(i).startsWith("Caused by")) cause = i; // 가장 안쪽 원인
+        if (cause >= 0) { out.add("…"); out.addAll(all.subList(cause, Math.min(all.size(), cause + 6))); }
+        return out;
     }
 
     private static List<String> firstLines(String s, int n) {
