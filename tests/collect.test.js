@@ -196,7 +196,8 @@ test('feeds.json: 언론사 id가 모두 있고 겹치지 않으며, 외국 언�
     assert.ok(['ko', 'en', 'vi', 'zh', 'ja', 'pt', 'ru', 'id', 'th'].includes(lang), x.id);
     assert.ok(EDITIONS[x.edition || lang], x.id); // 구글 뉴스 나라판이 있어야 한다
   }
-  assert.equal(cfg.sections.at(-1).id, 'vietnam', '베트남 농업·비료는 맨 마지막');
+  // 섹션 순서 (주인 확정 2026-10-19): 국내 헤드라인 → 국내 농업 → 해외 언론 → 해외 농업 → 주요 국가 농업(베트남 포함) → 해외 키워드 → AI
+  assert.deepEqual(cfg.sections.map((s) => s.id), ['papers', 'farm', 'world', 'global-agri', 'fert-world', 'agri-keywords', 'ai']);
 });
 
 // 안드로이드 앱(BriefTest.java)도 같은 파일로 같은 원고가 나오는지 확인한다

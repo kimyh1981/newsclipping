@@ -3,7 +3,7 @@
   "sections": [
     {
       "id": "papers",
-      "title": "주요 신문 헤드라인",
+      "title": "국내 주요 언론 헤드라인",
       "perSourceLabel": true,
       "limit": 14,
       "sources": [
@@ -116,15 +116,7 @@
           "take": 2,
           "default": false,
           "naver": "437"
-        }
-      ]
-    },
-    {
-      "id": "economy",
-      "title": "경제 신문 헤드라인",
-      "perSourceLabel": true,
-      "limit": 8,
-      "sources": [
+        },
         {
           "id": "mk",
           "name": "매일경제",
@@ -192,7 +184,7 @@
     },
     {
       "id": "farm",
-      "title": "농업 신문 헤드라인",
+      "title": "국내 농업 관련 뉴스",
       "promo": [
         "축제|대회|기부|기탁|성금|후원|봉사|나눔|시상|수상자|표창|협약식|업무협약|MOU|간담회|발대식|선포식|전달식|기념식|위촉|취임|선출|캠페인|골프|체육|장학금|동정|개막"
       ],
@@ -201,8 +193,51 @@
         "벼|쌀|과수|과원|사과 ?(농|재배|값|가격)|유기농|친환경"
       ],
       "perSourceLabel": true,
-      "limit": 8,
+      "limit": 10,
       "sources": [
+        {
+          "id": "newsfm",
+          "name": "영농자재신문",
+          "url": "https://www.newsfm.kr/data/rss/news.xml",
+          "google": "site:newsfm.kr",
+          "when": "2d",
+          "take": 1
+        },
+        {
+          "id": "weeklytrade",
+          "name": "한국무역신문",
+          "google": "site:weeklytrade.co.kr",
+          "when": "2d",
+          "take": 1,
+          "must": "비료|요소|퇴비|농자재|농기자재|칼륨|인산|미생물|토양"
+        },
+        {
+          "name": "비료 검색",
+          "google": "비료",
+          "when": "2d",
+          "take": 4,
+          "id": "fert-search",
+          "mix": true,
+          "must": "비료|요소|퇴비|농자재|농기자재|칼륨|인산|미생물|토양"
+        },
+        {
+          "name": "비료값·요소비료 검색",
+          "google": "비료값 OR 요소비료 OR 무기질비료 OR 유기질비료 OR 농자재",
+          "when": "2d",
+          "take": 2,
+          "id": "fert-price",
+          "mix": true,
+          "must": "비료|요소|퇴비|농자재|농기자재|칼륨|인산|미생물|토양"
+        },
+        {
+          "id": "fert-bio",
+          "name": "바이오스티뮬런트·미생물 비료 검색",
+          "google": "바이오스티뮬런트 OR 생물자극제 OR 미생물비료 OR 바이오비료 OR 미생물제제 OR 토양개량제",
+          "when": "3d",
+          "take": 2,
+          "mix": true,
+          "must": "비료|요소|퇴비|농자재|농기자재|칼륨|인산|미생물|토양|바이오스티뮬런트|생물자극제|바이오비료"
+        },
         {
           "name": "농민신문",
           "google": "site:nongmin.com (농업 OR 농가 OR 농협 OR 농산물 OR 농촌 OR 축산 OR 쌀 OR 비료)",
@@ -316,66 +351,198 @@
       ]
     },
     {
-      "id": "fertilizer",
-      "title": "비료 관련 뉴스",
-      "promo": [
-        "축제|대회|기부|기탁|성금|후원|봉사|나눔|시상|수상자|표창|협약식|업무협약|MOU|간담회|발대식|선포식|전달식|기념식|위촉|취임|선출|캠페인|골프|체육|장학금|동정|개막"
-      ],
-      "boost": [
-        "비료|퇴비|탄소중립|저탄소|온실가스|미생물|토양|바이오차|농자재|biochar",
-        "벼|쌀|과수|과원|사과 ?(농|재배|값|가격)|유기농|친환경"
-      ],
-      "limit": 5,
+      "id": "world",
+      "title": "해외 주요 언론 뉴스",
+      "limit": 10,
       "sources": [
         {
-          "id": "newsfm",
-          "name": "영농자재신문",
-          "url": "https://www.newsfm.kr/data/rss/news.xml",
-          "google": "site:newsfm.kr",
-          "when": "2d",
-          "take": 1
-        },
-        {
-          "id": "weeklytrade",
-          "name": "한국무역신문",
-          "google": "site:weeklytrade.co.kr",
-          "when": "2d",
-          "take": 1
-        },
-        {
-          "name": "비료 검색",
-          "google": "비료",
-          "when": "2d",
+          "name": "구글 뉴스 국제",
+          "url": "https://news.google.com/rss/headlines/section/topic/WORLD?hl=ko&gl=KR&ceid=KR:ko",
+          "google": "국제 정세",
           "take": 4,
-          "id": "fert-search",
+          "id": "gnews-world",
           "mix": true
         },
         {
-          "name": "비료값·요소비료 검색",
-          "google": "비료값 OR 요소비료 OR 무기질비료 OR 유기질비료 OR 농자재",
-          "when": "2d",
-          "take": 2,
-          "id": "fert-price",
+          "name": "구글 뉴스 경제",
+          "url": "https://news.google.com/rss/headlines/section/topic/BUSINESS?hl=ko&gl=KR&ceid=KR:ko",
+          "google": "경제 증시 환율",
+          "take": 4,
+          "id": "gnews-biz",
           "mix": true
         },
         {
-          "id": "fert-bio",
-          "name": "미생물·바이오 비료 검색",
-          "google": "미생물비료 OR 바이오비료 OR 미생물제제 OR 토양개량제",
-          "when": "3d",
+          "id": "reuters",
+          "country": "영국",
+          "name": "로이터",
+          "google": "site:reuters.com",
           "take": 2,
-          "mix": true,
-          "default": false
+          "default": false,
+          "lang": "en"
+        },
+        {
+          "id": "ap",
+          "country": "미국",
+          "name": "AP",
+          "google": "site:apnews.com",
+          "take": 2,
+          "default": false,
+          "lang": "en"
+        },
+        {
+          "id": "bbc",
+          "country": "영국",
+          "name": "BBC",
+          "google": "site:bbc.com",
+          "take": 2,
+          "default": false,
+          "lang": "en"
+        },
+        {
+          "id": "bloomberg",
+          "country": "미국",
+          "name": "블룸버그",
+          "google": "site:bloomberg.com",
+          "take": 2,
+          "default": false,
+          "lang": "en"
+        },
+        {
+          "id": "cnbc",
+          "name": "CNBC",
+          "google": "site:cnbc.com",
+          "take": 2,
+          "default": false,
+          "lang": "en",
+          "country": "미국"
+        },
+        {
+          "id": "nikkei-asia",
+          "country": "일본",
+          "name": "닛케이 아시아",
+          "google": "site:asia.nikkei.com",
+          "take": 2,
+          "default": false,
+          "lang": "en"
+        },
+        {
+          "id": "xinhua",
+          "name": "신화망",
+          "google": "site:xinhuanet.com",
+          "take": 2,
+          "default": false,
+          "lang": "zh",
+          "country": "중국"
+        },
+        {
+          "id": "caixin",
+          "name": "차이신",
+          "google": "site:caixin.com",
+          "take": 2,
+          "default": false,
+          "lang": "zh",
+          "country": "중국"
+        },
+        {
+          "id": "nhk",
+          "name": "NHK",
+          "google": "site:nhk.or.jp",
+          "take": 2,
+          "default": false,
+          "lang": "ja",
+          "country": "일본"
+        },
+        {
+          "id": "nikkei",
+          "name": "니혼게이자이",
+          "google": "site:nikkei.com",
+          "take": 2,
+          "default": false,
+          "lang": "ja",
+          "country": "일본"
+        },
+        {
+          "id": "vnexpress",
+          "name": "브이엔익스프레스",
+          "google": "site:vnexpress.net",
+          "take": 2,
+          "default": false,
+          "lang": "vi",
+          "country": "베트남"
+        },
+        {
+          "id": "tuoitre",
+          "name": "뚜오이째",
+          "google": "site:tuoitre.vn",
+          "take": 2,
+          "default": false,
+          "lang": "vi",
+          "country": "베트남"
         }
       ],
-      "hours": 60,
-      "must": "비료|요소|퇴비|농자재|농기자재|칼륨|인산|미생물|토양"
+      "region": true
+    },
+    {
+      "id": "global-agri",
+      "title": "해외 농업 관련 뉴스",
+      "lang": "en",
+      "limit": 5,
+      "hours": 72,
+      "sources": [
+        {
+          "id": "worldfertilizer",
+          "country": "영국",
+          "name": "월드 퍼틸라이저",
+          "google": "site:worldfertilizer.com",
+          "take": 2,
+          "default": false,
+          "when": "3d"
+        },
+        {
+          "id": "argus-fert",
+          "country": "영국",
+          "name": "아거스 비료 시황",
+          "google": "site:argusmedia.com fertilizer",
+          "take": 2,
+          "default": false,
+          "when": "3d",
+          "must": "fertili[sz]er|urea|ammonia|potash|phosphate|sulphur|sulfur"
+        },
+        {
+          "id": "dtn",
+          "name": "DTN 프로그레시브 파머",
+          "google": "site:dtnpf.com",
+          "take": 2,
+          "default": false,
+          "when": "3d",
+          "country": "미국"
+        },
+        {
+          "id": "agriculture-com",
+          "name": "석세스풀 파밍",
+          "google": "site:agriculture.com",
+          "take": 2,
+          "default": false,
+          "when": "3d",
+          "country": "미국"
+        },
+        {
+          "id": "worldgrain",
+          "country": "미국",
+          "name": "월드 그레인",
+          "google": "site:world-grain.com",
+          "take": 2,
+          "default": false,
+          "when": "3d"
+        }
+      ],
+      "region": true
     },
     {
       "id": "fert-world",
-      "title": "해외 농업·비료 시장 뉴스",
+      "title": "주요 국가 농업 관련 뉴스",
       "_설명": "해외 영업용: 나라마다 그 나라 말로 비료·바이오자재(미생물·바이오스티뮬런트)·작물 시장 낱말을 구글 뉴스에서 찾아 최신 기사부터 읽는다. 앱에서 나라·기사 수·추가 키워드를 고른다",
-      "limit": 5,
+      "limit": 8,
       "hours": 72,
       "latest": true,
       "region": true,
@@ -510,13 +677,155 @@
           "mix": true,
           "must": "fertili[sz]er|urea|potash|palm|biostimulant|bio-?fertili|soil|crop|farm|agri|harvest|padi|plantation|baja",
           "default": false
+        },
+        {
+          "id": "farmer-cn",
+          "name": "농민일보",
+          "google": "\"农民日报\"",
+          "lang": "zh",
+          "take": 2,
+          "default": false,
+          "when": "3d",
+          "hours": 72,
+          "country": "중국"
+        },
+        {
+          "id": "agrinews-jp",
+          "name": "일본농업신문",
+          "google": "site:agrinews.co.jp",
+          "take": 2,
+          "default": false,
+          "when": "3d",
+          "hours": 72,
+          "lang": "ja",
+          "country": "일본"
+        },
+        {
+          "name": "단찌",
+          "google": "site:dantri.com.vn phân bón",
+          "when": "7d",
+          "hours": 168,
+          "take": 2,
+          "must": "phân bón|vi sinh|hữu cơ|urê|NPK|DAP|kali",
+          "id": "dantri-fert",
+          "lang": "vi",
+          "country": "베트남"
+        },
+        {
+          "name": "베트남 비료 검색",
+          "google": "\"phân bón\" OR \"phân bón sinh học\" OR \"phân bón vi sinh\" OR \"phân bón hữu cơ\"",
+          "when": "3d",
+          "take": 2,
+          "must": "phân bón|vi sinh|hữu cơ|urê|NPK|DAP|kali",
+          "id": "vn-fert-search",
+          "mix": true,
+          "lang": "vi",
+          "country": "베트남",
+          "hours": 72
+        },
+        {
+          "name": "단찌",
+          "google": "site:dantri.com.vn (nông nghiệp OR nông sản OR nông dân OR cây trồng)",
+          "when": "3d",
+          "take": 2,
+          "id": "dantri-agri",
+          "lang": "vi",
+          "country": "베트남",
+          "must": "phân bón|nông nghiệp|nông sản|nông dân|cây trồng|vi sinh|hữu cơ|urê|NPK|DAP|kali|lúa|gạo|cà phê|sầu riêng|hồ tiêu",
+          "hours": 72
+        },
+        {
+          "id": "nongnghiep",
+          "name": "농업환경신문",
+          "google": "site:nongnghiepmoitruong.vn",
+          "take": 2,
+          "default": false,
+          "when": "3d",
+          "lang": "vi",
+          "country": "베트남",
+          "must": "phân bón|nông nghiệp|nông sản|nông dân|cây trồng|vi sinh|hữu cơ|urê|NPK|DAP|kali|lúa|gạo|cà phê|sầu riêng|hồ tiêu",
+          "hours": 72
+        },
+        {
+          "id": "danviet",
+          "name": "단비엣",
+          "google": "site:danviet.vn (nông nghiệp OR nông sản OR phân bón OR nông dân)",
+          "take": 2,
+          "default": false,
+          "when": "3d",
+          "lang": "vi",
+          "country": "베트남",
+          "must": "phân bón|nông nghiệp|nông sản|nông dân|cây trồng|vi sinh|hữu cơ|urê|NPK|DAP|kali|lúa|gạo|cà phê|sầu riêng|hồ tiêu",
+          "hours": 72
+        },
+        {
+          "id": "kinhtenongthon",
+          "name": "농촌경제",
+          "google": "site:kinhtenongthon.vn",
+          "take": 2,
+          "default": false,
+          "when": "3d",
+          "lang": "vi",
+          "country": "베트남",
+          "must": "phân bón|nông nghiệp|nông sản|nông dân|cây trồng|vi sinh|hữu cơ|urê|NPK|DAP|kali|lúa|gạo|cà phê|sầu riêng|hồ tiêu",
+          "hours": 72
+        },
+        {
+          "id": "vnexpress-agri",
+          "name": "브이엔익스프레스 농업",
+          "google": "site:vnexpress.net (nông nghiệp OR nông sản OR phân bón OR nông dân)",
+          "take": 2,
+          "default": false,
+          "when": "3d",
+          "lang": "vi",
+          "country": "베트남",
+          "must": "phân bón|nông nghiệp|nông sản|nông dân|cây trồng|vi sinh|hữu cơ|urê|NPK|DAP|kali|lúa|gạo|cà phê|sầu riêng|hồ tiêu",
+          "hours": 72
+        }
+      ]
+    },
+    {
+      "id": "agri-keywords",
+      "title": "해외 농업 관련 키워드 뉴스",
+      "_설명": "세계 비료·바이오자재 시장 낱말을 구글 뉴스(영어)에서 찾아 최신 기사부터 읽는다. 여러 나라 언론이 섞여 있어 나라는 원문 주소(도메인)로 붙인다",
+      "lang": "en",
+      "limit": 5,
+      "hours": 72,
+      "latest": true,
+      "sources": [
+        {
+          "id": "kw-biostim",
+          "name": "바이오스티뮬런트 검색",
+          "google": "biostimulant OR biostimulants OR biofertilizer OR \"microbial fertilizer\"",
+          "when": "3d",
+          "take": 2,
+          "mix": true,
+          "must": "biostimul|biofertil|microbial"
+        },
+        {
+          "id": "kw-fert-price",
+          "name": "비료값 검색",
+          "google": "\"fertilizer prices\" OR \"urea prices\" OR \"potash prices\" OR \"phosphate prices\"",
+          "when": "2d",
+          "take": 2,
+          "mix": true,
+          "must": "fertili|urea|potash|phosphate"
+        },
+        {
+          "id": "kw-soil",
+          "name": "토양·작물 생리 검색",
+          "google": "\"humic acid\" OR \"seaweed extract\" OR \"amino acid fertilizer\" OR \"soil health\" OR \"plant growth regulator\"",
+          "when": "3d",
+          "take": 2,
+          "mix": true,
+          "default": false
         }
       ]
     },
     {
       "id": "ai",
-      "title": "AI 뉴스",
-      "limit": 6,
+      "title": "AI 관련 뉴스",
+      "limit": 8,
       "hours": 48,
       "sources": [
         {
@@ -560,151 +869,7 @@
           "take": 2,
           "default": false,
           "when": "2d"
-        }
-      ]
-    },
-    {
-      "id": "world",
-      "title": "국제 정세와 경제",
-      "limit": 8,
-      "sources": [
-        {
-          "name": "구글 뉴스 국제",
-          "url": "https://news.google.com/rss/headlines/section/topic/WORLD?hl=ko&gl=KR&ceid=KR:ko",
-          "google": "국제 정세",
-          "take": 4,
-          "id": "gnews-world",
-          "mix": true
         },
-        {
-          "name": "구글 뉴스 경제",
-          "url": "https://news.google.com/rss/headlines/section/topic/BUSINESS?hl=ko&gl=KR&ceid=KR:ko",
-          "google": "경제 증시 환율",
-          "take": 4,
-          "id": "gnews-biz",
-          "mix": true
-        },
-        {
-          "id": "reuters",
-          "country": "영국",
-          "name": "로이터",
-          "google": "site:reuters.com",
-          "take": 2,
-          "default": false,
-          "lang": "en"
-        },
-        {
-          "id": "ap",
-          "country": "미국",
-          "name": "AP",
-          "google": "site:apnews.com",
-          "take": 2,
-          "default": false,
-          "lang": "en"
-        },
-        {
-          "id": "bbc",
-          "country": "영국",
-          "name": "BBC",
-          "google": "site:bbc.com",
-          "take": 2,
-          "default": false,
-          "lang": "en"
-        },
-        {
-          "id": "bloomberg",
-          "country": "미국",
-          "name": "블룸버그",
-          "google": "site:bloomberg.com",
-          "take": 2,
-          "default": false,
-          "lang": "en"
-        },
-        {
-          "id": "cnbc",
-          "name": "CNBC",
-          "google": "site:cnbc.com",
-          "take": 2,
-          "default": false,
-          "lang": "en",
-          "country": "미국"
-        },
-        {
-          "id": "nikkei-asia",
-          "country": "일본",
-          "name": "닛케이 아시아",
-          "google": "site:asia.nikkei.com",
-          "take": 2,
-          "default": false,
-          "lang": "en"
-        }
-      ],
-      "region": true
-    },
-    {
-      "id": "global-agri",
-      "title": "해외 농업과 비료 뉴스",
-      "lang": "en",
-      "limit": 5,
-      "hours": 72,
-      "sources": [
-        {
-          "id": "worldfertilizer",
-          "country": "영국",
-          "name": "월드 퍼틸라이저",
-          "google": "site:worldfertilizer.com",
-          "take": 2,
-          "default": false,
-          "when": "3d"
-        },
-        {
-          "id": "argus-fert",
-          "country": "영국",
-          "name": "아거스 비료 시황",
-          "google": "site:argusmedia.com fertilizer",
-          "take": 2,
-          "default": false,
-          "when": "3d",
-          "must": "fertili[sz]er|urea|ammonia|potash|phosphate|sulphur|sulfur"
-        },
-        {
-          "id": "dtn",
-          "name": "DTN 프로그레시브 파머",
-          "google": "site:dtnpf.com",
-          "take": 2,
-          "default": false,
-          "when": "3d",
-          "country": "미국"
-        },
-        {
-          "id": "agriculture-com",
-          "name": "석세스풀 파밍",
-          "google": "site:agriculture.com",
-          "take": 2,
-          "default": false,
-          "when": "3d",
-          "country": "미국"
-        },
-        {
-          "id": "worldgrain",
-          "country": "미국",
-          "name": "월드 그레인",
-          "google": "site:world-grain.com",
-          "take": 2,
-          "default": false,
-          "when": "3d"
-        }
-      ],
-      "region": true
-    },
-    {
-      "id": "ai-global",
-      "title": "해외 AI 뉴스",
-      "lang": "en",
-      "limit": 6,
-      "hours": 48,
-      "region": true,
-      "sources": [
         {
           "id": "mit-tr",
           "country": "미국",
@@ -713,7 +878,8 @@
           "google": "site:technologyreview.com AI",
           "take": 2,
           "default": false,
-          "when": "2d"
+          "when": "2d",
+          "lang": "en"
         },
         {
           "id": "verge-ai",
@@ -723,7 +889,8 @@
           "google": "site:theverge.com AI",
           "take": 2,
           "default": false,
-          "when": "2d"
+          "when": "2d",
+          "lang": "en"
         },
         {
           "id": "techcrunch-ai",
@@ -733,7 +900,8 @@
           "google": "site:techcrunch.com AI",
           "take": 2,
           "default": false,
-          "when": "2d"
+          "when": "2d",
+          "lang": "en"
         },
         {
           "id": "venturebeat-ai",
@@ -743,7 +911,8 @@
           "google": "site:venturebeat.com AI",
           "take": 2,
           "default": false,
-          "when": "2d"
+          "when": "2d",
+          "lang": "en"
         },
         {
           "id": "wired-ai",
@@ -753,7 +922,8 @@
           "google": "site:wired.com AI",
           "take": 2,
           "default": false,
-          "when": "2d"
+          "when": "2d",
+          "lang": "en"
         },
         {
           "id": "ars-ai",
@@ -763,7 +933,8 @@
           "google": "site:arstechnica.com AI",
           "take": 2,
           "default": false,
-          "when": "2d"
+          "when": "2d",
+          "lang": "en"
         },
         {
           "id": "the-decoder",
@@ -773,7 +944,8 @@
           "google": "site:the-decoder.com",
           "take": 2,
           "default": false,
-          "when": "2d"
+          "when": "2d",
+          "lang": "en"
         },
         {
           "id": "ieee-ai",
@@ -783,7 +955,8 @@
           "google": "site:spectrum.ieee.org AI",
           "take": 2,
           "default": false,
-          "when": "2d"
+          "when": "2d",
+          "lang": "en"
         },
         {
           "id": "reuters-ai",
@@ -792,225 +965,10 @@
           "google": "site:reuters.com artificial intelligence",
           "take": 2,
           "default": false,
-          "when": "2d"
+          "when": "2d",
+          "lang": "en"
         }
       ]
-    },
-    {
-      "id": "china",
-      "title": "중국 뉴스",
-      "lang": "zh",
-      "limit": 6,
-      "sources": [
-        {
-          "id": "xinhua",
-          "name": "신화망",
-          "google": "site:xinhuanet.com",
-          "take": 2,
-          "default": false
-        },
-        {
-          "id": "people",
-          "name": "인민망",
-          "google": "site:people.com.cn",
-          "take": 2,
-          "default": false
-        },
-        {
-          "id": "caixin",
-          "name": "차이신",
-          "google": "site:caixin.com",
-          "take": 2,
-          "default": false
-        },
-        {
-          "id": "farmer-cn",
-          "name": "농민일보",
-          "google": "\"农民日报\"",
-          "lang": "zh",
-          "take": 2,
-          "default": false,
-          "when": "3d",
-          "hours": 72
-        }
-      ],
-      "region": true,
-      "country": "중국"
-    },
-    {
-      "id": "japan",
-      "title": "일본 뉴스",
-      "lang": "ja",
-      "limit": 6,
-      "sources": [
-        {
-          "id": "nhk",
-          "name": "NHK",
-          "google": "site:nhk.or.jp",
-          "take": 2,
-          "default": false
-        },
-        {
-          "id": "nikkei",
-          "name": "니혼게이자이",
-          "google": "site:nikkei.com",
-          "take": 2,
-          "default": false
-        },
-        {
-          "id": "agrinews-jp",
-          "name": "일본농업신문",
-          "google": "site:agrinews.co.jp",
-          "take": 2,
-          "default": false,
-          "when": "3d",
-          "hours": 72
-        }
-      ],
-      "region": true,
-      "country": "일본"
-    },
-    {
-      "id": "vietnam-news",
-      "title": "베트남 주요 뉴스",
-      "lang": "vi",
-      "limit": 6,
-      "sources": [
-        {
-          "id": "vnexpress",
-          "name": "브이엔익스프레스",
-          "google": "site:vnexpress.net",
-          "take": 2,
-          "default": false
-        },
-        {
-          "id": "tuoitre",
-          "name": "뚜오이째",
-          "google": "site:tuoitre.vn",
-          "take": 2,
-          "default": false
-        },
-        {
-          "id": "thanhnien",
-          "name": "타인니엔",
-          "google": "site:thanhnien.vn",
-          "take": 2,
-          "default": false
-        },
-        {
-          "id": "vietnamplus",
-          "name": "베트남플러스",
-          "google": "site:vietnamplus.vn",
-          "take": 2,
-          "default": false
-        },
-        {
-          "id": "vtv",
-          "name": "VTV",
-          "google": "site:vtv.vn",
-          "take": 2,
-          "default": false
-        },
-        {
-          "id": "laodong",
-          "name": "라오동",
-          "google": "site:laodong.vn",
-          "take": 2,
-          "default": false
-        },
-        {
-          "id": "vneconomy",
-          "name": "브이엔이코노미",
-          "google": "site:vneconomy.vn",
-          "take": 2,
-          "default": false
-        },
-        {
-          "id": "cafef",
-          "name": "카페에프",
-          "google": "site:cafef.vn",
-          "take": 2,
-          "default": false
-        },
-        {
-          "id": "baodautu",
-          "name": "투자신문",
-          "google": "site:baodautu.vn",
-          "take": 2,
-          "default": false
-        }
-      ],
-      "region": true,
-      "country": "베트남"
-    },
-    {
-      "id": "vietnam",
-      "title": "베트남 농업과 비료 뉴스",
-      "lang": "vi",
-      "limit": 5,
-      "hours": 72,
-      "sources": [
-        {
-          "name": "단찌",
-          "google": "site:dantri.com.vn phân bón",
-          "when": "7d",
-          "hours": 168,
-          "take": 2,
-          "must": "phân bón|vi sinh|hữu cơ|urê|NPK|DAP|kali",
-          "id": "dantri-fert"
-        },
-        {
-          "name": "베트남 비료 검색",
-          "google": "\"phân bón\" OR \"phân bón sinh học\" OR \"phân bón vi sinh\" OR \"phân bón hữu cơ\"",
-          "when": "3d",
-          "take": 2,
-          "must": "phân bón|vi sinh|hữu cơ|urê|NPK|DAP|kali",
-          "id": "vn-fert-search",
-          "mix": true
-        },
-        {
-          "name": "단찌",
-          "google": "site:dantri.com.vn (nông nghiệp OR nông sản OR nông dân OR cây trồng)",
-          "when": "3d",
-          "take": 2,
-          "id": "dantri-agri"
-        },
-        {
-          "id": "nongnghiep",
-          "name": "농업환경신문",
-          "google": "site:nongnghiepmoitruong.vn",
-          "take": 2,
-          "default": false,
-          "when": "3d"
-        },
-        {
-          "id": "danviet",
-          "name": "단비엣",
-          "google": "site:danviet.vn (nông nghiệp OR nông sản OR phân bón OR nông dân)",
-          "take": 2,
-          "default": false,
-          "when": "3d"
-        },
-        {
-          "id": "kinhtenongthon",
-          "name": "농촌경제",
-          "google": "site:kinhtenongthon.vn",
-          "take": 2,
-          "default": false,
-          "when": "3d"
-        },
-        {
-          "id": "vnexpress-agri",
-          "name": "브이엔익스프레스 농업",
-          "google": "site:vnexpress.net (nông nghiệp OR nông sản OR phân bón OR nông dân)",
-          "take": 2,
-          "default": false,
-          "when": "3d"
-        }
-      ],
-      "must": "phân bón|nông nghiệp|nông sản|nông dân|cây trồng|vi sinh|hữu cơ|urê|NPK|DAP|kali|lúa|gạo|cà phê|sầu riêng|hồ tiêu",
-      "region": true,
-      "country": "베트남"
     }
   ]
 }
