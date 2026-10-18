@@ -3,7 +3,7 @@
 다른 Claude 계정(또는 다른 개발자)이 이 저장소에서 바로 이어서 개발할 수 있도록 정리한 문서입니다.
 기능 설명·설치·설정 방법은 [README.md](README.md)에 자세히 있고, 이 문서는 **개발을 이어받는 데 필요한 것**만 모았습니다.
 
-- 현재 버전: **v1.76** (정식 `android/version.txt`, 라이트 `android/version-lite.txt`)
+- 현재 버전: **v1.77** (정식 `android/version.txt`, 라이트 `android/version-lite.txt`)
 - 웹: https://kimyh1981.github.io/newsclipping/
 - APK: https://github.com/kimyh1981/newsclipping/releases/latest/download/newsclipping.apk
 - 라이트 APK(제품 공부·농업영어 없음, '뉴스클리핑 라이트'): https://github.com/kimyh1981/newsclipping/releases/latest/download/newsclipping-lite.apk
@@ -123,6 +123,7 @@ Pages Source는 **GitHub Actions**로 설정되어 있어야 합니다.
 | #74 | 1.74 | 시작 화면의 앱 이름·소개 글을 가운데로. 사내 코드는 설치 후 한 번(그리고 코드가 바뀌면 한 번 더) 앱을 켤 때 묻되, 읽는 중(운전 중)이면 미룸. 취소하면 뉴스만 듣고, 차에서 아침마다 "사내 코드를 넣어 주세요"를 한 번 읽음(일부러 안 듣는 단추는 두지 않음) |
 | #75 | 1.75 | 저작권 위험 줄이기: 서버는 제목·언론사·원문 링크만(본문 수집·녹음·보관 안 함), '전체 듣기'는 폰이 원문을 열어 본문만 뽑아 읽음(`ArticleReader`), 전체 듣기 중 오른쪽 쓸기로 헤드라인 복귀, 자막 '원문 보기'. 해외 언론 기사는 원문 도메인으로 나라 밝힘. 영문 고유명사(KIA→기아). 회사 이름 노출 제거 |
 | #76 | 1.76 | 전체 듣기 본문 뽑기 보강(실제 기사 32곳 점검: 태그 흔적·바닥글·위젯·영어 홍보·기자명·대괄호 홍보·기호 거르기), 외국어 기사는 우리말로 옮겨 읽기, 원문 15초 대기, F1 숫자 '팔천 백 이만' 띄우기, news-check 경로 보강 |
+| #77 | 1.77 | 빨리 듣기(자막: 누른 채 2배·두 번 눌러 유지 3배, F1이 못 따라가면 2배로 / 홈 이전·다음: 누른 채 2배), 전체 듣기 위·아래 쓸기로 문단 넘기기, 해외 뉴스의 한국 이야기는 '한국,' |
 
 자세한 내용은 각 PR 설명과 커밋 메시지를 보세요.
 
