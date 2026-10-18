@@ -336,6 +336,16 @@ public class NewsService extends Service {
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         Crash.install(this);
+        // 자막 화면을 가리키는 요청이 서비스로 들어오며 앱이 꺼졌다 (1.76, 10/18 앱 종료 기록): 서비스 요청이 아니면 빈 요청으로 본다
+        if (intent != null && intent.getComponent() != null && !NewsService.class.getName().equals(intent.getComponent().getClassName())) intent = null;
+        try {
+            return startCommand(intent);
+        } catch (RuntimeException e) {
+            Log.w(TAG, "서비스 시작 처리 중 오류, 앱은 끄지 않는다: " + e);            return START_NOT_STICKY;
+        }
+    }
+
+    private int startCommand(Intent intent) {
         if (intent != null && ACTION_STOP.equals(intent.getAction())) {
             finish();
             return START_NOT_STICKY;
