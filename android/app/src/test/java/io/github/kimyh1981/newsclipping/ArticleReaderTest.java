@@ -76,4 +76,11 @@ public class ArticleReaderTest {
         assertTrue(ArticleReader.foreign("Ngày 14/10, Cơ quan Cảnh sát điều tra Công an tỉnh Cà Mau đã khởi tố một người sản xuất phân bón giả."));
         assertFalse(ArticleReader.foreign(P1 + " KIA와 LG가 맞붙었다."));
     }
+
+    @Test public void keepsParagraphBoundaries() {
+        List<List<String>> p = ArticleReader.paragraphs(ArticleReader.text(PAGE));
+        assertEquals(2, p.size()); // 문단 둘 (군글 문단은 빠짐)
+        assertEquals(P1, p.get(0).get(0));
+        assertEquals(P2, p.get(1).get(0));
+    }
 }
