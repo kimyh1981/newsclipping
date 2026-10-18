@@ -22,7 +22,7 @@ import android.widget.TextView;
  * 웹 기사 목록의 ▶(newsclipping://play?t=기사 제목)로 열리면 그 기사부터 읽는다.
  */
 public class CaptionActivity extends Activity {
-    private TextView head, body, hint;
+    private TextView head, body, hint, origin;
     /** 제품 공부 중: 농업영어로 넘기기, 농업영어 중: 이 회 마치기 */
     private Button skip;
     private final Runnable redraw = this::show;
@@ -81,8 +81,19 @@ public class CaptionActivity extends Activity {
         hint = text(17, 0xFF8E8E93);
         hint.setGravity(Gravity.CENTER);
         col.addView(hint);
+        // 원문 보기: 차를 세웠을 때 기사 페이지를 연다 (읽는 동안 화면은 자막 그대로, 주인 결정 2026-10-18)
+        origin = text(15, 0xFF0A84FF);
+        origin.setText("원문 보기 ↗");
+        origin.setGravity(Gravity.CENTER);
+        origin.setPadding(0, dp(10), 0, dp(4));
+        origin.setVisibility(View.GONE);
+        origin.setOnClickListener(v -> {
+            String link = NewsService.currentLink();
+            if (!link.isEmpty()) startActivity(new Intent(Intent.ACTION_VIEW, android.net.Uri.parse(link)));
+        });
+        col.addView(origin);
 
-        // 누르면 전체 듣기, 오른쪽에서 왼쪽으로 쓸면 다음 기사(전체 듣기 중이면 끝내고 다음 헤드라인), 반대로 쓸면 이전 기사
+        // 누르면 전체 듣기, 오른쪽에서 왼쪽으로 쓸면 다음 기사, 반대로 쓸면 이전 기사. 전체 듣기 중에는 어느 쪽이든 본문을 끝내고 헤드라인으로 돌아온다
         GestureDetector gestures = new GestureDetector(this, new GestureDetector.SimpleOnGestureListener() {
             @Override public boolean onDown(MotionEvent e) { return true; }
             @Override public boolean onSingleTapUp(MotionEvent e) {
@@ -137,6 +148,7 @@ public class CaptionActivity extends Activity {
 
     private void show() {
         skip.setVisibility(View.GONE);
+        origin.setVisibility(NewsService.isRunning() && !NewsService.currentLink().isEmpty() ? View.VISIBLE : View.GONE);
         if (!NewsService.isRunning()) {
             if (seen) { finish(); return; }
             head.setText("뉴스클리핑");
@@ -164,7 +176,7 @@ public class CaptionActivity extends Activity {
         head.setText(c.full ? c.source + " · 전체 듣기 · " + c.title : c.source);
         // 헤드라인은 읽는 글 그대로, 전체 듣기는 지금 읽는 문장. 너무 긴 글(옛 원고의 본문 통째)은 기사 제목
         body.setText(c.text.length() > 240 ? c.title : c.text);
-        hint.setText(paused ? "멈춤" : c.title.isEmpty() ? "" : c.full ? "왼쪽으로 넘기면 다음 헤드라인으로 갑니다" : "누르면 전체 듣기 · 왼쪽으로 넘기면 다음 기사");
+        hint.setText(paused ? "멈춤" : c.title.isEmpty() ? "" : c.full ? "오른쪽으로 넘기면 헤드라인으로 돌아갑니다" : "누르면 전체 듣기 · 왼쪽으로 넘기면 다음 기사");
     }
 
     private TextView text(int sp, int color) {

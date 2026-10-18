@@ -23,7 +23,7 @@ jobs:
       - name: Live collection
         timeout-minutes: 8
         env:
-          SUMMARY_LIMIT: '30' # 요약은 앞의 8건만 시험한다 (기본 리드 방식, 무료)
+          LINK_LIMIT: '30' # 구글 뉴스 기사의 원래 주소 찾기는 30건만 시험한다
           TTS_ENGINE: edge
           TTS_DAILY_CHARS: '600' # 엣지 음성 녹음이 되는지 몇 줄만 시험한다
         run: |
@@ -32,8 +32,8 @@ jobs:
           cat out/briefing.txt
           echo '----- 번역 원문 -----'
           node -e "const b=require('./out/briefing.json');for(const s of b.sections)for(const x of s.sources)for(const i of x.items)if(i.original)console.log(i.source+' | '+i.original+' => '+i.title)"
-          echo '----- 자세히 (요약) -----'
-          node -e "const b=require('./out/briefing.json');for(const s of b.sections)for(const x of s.sources)for(const i of x.items)if(i.summary)console.log('* '+i.title+'\n  '+i.summary)"
+          echo '----- 기사 주소 (본문은 서버에 없음) -----'
+          node -e "const b=require('./out/briefing.json');for(const s of b.sections)for(const x of s.sources)for(const i of x.items){if(i.summary||i.body||i.say)throw new Error('본문이 남음: '+i.title);console.log('* '+i.title+'\n  '+i.link)}"
           echo '----- 숫자·기호 읽기 -----'
           node tools/pron-audit.js out/briefing.json | head -400
           echo '----- 음성 녹음 -----'
@@ -46,4 +46,11 @@ jobs:
           curl -sSfo /tmp/json.jar https://repo1.maven.org/maven2/org/json/json/20240303/json-20240303.jar
           J=android/app/src/main/java/io/github/kimyh1981/newsclipping
           javac -encoding UTF-8 -nowarn -d /tmp/ex -cp /tmp/json.jar $J/Brief.java $J/LessonLock.java $J/Extras.java android/app/src/test/java/io/github/kimyh1981/newsclipping/ExtrasLive.java
-          java -cp /tmp/ex:/tmp/json.jar io.github.kimyh1981.newsclipping.ExtrasLive www.nongmin.com https://www.amnews.co.kr https://www.agrinet.co.kr/rss/allArticle.xml www.newsfarm.co.kr 키워드:비료 키워드:바이오플랜 키워드:미생물
+          java -cp /tmp/ex:/tmp/json.jar io.github.kimyh1981.newsclipping.ExtrasLive www.nongmin.com https://www.amnews.co.kr https://www.agrinet.co.kr/rss/allArticle.xml www.newsfarm.co.kr 키워드:비료 키워드:미생물
+      # '전체 듣기': 폰이 원문에서 본문만 뽑는지 실제 기사로 점검 (언론사마다 첫 기사, 앞 두 문장과 마지막 문장을 보여 준다)
+      - name: Phone full article (전체 듣기 본문 뽑기)
+        timeout-minutes: 5
+        run: |
+          J=android/app/src/main/java/io/github/kimyh1981/newsclipping
+          javac -encoding UTF-8 -nowarn -d /tmp/ar -cp /tmp/json.jar $J/Brief.java $J/LessonLock.java $J/Extras.java $J/ArticleReader.java android/app/src/test/java/io/github/kimyh1981/newsclipping/ArticleLive.java
+          java -cp /tmp/ar:/tmp/json.jar io.github.kimyh1981.newsclipping.ArticleLive out/briefing.json 60

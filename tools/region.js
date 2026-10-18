@@ -74,4 +74,21 @@ function withRegion(spoken, region) {
   return `${region}, ${spoken}`;
 }
 
-module.exports = { regionOf, withRegion, PLACES };
+// 원문 주소의 나라 도메인 → 나라 이름. 해외 섹션이 아닌 곳(비료 검색 등)에 섞인 해외 언론 기사도 나라를 밝혀 읽는다 (주인 지적 2026-10-18).
+// .com처럼 나라를 알 수 없는 주소는 붙이지 않는다
+const TLD = {
+  vn: '베트남', cn: '중국', jp: '일본', in: '인도', id: '인도네시아', th: '태국', my: '말레이시아', ph: '필리핀', sg: '싱가포르',
+  tw: '대만', hk: '홍콩', br: '브라질', ru: '러시아', uk: '영국', de: '독일', fr: '프랑스', it: '이탈리아', es: '스페인',
+  nl: '네덜란드', tr: '튀르키예', au: '호주', nz: '뉴질랜드', ca: '캐나다', mx: '멕시코', ar: '아르헨티나', cl: '칠레',
+  ae: '아랍에미리트', sa: '사우디아라비아', eg: '이집트', za: '남아프리카공화국', ng: '나이지리아', ke: '케냐', pk: '파키스탄', bd: '방글라데시',
+  kz: '카자흐스탄', uz: '우즈베키스탄', mn: '몽골', kh: '캄보디아', la: '라오스', mm: '미얀마', ua: '우크라이나', pl: '폴란드',
+};
+
+function countryOfLink(link) {
+  let host = '';
+  try { host = new URL(link).hostname.toLowerCase(); } catch { return ''; }
+  if (!host || host.endsWith('news.google.com')) return '';
+  return TLD[host.split('.').pop()] || '';
+}
+
+module.exports = { regionOf, withRegion, countryOfLink, PLACES };

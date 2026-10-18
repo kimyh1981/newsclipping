@@ -3,7 +3,7 @@
 다른 Claude 계정(또는 다른 개발자)이 이 저장소에서 바로 이어서 개발할 수 있도록 정리한 문서입니다.
 기능 설명·설치·설정 방법은 [README.md](README.md)에 자세히 있고, 이 문서는 **개발을 이어받는 데 필요한 것**만 모았습니다.
 
-- 현재 버전: **v1.74** (정식 `android/version.txt`, 라이트 `android/version-lite.txt`)
+- 현재 버전: **v1.75** (정식 `android/version.txt`, 라이트 `android/version-lite.txt`)
 - 웹: https://kimyh1981.github.io/newsclipping/
 - APK: https://github.com/kimyh1981/newsclipping/releases/latest/download/newsclipping.apk
 - 라이트 APK(제품 공부·농업영어 없음, '뉴스클리핑 라이트'): https://github.com/kimyh1981/newsclipping/releases/latest/download/newsclipping-lite.apk
@@ -33,13 +33,14 @@ GitHub Actions (새벽·오후)                     폰/웹
  tools/collect.js ── feeds.json                 android/ (Java, 갤럭시 앱)
    ├ naver.js   : 신문 1면 / 주요뉴스 / 많이본뉴스   CarReceiver → NewsService(TTS)
    ├ rss.js     : RSS, 구글뉴스 대체               Brief.java  (= js/brief.js)
-   ├ summarize.js: 본문 요약(기본 리드)             Pron.java   (= js/pron.js)
+   ├ summarize.js: 구글 뉴스 → 원래 기사 주소만      Pron.java   (= js/pron.js)
    ├ holidays.js: 주말·공휴일 → briefing.txt 비움    Updater.java (앱 내 업데이트)
    ├ tts.js + edge_tts_batch.py : audio/ 녹음      index.html + js/app.js (웹)
    └ dist/ → GitHub Pages (briefing.json, briefing.txt, audio/, archive/, ios/)
 ```
 
 - **서버·웹·앱이 같은 규칙을 두 번 구현**합니다. `js/brief.js` ↔ `Brief.java`, `js/pron.js` ↔ `Pron.java`. 한쪽을 바꾸면 다른 쪽도 바꾸고 `tests/fixtures`(script-*.txt, pron.json)로 둘을 맞춥니다.
+- **서버는 기사 본문을 받거나 저장·녹음·공개하지 않습니다**(저작권, 2026-10-18). 기사마다 제목·언론사·원래 기사 주소(`link`)·시각만 두고, 본문은 앱이 들을 때 원래 기사에서 직접 받습니다. 지난 원고(`archive/`)도 다시 올릴 때 summary·body·say를 지웁니다.
 - 앱은 서버가 만든 `briefing.json`을 받아 사용자가 고른 언론사로 원고를 만들고, 녹음된 줄은 `audio/` 파일로, 나머지는 폰 TTS로 읽습니다.
 - 해외 키워드 뉴스(`Abroad.java`, `Countries.java`)는 앱에서 직접 구글 뉴스 검색 + 무료 구글 번역(gtx)으로 만듭니다.
 - 제품 공부·농업영어: **잠겨 있습니다**(퇴사자가 못 보게, 2026-10-17 A안). 저장소에는 `lessons/lessons.enc.json`만 있고, 원문(`product.json`, `english.json`, `make_english.py`, 음성 en-US-AndrewNeural -10%)은 주인 PC `H:\Newscliping\_lessons\`(git 제외)에 있습니다. 고치는 법: `_lessons`의 원문을 고침 → `node tools/lessons-crypt.js seal --code-file _keys/lesson-code.txt` → `lessons.enc.json` 커밋. 서버는 비밀값 `LESSON_CODE`로 풀어 녹음만 하고, 공개 원고에는 `lessonsEnc`(잠긴 채)로 넣습니다. 앱(정식판)은 제품공부를 처음 열 때 사내 코드를 물어 `LessonLock`으로 풉니다. **퇴사자가 나오면** 새 코드로 seal → `LESSON_CODE` 교체 → 직원들에게 새 코드 공지. 진행도는 폰에 저장(`Lessons.java`, `Prefs`). 평일 오전에만 붙습니다.
@@ -65,10 +66,8 @@ GitHub Actions (새벽·오후)                     폰/웹
 |---|---|---|
 | Secret | `DATA_GO_KR_KEY` | 공공데이터포털 특일 정보(공휴일). 2028-10-06까지 유효 |
 | Secret | `GOOGLE_TTS_KEY` | (선택) 구글 클라우드 TTS. 없으면 엣지 TTS |
-| Secret | `ANTHROPIC_API_KEY` | (선택) `SUMMARY_MODE=claude`일 때만. 기본은 안 씀(유료) |
 | Variable | `TTS_VOICE` | 서버 음성. 기본 `ko-KR-HyunsuMultilingualNeural`, 실패 시 `ko-KR-InJoonNeural` |
 | Variable | `TTS_ENGINE` | `off`면 녹음 안 함 |
-| Variable | `SUMMARY_MODE` | 기본 `lead`(본문 첫 문장) |
 | (선택) | `KEYSTORE_PASSWORD` | 서명 키 비밀번호를 바꿀 때 |
 | Secret | `LITE_KEYSTORE_B64`, `LITE_KEYSTORE_PASSWORD` | 라이트판 비공개 서명 키(PKCS12, 별칭 `lite`). 없으면 main 배포가 멈춤. **원본은 주인 PC `H:\Newscliping\_keys\`(git 제외). 잃어버리면 라이트 사용자가 앱을 지우고 다시 깔아야 함** |
 | Secret | `LESSON_CODE` | 사내 코드: 잠긴 제품 공부(`lessons/lessons.enc.json`)를 서버가 녹음하려고 풀 때 씀. 직원은 앱에 같은 코드를 넣음. **원본은 주인 PC `H:\Newscliping\_keys\lesson-code.txt`** |
@@ -79,7 +78,7 @@ Pages Source는 **GitHub Actions**로 설정되어 있어야 합니다.
 
 - 샌드박스에서는 **네이버·뉴스 사이트·구글에 접속이 안 됩니다**. 실제 수집 결과는 PR의 `news-check` 로그와 Actions 로그로 확인합니다.
 - **Android SDK가 없어** 로컬에서 APK를 못 만듭니다. `android.yml`이 빌드·테스트하며, 순수 자바 로직은 `android/app/src/test`의 단위 테스트로 확인합니다.
-- 서버 테스트: 처음에 `npm ci`, 그다음 `npm test` (네트워크 없이 동작, 71개). `npm ci`를 빼먹으면 4개가 실패합니다.
+- 서버 테스트: 처음에 `npm ci`, 그다음 `npm test` (네트워크 없이 동작, 74개).
 - 실제 갤럭시·차량 테스트는 주인이 합니다. 변경 후 "실제 폰에서 아직 시험하지 못함"을 솔직하게 알립니다.
 
 ## 5. 기능 이력 (요약)
@@ -122,6 +121,7 @@ Pages Source는 **GitHub Actions**로 설정되어 있어야 합니다.
 | #72 | 1.72 | 선명한 로고: 서버가 언론사마다 가장 큰 아이콘을 골라 `logos/`에 올림(`tools/logos.py`, 7일 캐시), 앱은 그것을 먼저 받음(폰 캐시 logos2) |
 | #73 | 1.73 | 제품 공부·농업영어 잠금(A안): 저장소·공개 원고에는 암호문만, 앱은 사내 코드로 풂(`LessonLock`, `tools/lessons-crypt.js`). 시작 화면(파란 바탕, 앱 아이콘을 눌러 열 때만 1.5초) |
 | #74 | 1.74 | 시작 화면의 앱 이름·소개 글을 가운데로. 사내 코드는 설치 후 한 번(그리고 코드가 바뀌면 한 번 더) 앱을 켤 때 묻되, 읽는 중(운전 중)이면 미룸. 취소하면 뉴스만 듣고, 차에서 아침마다 "사내 코드를 넣어 주세요"를 한 번 읽음(일부러 안 듣는 단추는 두지 않음) |
+| #75 | 1.75 | 저작권 위험 줄이기: 서버는 제목·언론사·원문 링크만(본문 수집·녹음·보관 안 함), '전체 듣기'는 폰이 원문을 열어 본문만 뽑아 읽음(`ArticleReader`), 전체 듣기 중 오른쪽 쓸기로 헤드라인 복귀, 자막 '원문 보기'. 해외 언론 기사는 원문 도메인으로 나라 밝힘. 영문 고유명사(KIA→기아). 회사 이름 노출 제거 |
 
 자세한 내용은 각 PR 설명과 커밋 메시지를 보세요.
 

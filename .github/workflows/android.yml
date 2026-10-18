@@ -87,7 +87,7 @@ jobs:
         run: |
           J=android/app/src/main/java/io/github/kimyh1981/newsclipping
           javac -encoding UTF-8 -nowarn -d /tmp/f1 -cp /tmp/ort.jar:/tmp/json.jar $J/F1Engine.java $J/F1Text.java $J/Pron.java android/app/src/test/java/io/github/kimyh1981/newsclipping/F1Live.java
-          java -cp /tmp/f1:/tmp/ort.jar:/tmp/json.jar io.github.kimyh1981.newsclipping.F1Live f1model f1.wav "좋은 아침입니다. 10월 16일 금요일, 출근길 뉴스 브리핑입니다." "이날 삼성전자는 9.48% 급락한 21만원에 거래를 마쳤다." "이대통령 지지율, 2%p 올라 39%." "올해 예산은 3,456억 원, 수출은 1,234만 달러, 7,089대가 팔렸다."
+          java -cp /tmp/f1:/tmp/ort.jar:/tmp/json.jar io.github.kimyh1981.newsclipping.F1Live f1model f1.wav "좋은 아침입니다. 10월 16일 금요일, 출근길 뉴스 브리핑입니다." "이날 삼성전자는 9.48% 급락한 21만원에 거래를 마쳤다." "이대통령 지지율, 2%p 올라 39%." "올해 예산은 3,456억 원, 수출은 1,234만 달러, 7,089대가 팔렸다." "로또 1등 당첨금은 16억 8102만원이다." "KIA 타이거즈가 우승했다."
       - name: Transcribe
         run: |
           pip install -q faster-whisper "av==14.2.0" # 최신 av는 faster-whisper가 쓰는 인자를 뺐다 (2026-10-16 실패)

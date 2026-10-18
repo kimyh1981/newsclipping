@@ -10,7 +10,7 @@ const rss = require('./rss.js');
 const brief = require('../js/brief.js');
 const pron = require('../js/pron.js');
 const holidays = require('./holidays.js');
-const { summarize } = require('./summarize.js');
+const { resolveLinks } = require('./summarize.js');
 const lock = require('./lessons-crypt.js');
 const tts = require('./tts.js');
 const naver = require('./naver.js');
@@ -164,7 +164,7 @@ async function getFeed(url) {
   }
 }
 
-// 기사 본문 페이지: 브라우저처럼 받고, 시간 초과·연결 끊김·5xx·429면 쉬었다가 두 번 더 (2026-10-14: 네이버 기사 17건이 시간 초과)
+// 구글 뉴스 기사 화면(원래 기사 주소 찾기용, 본문은 받지 않는다): 브라우저처럼 받고, 시간 초과·연결 끊김·5xx·429면 쉬었다가 두 번 더 (2026-10-14: 네이버 기사 17건이 시간 초과)
 const BROWSER = 'Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126 Mobile Safari/537.36';
 const PAGE_WAITS = [2e3, 6e3];
 async function getPage(url) {
@@ -177,15 +177,6 @@ async function getPage(url) {
       await sleep(PAGE_WAITS[i]);
     }
   }
-}
-
-// 같은 소식을 쓴 다른 언론사 기사: 원래 제목으로 구글 뉴스(그 기사 말의 판)를 찾아 제목이 비슷한 기사 주소들
-async function elsewhere(it) {
-  const title = it.original || it.title;
-  const words = title.replace(/["“”'‘’\[\]()]/g, ' ').replace(/\s+/g, ' ').trim();
-  const found = rss.parseFeed(await get(googleUrl(words, '3d', it.lang || 'ko')));
-  return found.map((f) => ({ ...f, title: f.title.replace(/\s+-\s+[^-]+$/, '') }))
-    .filter((f) => f.link && f.link !== it.link && rss.similar(f.title, title)).map((f) => f.link);
 }
 
 // 네이버의 1면·주요 뉴스(언론사가 고른 헤드라인)를 먼저, 안 되면 언론사 RSS, 그것도 막히거나 비었으면 구글 뉴스 검색으로 대신한다
@@ -277,7 +268,13 @@ function earlierKeys(live, now, days = 2) {
 // 지난 원고 보관: archive/<서울 날짜>.json을 최근 ARCHIVE_DAYS일치 남기고 archive/index.json에 날짜 목록을 둔다.
 // 사이트는 배포마다 통째로 바뀌므로, 지금 사이트에 있는 지난 날짜 파일을 받아 다시 올린다 (웹 화면에서 날짜를 골라 본다)
 const ARCHIVE_DAYS = 7; // 아침·오후 원고를 따로 남긴다 (오후 원고는 archive/<날짜>pm.json)
-const slim = (b) => { const { audio, earlier, lessons: _, lessonsEnc: __, ...rest } = b; return rest; }; // 녹음은 그날 것만 남으니 빼고, 겹침 열쇠와 제품 공부 원고(날마다 같음)도 뺀다
+// 기사 본문(예전 원고의 summary·body·say)은 지난 원고에서도 지운다: 사이트 어디에도 본문을 남기지 않는다 (저작권, 2026-10-18)
+const BODY_FIELDS = ['summary', 'body', 'say', 'bodyElsewhere'];
+const noBody = (b) => ({
+  ...b,
+  sections: (b.sections || []).map((sec) => ({ ...sec, sources: (sec.sources || []).map((src) => ({ ...src, items: (src.items || []).map((it) => Object.fromEntries(Object.entries(it).filter(([k]) => !BODY_FIELDS.includes(k)))) })) })),
+});
+const slim = (b) => { const { audio, earlier, lessons: _, lessonsEnc: __, ...rest } = b; return noBody(rest); }; // 녹음은 그날 것만 남으니 빼고, 겹침 열쇠와 제품 공부 원고(날마다 같음)도 뺀다
 
 // 제품 공부(product)와 같은 회의 농업영어(english) 원고. 저장소에는 잠긴 것(lessons/lessons.enc.json)만 있다 (퇴사자가 못 보게, 2026-10-17).
 // box: 공개 원고에 그대로 넣는 잠긴 꼴(앱이 사내 코드로 푼다). plain: 녹음하려고 저장소 비밀값 LESSON_CODE로 푼 원문 (코드가 없으면 없음)
@@ -305,7 +302,7 @@ async function archive(out, b, live, now, getText) {
   const past = ((index && index.days) || []).map((d) => d.ymd).filter((d) => d < today).sort().reverse().slice(0, ARCHIVE_DAYS * 2);
   for (const d of past) {
     const old = await getText(`${SITE}archive/${d}.json`).then(JSON.parse).catch(() => null);
-    if (old) days[d] = old;
+    if (old) days[d] = slim(old);
   }
   // 보관을 처음 시작할 때: 지금 사이트의 원고가 지난 날 것이면 그것부터 남긴다
   if (live && live.generatedAt) {
@@ -322,7 +319,7 @@ async function archive(out, b, live, now, getText) {
 }
 
 // 섹션의 boost(정규식 목록, 앞일수록 중요): 제목에 그 말이 든 기사를 언론사 안에서 앞으로 올린다.
-// 농업 기사는 바이오플랜과 이어지는 비료·탄소중립·벼·과수 기사를 먼저 듣고 싶다 (2026-10-08)
+// 농업 기사는 비료·탄소중립·벼·과수 기사를 먼저 듣고 싶다 (2026-10-08)
 function boostScore(patterns, title) {
   const i = patterns.findIndex((p) => p.test(title));
   return i < 0 ? 0 : patterns.length - i;
@@ -408,33 +405,26 @@ async function collect(config, now = Date.now(), key = '', opts = {}) {
   if (foreign.length) log.push(`번역기: ${Object.entries(used).map(([k, n]) => `${k} ${n}번`).join(', ') || '없음'}${blocked.size ? ` (429로 막힘: ${[...blocked].join(', ')})` : ''}`);
   group(sections);
   const b = { version: 2, generatedAt: new Date(now).toISOString(), dateLabel: rss.koreanDate(now), edition, autoPlay, sections, log, earlier };
-  // 기본 언론사 원고에 든 기사부터, 그다음 언론사를 다 골랐을 때 원고에 들 기사까지 요약·본문을 붙인다 (같은 기사 객체에 summary가 붙는다).
-  // 예전에는 기본 언론사 기사만 해서, 언론사를 많이 고르면 '전체 듣기'에서 본문을 못 가져왔다고 나왔다 (2026-10-12)
-  const run = limiter(6);
-  const all = sections.flatMap((s) => s.sources.map((x) => x.id));
-  // 본문을 끝내 못 받은 기사는 그 언론사의 뒤로 보내고, 대신 앞으로 온 예비 기사의 본문을 받는다 (세 번까지).
-  // 원고에 드는 기사는 모두 '전체 듣기' 본문이 있게 (주인 요청 2026-10-14)
-  const tried = new Set();
-  for (let round = 0; opts.summaryLimit && round < 3; round++) {
-    const toRead = [...new Set([...brief.select(b), ...brief.select(b, all)].flatMap((s) => s.items))].filter((it) => !tried.has(it));
-    if (!toRead.length) break;
-    toRead.forEach((it) => tried.add(it));
-    await summarize(toRead, { mode: opts.summaryMode, get: opts.getPage || getPage, translate, decodeEntities: rss.decodeEntities, log, run, key: opts.summaryKey, limit: opts.summaryLimit, elsewhere: opts.elsewhere === undefined ? elsewhere : opts.elsewhere });
-    let moved = 0;
-    for (const sec of sections) for (const src of sec.sources) {
-      const bad = src.items.filter((it) => tried.has(it) && !it.summary);
-      if (!bad.length || !src.items.some((it) => !tried.has(it))) continue;
-      src.items = [...src.items.filter((it) => !bad.includes(it)), ...bad];
-      moved += bad.length;
+  // 원고에 들 기사(기본 언론사, 그리고 언론사를 다 골랐을 때)의 구글 뉴스 주소를 원래 기사 주소로 바꾼다.
+  // 본문은 받지 않는다: 앱이 들을 때 원래 기사에서 직접 받는다 (저작권, 주인 결정 2026-10-18)
+  if (opts.linkLimit) {
+    const all = sections.flatMap((s) => s.sources.map((x) => x.id));
+    const toResolve = [...new Set([...brief.select(b), ...brief.select(b, all)].flatMap((s) => s.items))];
+    await resolveLinks(toResolve, { get: opts.getPage || getPage, log, run: limiter(6), limit: opts.linkLimit });
+  }
+  // 해외 섹션이 아닌 곳에 섞인 해외 언론 기사: 원문 주소가 외국 도메인이면 그 나라를 첫머리에 (해외 섹션은 위에서 이미 붙였다)
+  let tagged = 0;
+  sections.forEach((sec, i) => {
+    if (config.sections[i].region) return;
+    for (const src of sec.sources) for (const it of src.items) {
+      const country = region.countryOfLink(it.link);
+      if (!country || it.spoken.startsWith(country)) continue;
+      it.region = country;
+      it.spoken = region.withRegion(it.spoken, country);
+      tagged++;
     }
-    if (!moved) break;
-    log.push(`본문을 못 받은 기사 ${moved}건을 뒤로 보내고 예비 기사로 채움`);
-  }
-  // '전체 듣기'로 읽을 문장들: 소리 내어 읽기 좋게 다듬어 문장마다 나눈다 (앱 자막·녹음 단위)
-  for (const sec of sections) for (const src of sec.sources) for (const it of src.items) {
-    const say = rss.speechSentences(it.body || it.summary);
-    if (say.length) it.say = say;
-  }
+  });
+  if (tagged) log.push(`해외 언론 기사 ${tagged}건에 나라 이름을 붙임`);
   b.script = brief.script(b); // 기본 언론사로 만든 원고: briefing.txt(아이폰 단축어, 옛 앱)
   return b;
 }
@@ -448,9 +438,7 @@ if (require.main === module) {
     try { live = JSON.parse(await get(`${SITE}briefing.json`)); } catch (err) { console.log(`지난 원고를 못 받음: ${err.message}`); }
     const b = await collect(config, Date.now(), process.env.DATA_GO_KR_KEY || '', {
       earlier: earlierKeys(live, Date.now()),
-      summaryMode: process.env.SUMMARY_MODE || 'lead', // 저장소 Variables에서 SUMMARY_MODE=claude로 바꾸면 Claude 요약
-      summaryKey: process.env.ANTHROPIC_API_KEY || '',
-      summaryLimit: process.env.SUMMARY_LIMIT === undefined ? 300 : Number(process.env.SUMMARY_LIMIT),
+      linkLimit: process.env.LINK_LIMIT === undefined ? 300 : Number(process.env.LINK_LIMIT), // 원래 기사 주소를 찾을 구글 뉴스 기사 수
     });
     // 제품 공부 원고(평일 뉴스 뒤 한 회씩, 어느 회를 읽을지는 기기가 진도에 따라 고른다). 녹음에만 원문을 쓰고, 공개 원고에는 잠긴 것만
     const { box, plain } = lessons();
@@ -478,11 +466,9 @@ if (require.main === module) {
     console.log(`언론사 ${b.sections.reduce((n, s) => n + s.sources.length, 0)}곳, 기사 ${b.sections.reduce((n, s) => n + s.sources.reduce((m, x) => m + x.items.length, 0), 0)}건`);
     b.log.forEach((l) => console.log('  ' + l));
     console.log(`자동 재생: ${b.autoPlay.play ? '함' : '안 함'} (${b.autoPlay.ymd} ${b.autoPlay.reason}, ${b.autoPlay.source})`);
-    const sums = b.sections.flatMap((s) => s.sources.flatMap((x) => x.items)).filter((i) => i.summary);
-    if (sums.length) console.log(`요약 ${sums.length}건, 예: ${sums[0].title} → ${sums[0].summary}`);
     console.log(`원고 ${b.script.length}자 (약 ${Math.ceil(b.script.length / 330)}분)`);
     process.exit(0); // 남은 연결이 있어도 배포를 막지 않는다
   })();
 }
 
-module.exports = { EDITIONS, editionOf, collect, archive, lessons, boosted, earlierKeys, itemKeys, titleKey, decode, googleUrl, translate, speechText, iosPieces, iosHours, RETRY };
+module.exports = { EDITIONS, editionOf, collect, archive, slim, lessons, boosted, earlierKeys, itemKeys, titleKey, decode, googleUrl, translate, speechText, iosPieces, iosHours, RETRY };
