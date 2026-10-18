@@ -158,7 +158,7 @@ public class MainActivity extends Activity {
         LinearLayout nav = new LinearLayout(this);
         nav.setOrientation(LinearLayout.HORIZONTAL);
         nav.setPadding(0, dp(12), 0, 0);
-        nav.addView(iconPill(Glyph.PREV, "이전 기사", bg, tint, v -> NewsService.control(NewsService.ACTION_PREV)), new LinearLayout.LayoutParams(0, dp(56), 1f));
+        nav.addView(holdForSpeed(iconPill(Glyph.PREV, "이전 기사", bg, tint, v -> NewsService.control(NewsService.ACTION_PREV))), new LinearLayout.LayoutParams(0, dp(56), 1f));
         nav.addView(new View(this), new LinearLayout.LayoutParams(dp(12), 1));
         TextView fullBtn = text("전체 듣기", 16, tint);
         fullBtn.setTypeface(Typeface.DEFAULT_BOLD);
@@ -172,7 +172,7 @@ public class MainActivity extends Activity {
         });
         nav.addView(fullBtn, new LinearLayout.LayoutParams(0, dp(56), 1f));
         nav.addView(new View(this), new LinearLayout.LayoutParams(dp(12), 1));
-        nav.addView(iconPill(Glyph.NEXT, "다음 기사", bg, tint, v -> NewsService.control(NewsService.ACTION_NEXT)), new LinearLayout.LayoutParams(0, dp(56), 1f));
+        nav.addView(holdForSpeed(iconPill(Glyph.NEXT, "다음 기사", bg, tint, v -> NewsService.control(NewsService.ACTION_NEXT))), new LinearLayout.LayoutParams(0, dp(56), 1f));
         controls.addView(nav, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
         // 진행바: 섹션마다 끊어 보이고, 끌면 그 언론사 로고가 커지고, 놓으면 거기부터 읽는다 (홈 화면의 핵심, 주인 요청 2026-10-17)
         bar = new ChapterBar(this, tint, separator);
@@ -808,6 +808,33 @@ public class MainActivity extends Activity {
     }
 
     /** 아래 탭 막대의 그림: 0 뉴스클리핑(가로 신문), 1 자막실행(말풍선), 2 제품공부(책), 3 뉴스설정(조절 막대), 4 설정(톱니) */
+    /** 홈 화면 이전·다음 단추: 누른 채 0.25초면 읽는 동안 2배속, 손을 떼면 보통 (짧게 누르면 그대로 이전·다음 기사). 3배속은 자막 화면에서만 (주인 요청 2026-10-18) */
+    private View holdForSpeed(View button) {
+        final boolean[] fast = {false};
+        final Runnable on = () -> { if (NewsService.isRunning()) { fast[0] = true; NewsService.setBoost(2f); } };
+        button.setOnTouchListener((v, e) -> {
+            switch (e.getActionMasked()) {
+                case android.view.MotionEvent.ACTION_DOWN:
+                    fast[0] = false;
+                    v.postDelayed(on, 250);
+                    break;
+                case android.view.MotionEvent.ACTION_UP:
+                case android.view.MotionEvent.ACTION_CANCEL:
+                    v.removeCallbacks(on);
+                    if (fast[0]) {
+                        NewsService.setBoost(1f);
+                        v.setPressed(false);
+                        return true; // 빨리 듣기였으면 이전·다음으로 치지 않는다
+                    }
+                    break;
+                default:
+                    break;
+            }
+            return false; // 그 밖에는 단추가 평소처럼 (누름 모양, 짧게 누르면 이전·다음)
+        });
+        return button;
+    }
+
     /** 회사 파랑 (받기 페이지와 같은 색) */
     private static final int BRAND = 0xFF0063BA;
     private static final long SPLASH_MS = 1500;
