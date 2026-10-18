@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 홈 화면: 앱이 뜨는 순간 흰 화면 대신 시작 화면과 같은 파랑 (주인 요청 2026-10-18) -->
+    <style name="Theme.Newsclipping.Main" parent="@android:style/Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/brand</item>
+    </style>
+    <color name="brand">#0063BA</color>
+</resources>

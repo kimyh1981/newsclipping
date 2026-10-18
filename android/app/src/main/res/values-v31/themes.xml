@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 안드로이드 12부터 시스템이 먼저 보여 주는 시작 화면도 같은 파랑으로 -->
+    <style name="Theme.Newsclipping.Main" parent="@android:style/Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/brand</item>
+        <item name="android:windowSplashScreenBackground">@color/brand</item>
+    </style>
+</resources>

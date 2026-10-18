@@ -286,7 +286,16 @@ public class MainActivity extends Activity {
             bar.addView(t, new LinearLayout.LayoutParams(0, dp(52), 1f));
         }
         root.addView(bar);
-        setContentView(root);
+        // 시작 화면: 폰에서 앱 아이콘을 눌러 열 때만 1.5초 (주인 요청 2026-10-18, 시안 B 파란 바탕). 차에서 저절로 읽을 때는 화면을 열지 않는다
+        boolean launcher = Intent.ACTION_MAIN.equals(getIntent().getAction()) && getIntent().hasCategory(Intent.CATEGORY_LAUNCHER);
+        if (b == null && launcher) {
+            android.widget.FrameLayout frame = new android.widget.FrameLayout(this);
+            frame.addView(root);
+            frame.addView(splash(), new android.widget.FrameLayout.LayoutParams(android.widget.FrameLayout.LayoutParams.MATCH_PARENT, android.widget.FrameLayout.LayoutParams.MATCH_PARENT));
+            setContentView(frame);
+        } else {
+            setContentView(root);
+        }
         showTab(b == null ? getIntent().getIntExtra("tab", 0) : b.getInt("tab", 0));
     }
 
@@ -791,6 +800,55 @@ public class MainActivity extends Activity {
     }
 
     /** 아래 탭 막대의 그림: 0 뉴스클리핑(가로 신문), 1 자막실행(말풍선), 2 제품공부(책), 3 뉴스설정(조절 막대), 4 설정(톱니) */
+    /** 회사 파랑 (받기 페이지와 같은 색) */
+    private static final int BRAND = 0xFF0063BA;
+    private static final long SPLASH_MS = 1500;
+
+    /** 시작 화면: 파란 바탕, 흰 둥근 칸 안의 신문 아이콘, 앱 이름, 한 줄 소개, 아래 회사 이름(정식판). 1.5초 뒤 흐려지며 홈이 드러난다. 누르면 바로 넘어간다 */
+    private View splash() {
+        LinearLayout s = new LinearLayout(this);
+        s.setOrientation(LinearLayout.VERTICAL);
+        s.setGravity(Gravity.CENTER);
+        s.setBackgroundColor(BRAND);
+        s.setClickable(true);
+        android.widget.ImageView tile = new android.widget.ImageView(this);
+        tile.setImageDrawable(new TabIcon(0, BRAND, dp(56)));
+        tile.setScaleType(android.widget.ImageView.ScaleType.CENTER);
+        tile.setBackground(rounded(0xFFFFFFFF, dp(26)));
+        s.addView(tile, new LinearLayout.LayoutParams(dp(112), dp(112)));
+        TextView name = text(getApplicationInfo().loadLabel(getPackageManager()).toString(), 28, 0xFFFFFFFF);
+        name.setTypeface(Typeface.DEFAULT_BOLD);
+        name.setPadding(0, dp(24), 0, dp(8));
+        s.addView(name);
+        TextView tag = text("출근길 1면 · 퇴근길 많이 본 뉴스", 15, 0xE6FFFFFF);
+        s.addView(tag);
+        android.widget.FrameLayout box = new android.widget.FrameLayout(this);
+        box.addView(s, new android.widget.FrameLayout.LayoutParams(android.widget.FrameLayout.LayoutParams.MATCH_PARENT, android.widget.FrameLayout.LayoutParams.MATCH_PARENT));
+        if (BuildConfig.LESSONS) { // 정식판(직원용)에만 회사 이름
+            TextView co = text("바이오플랜", 13, 0xCCFFFFFF);
+            android.widget.FrameLayout.LayoutParams cl = new android.widget.FrameLayout.LayoutParams(android.widget.FrameLayout.LayoutParams.WRAP_CONTENT, android.widget.FrameLayout.LayoutParams.WRAP_CONTENT, Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL);
+            cl.bottomMargin = dp(48);
+            box.addView(co, cl);
+        }
+        getWindow().setStatusBarColor(BRAND);
+        getWindow().setNavigationBarColor(BRAND);
+        View decor = getWindow().getDecorView();
+        int lightBars = decor.getSystemUiVisibility();
+        decor.setSystemUiVisibility(lightBars & ~(View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR | View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR)); // 파란 바탕 위 흰 글자
+        Runnable away = () -> {
+            if (box.getParent() == null || box.getAlpha() < 1f) return;
+            box.animate().alpha(0f).setDuration(300).withEndAction(() -> {
+                if (box.getParent() instanceof android.view.ViewGroup) ((android.view.ViewGroup) box.getParent()).removeView(box);
+                getWindow().setStatusBarColor(bg);
+                getWindow().setNavigationBarColor(bg);
+                decor.setSystemUiVisibility(lightBars);
+            }).start();
+        };
+        s.setOnClickListener(v -> away.run());
+        box.postDelayed(away, SPLASH_MS);
+        return box;
+    }
+
     private static final class TabIcon extends Drawable {
         private final int kind, size;
         private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
