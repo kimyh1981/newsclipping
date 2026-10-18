@@ -247,17 +247,34 @@ public class NewsService extends Service {
         if (r != null) new Handler(Looper.getMainLooper()).post(r);
     }
 
-    // 진행바 아래 '지난 시간 / 전체 시간'. 줄 무게(글자 수)로 어림잡고, 차례대로 읽는 동안 실제로 걸린 시간을 재서 맞춘다
-    private static volatile long lineStart;      // 지금 줄을 읽기 시작한 시각 (0 = 모름)
-    private static volatile float within;        // 멈췄을 때 그 줄에서 지난 초
+    // 진행바 아래 '지난 시간 / 전체 시간'. 줄 무게(글자 수)로 어림잡고, 차례대로 읽는 동안 실제로 걸린 시간을 재서 맞춘다.
+    // 시간은 '보통 빠르기 초'로 센다: 2배속이면 시간도 2배로 간다 (2026-10-18 주인: 빨리 듣기 때 시간이 멈췄다가 손을 떼면 뛰었다)
+    private static volatile long segStart;       // 지금 줄에서 마지막으로 시계를 다시 잰 시각 (0 = 멈춤·모름)
+    private static volatile float lineAcc;       // 그 전까지 이 줄에서 지난 '보통 빠르기 초'
     private static volatile double perWeight;    // 잰 '초/무게' (0 = 아직 못 잼)
-    private long calMs, lastAt;
+    private static volatile boolean extra;       // 이 줄 뒤에 전체 듣기·제품 공부처럼 다른 걸 읽었다: 재기에서 뺀다
+    private static float shownT = -1;            // 마지막으로 보여 준 지난 초 (뒤로 가지 않게)
+    private static int shownLine = -1;
+    private double calSec;
     private float calWeight;
     private int lastLine = -1;
 
     /** 초/무게: 잰 값이 있으면 그것, 없으면 어림 (1,703자 원고가 약 6분 → 글자당 0.2초, 말 빠르기에 반비례) */
     private static double secondsPerWeight(Context c) {
         return perWeight > 0 ? perWeight : 0.2 * 100 / Math.max(50, new Prefs(c).rate());
+    }
+
+    /** 지금 줄에서 지난 '보통 빠르기 초' */
+    private static float lineIn() {
+        long st = segStart;
+        return lineAcc + (st > 0 && state() == PLAYING ? (System.currentTimeMillis() - st) / 1000f * boost : 0);
+    }
+
+    /** 시계를 지금까지 쌓아 두고 다시 잰다 (빠르기를 바꾸거나 멈출 때) */
+    private static void foldClock(boolean run) {
+        long st = segStart;
+        if (st > 0) lineAcc += (System.currentTimeMillis() - st) / 1000f * boost; // 멈추는 중에도 여기까지는 센다
+        segStart = run ? System.currentTimeMillis() : 0;
     }
 
     /** {지난 초, 전체 초}. 읽는 중이 아니면 null */
@@ -267,23 +284,30 @@ public class NewsService extends Service {
         if (ch == null || line < 0) return ch == null ? null : new float[] {0, (float) (ch.totalWeight() * secondsPerWeight(c))};
         double spw = secondsPerWeight(c);
         float lineSec = (float) (ch.weightOf(line) * spw);
-        float in = state() == PLAYING && lineStart > 0 ? (System.currentTimeMillis() - lineStart) / 1000f : within;
-        return new float[] {(float) (ch.weightAt(line) * spw) + Math.min(Math.max(0, in), lineSec), (float) (ch.totalWeight() * spw)};
+        float t = (float) (ch.weightAt(line) * spw) + Math.min(Math.max(0, lineIn()), lineSec);
+        synchronized (NewsService.class) {
+            // 어림이 실제와 달라 다음 줄로 넘어갈 때 시간이 거꾸로 가지 않게: 뒤로 옮긴 때(이전 기사·진행바)만 줄어든다
+            if (line >= shownLine && t < shownT) t = shownT;
+            shownT = t;
+            shownLine = line;
+        }
+        return new float[] {t, (float) (ch.totalWeight() * spw)};
     }
 
     /** 줄 i를 읽기 시작: 앞 줄에서 차례대로 넘어왔으면 걸린 시간으로 초/무게를 잰다 */
     private void lineStarted(int i, boolean sequential) {
-        long now = System.currentTimeMillis();
         Chapters ch = chapters;
-        if (sequential && ch != null && lastLine >= 0 && i > lastLine && lastAt > 0 && now - lastAt < 120000) {
-            calMs += now - lastAt;
-            calWeight += ch.weightAt(i) - ch.weightAt(lastLine);
-            if (calWeight >= 60) perWeight = calMs / 1000.0 / calWeight;
+        float took = lineIn();
+        if (sequential && !extra && ch != null && lastLine >= 0 && i == lastLine + 1 && took > 0 && took < 120) {
+            calSec += took;
+            calWeight += ch.weightOf(lastLine);
+            if (calWeight >= 60) perWeight = calSec / calWeight;
         }
+        if (!sequential) synchronized (NewsService.class) { shownLine = -1; shownT = -1; } // 옮겼으면 그 자리 시간부터
         lastLine = i;
-        lastAt = sequential ? now : 0;
-        lineStart = now;
-        within = 0;
+        extra = false;
+        lineAcc = 0;
+        segStart = System.currentTimeMillis();
     }
 
     /** 진행바를 끌다 놓은 줄부터 다시 읽는다 */
@@ -467,8 +491,8 @@ public class NewsService extends Service {
         else if (brief != null) fetchClips(brief, ready);
         chapters = Chapters.of(ready, siteOf(brief));
         progressLine = -1;
-        lineStart = 0;
-        within = 0;
+        segStart = 0;
+        lineAcc = 0;
         main.post(() -> speak(ready));
     }
 
@@ -631,6 +655,7 @@ public class NewsService extends Service {
             lineStarted(i, true);
             progressChanged();
         }
+        if (!s.id.startsWith("L") && !s.text.isEmpty()) extra = true; // 헤드라인 줄 말고 다른 걸 읽는 중
         if (s.id.startsWith("Q")) new Prefs(this).markLessonDone(Integer.parseInt(s.id.substring(1, s.id.indexOf('.'))));
         if (s.silence > 0) { main.postDelayed(afterSilence, s.silence); return; }
         showCaption(s);
@@ -987,6 +1012,7 @@ public class NewsService extends Service {
 
     /** 빠르기 배수 (1이면 보통). 녹음·F1 소리는 바로, 폰 음성은 다음 문장부터 */
     static void setBoost(float x) {
+        if (segStart > 0) foldClock(true); // 여기까지는 이전 빠르기로 센다
         boost = x;
         NewsService s = running;
         if (s != null) s.main.post(s::applyBoost);
@@ -1063,8 +1089,8 @@ public class NewsService extends Service {
         }
         resumeOnGain = autoResume;
         pausedAt = System.currentTimeMillis();
-        if (lineStart > 0) within = (pausedAt - lineStart) / 1000f; // 진행바 시간이 멈춘 자리에 선다
-        lastAt = 0;
+        foldClock(false); // 진행바 시간이 멈춘 자리에 선다
+        extra = true; // 멈췄던 줄은 재기에서 뺀다
         callSincePause = callNow();
         sawMic = false;
         if (!autoResume && audio != null && focus != null) audio.abandonAudioFocusRequest(focus); // 손으로 멈추면 소리 차례를 내준다: 통화·음악이 끝나도 다시 켜지지 않게
@@ -1179,6 +1205,7 @@ public class NewsService extends Service {
 
     private void unpause() {
         paused = false;
+        if (progressLine >= 0) segStart = System.currentTimeMillis(); // 멈춘 자리에서 다시 센다
         stateChanged();
         main.removeCallbacks(pauseLimit);
         audio.requestAudioFocus(focus);
