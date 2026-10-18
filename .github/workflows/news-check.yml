@@ -45,5 +45,5 @@ jobs:
         run: |
           curl -sSfo /tmp/json.jar https://repo1.maven.org/maven2/org/json/json/20240303/json-20240303.jar
           J=android/app/src/main/java/io/github/kimyh1981/newsclipping
-          javac -encoding UTF-8 -nowarn -d /tmp/ex -cp /tmp/json.jar $J/Brief.java $J/Extras.java android/app/src/test/java/io/github/kimyh1981/newsclipping/ExtrasLive.java
+          javac -encoding UTF-8 -nowarn -d /tmp/ex -cp /tmp/json.jar $J/Brief.java $J/LessonLock.java $J/Extras.java android/app/src/test/java/io/github/kimyh1981/newsclipping/ExtrasLive.java
           java -cp /tmp/ex:/tmp/json.jar io.github.kimyh1981.newsclipping.ExtrasLive www.nongmin.com https://www.amnews.co.kr https://www.agrinet.co.kr/rss/allArticle.xml www.newsfarm.co.kr 키워드:비료 키워드:바이오플랜 키워드:미생물

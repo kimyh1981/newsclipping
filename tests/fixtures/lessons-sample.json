@@ -1,0 +1,133 @@
+{
+ "product": {
+  "title": "제품 공부 (시험용 샘플)",
+  "episodes": [
+   {
+    "n": 1,
+    "title": "샘플 제품 1회",
+    "week": 1,
+    "lines": [
+     "샘플 제품 1회 첫째 줄입니다.",
+     "둘째 줄입니다.",
+     "셋째 줄입니다."
+    ]
+   },
+   {
+    "n": 2,
+    "title": "샘플 제품 2회",
+    "week": 1,
+    "lines": [
+     "샘플 제품 2회 첫째 줄입니다.",
+     "둘째 줄입니다.",
+     "셋째 줄입니다."
+    ]
+   },
+   {
+    "n": 3,
+    "title": "샘플 제품 3회",
+    "week": 1,
+    "lines": [
+     "샘플 제품 3회 첫째 줄입니다.",
+     "둘째 줄입니다.",
+     "셋째 줄입니다."
+    ]
+   },
+   {
+    "n": 4,
+    "title": "샘플 제품 4회",
+    "week": 1,
+    "lines": [
+     "샘플 제품 4회 첫째 줄입니다.",
+     "둘째 줄입니다.",
+     "셋째 줄입니다."
+    ]
+   }
+  ]
+ },
+ "english": {
+  "title": "농업영어 (시험용 샘플)",
+  "voice": "en-US-AndrewNeural",
+  "episodes": [
+   {
+    "n": 1,
+    "title": "영어 1",
+    "lines": [
+     {
+      "ko": "이어서 농업영어 1회입니다."
+     },
+     {
+      "en": "What is Sample made of?",
+      "pause": 3
+     },
+     {
+      "ko": "샘플은 무엇으로 만들었냐는 뜻입니다."
+     },
+     {
+      "en": "It is made of microbes.",
+      "pause": 3
+     }
+    ]
+   },
+   {
+    "n": 2,
+    "title": "영어 2",
+    "lines": [
+     {
+      "ko": "이어서 농업영어 2회입니다."
+     },
+     {
+      "en": "What is Sample made of?",
+      "pause": 3
+     },
+     {
+      "ko": "샘플은 무엇으로 만들었냐는 뜻입니다."
+     },
+     {
+      "en": "It is made of microbes.",
+      "pause": 3
+     }
+    ]
+   },
+   {
+    "n": 3,
+    "title": "영어 3",
+    "lines": [
+     {
+      "ko": "이어서 농업영어 3회입니다."
+     },
+     {
+      "en": "What is Sample made of?",
+      "pause": 3
+     },
+     {
+      "ko": "샘플은 무엇으로 만들었냐는 뜻입니다."
+     },
+     {
+      "en": "It is made of microbes.",
+      "pause": 3
+     }
+    ]
+   },
+   {
+    "n": 4,
+    "title": "영어 4",
+    "lines": [
+     {
+      "ko": "이어서 농업영어 4회입니다."
+     },
+     {
+      "en": "What is Sample made of?",
+      "pause": 3
+     },
+     {
+      "ko": "샘플은 무엇으로 만들었냐는 뜻입니다."
+     },
+     {
+      "en": "It is made of microbes.",
+      "pause": 3
+     }
+    ]
+   }
+  ]
+ }
+}

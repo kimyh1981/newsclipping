@@ -19,7 +19,12 @@ final class Prefs {
 
     Prefs(Context c) {
         p = c.getSharedPreferences("newsclipping", Context.MODE_PRIVATE);
+        Brief.lessonCode = lessonCode(); // 원고를 읽기 전에 늘 Prefs를 만들므로 여기서 넣어 둔다
     }
+
+    /** 제품 공부를 여는 사내 코드 (정식판, 퇴사자가 나오면 회사가 바꾼다) */
+    String lessonCode() { return p.getString("lessonCode", ""); }
+    void setLessonCode(String code) { p.edit().putString("lessonCode", code.trim()).apply(); Brief.lessonCode = code.trim(); }
 
     boolean enabled() { return p.getBoolean("enabled", true); }
     void setEnabled(boolean v) { p.edit().putBoolean("enabled", v).apply(); }

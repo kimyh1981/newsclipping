@@ -220,7 +220,8 @@ public class MainActivity extends Activity {
         fertVal = row(today, "해외농업 키워드", v -> withBrief(this::showAbroad), false);
         if (BuildConfig.LESSONS) { // 라이트판에는 제품 공부·농업영어가 없다
             LinearLayout study = section(newsPage, "뉴스 뒤에 듣기", "평일 아침 뉴스가 끝나면 제품 공부 한 회와 같은 회의 농업영어를 읽습니다.");
-            lessonVal = row(study, "제품 공부·농업영어 진도", v -> withBrief(this::showLessons), false);
+            lessonVal = row(study, "제품 공부·농업영어 진도", v -> withBrief(this::showLessons), true);
+            row(study, "사내 코드 (제품 공부 열기)", v -> askLessonCode(null), false).setText("");
         }
 
         // ── 설정 탭: 처음 한 번만 · 자동 재생 · 듣기 ──
@@ -285,7 +286,16 @@ public class MainActivity extends Activity {
             bar.addView(t, new LinearLayout.LayoutParams(0, dp(52), 1f));
         }
         root.addView(bar);
-        setContentView(root);
+        // 시작 화면: 폰에서 앱 아이콘을 눌러 열 때만 1.5초 (주인 요청 2026-10-18, 시안 B 파란 바탕). 차에서 저절로 읽을 때는 화면을 열지 않는다
+        boolean launcher = Intent.ACTION_MAIN.equals(getIntent().getAction()) && getIntent().hasCategory(Intent.CATEGORY_LAUNCHER);
+        if (b == null && launcher) {
+            android.widget.FrameLayout frame = new android.widget.FrameLayout(this);
+            frame.addView(root);
+            frame.addView(splash(), new android.widget.FrameLayout.LayoutParams(android.widget.FrameLayout.LayoutParams.MATCH_PARENT, android.widget.FrameLayout.LayoutParams.MATCH_PARENT));
+            setContentView(frame);
+        } else {
+            setContentView(root);
+        }
         showTab(b == null ? getIntent().getIntExtra("tab", 0) : b.getInt("tab", 0));
     }
 
@@ -790,6 +800,55 @@ public class MainActivity extends Activity {
     }
 
     /** 아래 탭 막대의 그림: 0 뉴스클리핑(가로 신문), 1 자막실행(말풍선), 2 제품공부(책), 3 뉴스설정(조절 막대), 4 설정(톱니) */
+    /** 회사 파랑 (받기 페이지와 같은 색) */
+    private static final int BRAND = 0xFF0063BA;
+    private static final long SPLASH_MS = 1500;
+
+    /** 시작 화면: 파란 바탕, 흰 둥근 칸 안의 신문 아이콘, 앱 이름, 한 줄 소개, 아래 회사 이름(정식판). 1.5초 뒤 흐려지며 홈이 드러난다. 누르면 바로 넘어간다 */
+    private View splash() {
+        LinearLayout s = new LinearLayout(this);
+        s.setOrientation(LinearLayout.VERTICAL);
+        s.setGravity(Gravity.CENTER);
+        s.setBackgroundColor(BRAND);
+        s.setClickable(true);
+        android.widget.ImageView tile = new android.widget.ImageView(this);
+        tile.setImageDrawable(new TabIcon(0, BRAND, dp(56)));
+        tile.setScaleType(android.widget.ImageView.ScaleType.CENTER);
+        tile.setBackground(rounded(0xFFFFFFFF, dp(26)));
+        s.addView(tile, new LinearLayout.LayoutParams(dp(112), dp(112)));
+        TextView name = text(getApplicationInfo().loadLabel(getPackageManager()).toString(), 28, 0xFFFFFFFF);
+        name.setTypeface(Typeface.DEFAULT_BOLD);
+        name.setPadding(0, dp(24), 0, dp(8));
+        s.addView(name);
+        TextView tag = text("출근길 1면 · 퇴근길 많이 본 뉴스", 15, 0xE6FFFFFF);
+        s.addView(tag);
+        android.widget.FrameLayout box = new android.widget.FrameLayout(this);
+        box.addView(s, new android.widget.FrameLayout.LayoutParams(android.widget.FrameLayout.LayoutParams.MATCH_PARENT, android.widget.FrameLayout.LayoutParams.MATCH_PARENT));
+        if (BuildConfig.LESSONS) { // 정식판(직원용)에만 회사 이름
+            TextView co = text("바이오플랜", 13, 0xCCFFFFFF);
+            android.widget.FrameLayout.LayoutParams cl = new android.widget.FrameLayout.LayoutParams(android.widget.FrameLayout.LayoutParams.WRAP_CONTENT, android.widget.FrameLayout.LayoutParams.WRAP_CONTENT, Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL);
+            cl.bottomMargin = dp(48);
+            box.addView(co, cl);
+        }
+        getWindow().setStatusBarColor(BRAND);
+        getWindow().setNavigationBarColor(BRAND);
+        View decor = getWindow().getDecorView();
+        int lightBars = decor.getSystemUiVisibility();
+        decor.setSystemUiVisibility(lightBars & ~(View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR | View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR)); // 파란 바탕 위 흰 글자
+        Runnable away = () -> {
+            if (box.getParent() == null || box.getAlpha() < 1f) return;
+            box.animate().alpha(0f).setDuration(300).withEndAction(() -> {
+                if (box.getParent() instanceof android.view.ViewGroup) ((android.view.ViewGroup) box.getParent()).removeView(box);
+                getWindow().setStatusBarColor(bg);
+                getWindow().setNavigationBarColor(bg);
+                decor.setSystemUiVisibility(lightBars);
+            }).start();
+        };
+        s.setOnClickListener(v -> away.run());
+        box.postDelayed(away, SPLASH_MS);
+        return box;
+    }
+
     private static final class TabIcon extends Drawable {
         private final int kind, size;
         private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -1008,6 +1067,27 @@ public class MainActivity extends Activity {
 
     /** 언론사 체크 목록: 오늘 브리핑에 든 언론사 전체를 섹션별로 보여 주고, 고른 것만 읽는다 */
     /** 오늘 브리핑(섹션·언론사 목록)을 받아 next를 화면에서 실행한다. 직접 넣은 언론사도 목록에 넣는다 */
+    /** 사내 코드를 묻는다: 맞으면 제품 공부를 연다 (퇴사자가 못 보게 잠가 둠, 2026-10-17). why: 다시 묻는 까닭 (처음이면 null) */
+    private void askLessonCode(String why) {
+        android.widget.EditText in = new android.widget.EditText(this);
+        in.setHint("예: BP-XXXX-XXXX-XXXX");
+        in.setSingleLine(true);
+        in.setText(prefs.lessonCode());
+        LinearLayout box = new LinearLayout(this);
+        box.setPadding(dp(16), dp(8), dp(16), dp(8));
+        box.addView(in, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
+        new Sheet(this)
+                .setTitle("사내 코드")
+                .setMessage((why == null ? "" : why + "\n\n") + "바이오플랜 제품 공부는 직원만 들을 수 있습니다. 회사에서 받은 사내 코드를 넣어 주세요.")
+                .setView(box)
+                .setPositiveButton("확인", (d, w) -> {
+                    prefs.setLessonCode(in.getText().toString());
+                    withBrief(this::showLessons); // 새 코드로 다시 읽어 연다 (틀리면 다시 묻는다)
+                })
+                .setNegativeButton("취소", null)
+                .show();
+    }
+
     private void withBrief(java.util.function.Consumer<Brief> next) {
         if (loadingSources) return;
         loadingSources = true;
@@ -1200,6 +1280,7 @@ public class MainActivity extends Activity {
 
     /** 제품 공부 진도: 오늘 회, 남은 회(예정 날짜), 완료한 회(누르면 다시 듣기·다시 듣기 표시) */
     private void showLessons(Brief b) {
+        if (b.lessonsLocked) { askLessonCode(prefs.lessonCode().isEmpty() ? null : "사내 코드가 맞지 않습니다. 바뀐 코드를 받았으면 새로 넣어 주세요."); return; }
         if (b.lessons.isEmpty()) {
             new Sheet(this).setMessage("제품 공부 원고가 아직 서버에 없습니다. 내일 아침 원고부터 들어옵니다.").setPositiveButton("확인", null).show();
             return;

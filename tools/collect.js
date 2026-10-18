@@ -11,6 +11,7 @@ const brief = require('../js/brief.js');
 const pron = require('../js/pron.js');
 const holidays = require('./holidays.js');
 const { summarize } = require('./summarize.js');
+const lock = require('./lessons-crypt.js');
 const tts = require('./tts.js');
 const naver = require('./naver.js');
 const region = require('./region.js');
@@ -276,19 +277,25 @@ function earlierKeys(live, now, days = 2) {
 // 지난 원고 보관: archive/<서울 날짜>.json을 최근 ARCHIVE_DAYS일치 남기고 archive/index.json에 날짜 목록을 둔다.
 // 사이트는 배포마다 통째로 바뀌므로, 지금 사이트에 있는 지난 날짜 파일을 받아 다시 올린다 (웹 화면에서 날짜를 골라 본다)
 const ARCHIVE_DAYS = 7; // 아침·오후 원고를 따로 남긴다 (오후 원고는 archive/<날짜>pm.json)
-const slim = (b) => { const { audio, earlier, lessons: _, ...rest } = b; return rest; }; // 녹음은 그날 것만 남으니 빼고, 겹침 열쇠와 제품 공부 원고(날마다 같음)도 뺀다
+const slim = (b) => { const { audio, earlier, lessons: _, lessonsEnc: __, ...rest } = b; return rest; }; // 녹음은 그날 것만 남으니 빼고, 겹침 열쇠와 제품 공부 원고(날마다 같음)도 뺀다
 
-// 제품 공부(product)와 같은 회의 농업영어(english) 원고
-function lessons() {
-  const out = {};
-  for (const name of ['product', 'english']) {
-    try {
-      out[name] = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'lessons', `${name}.json`), 'utf8'));
-    } catch (err) {
-      console.log(`${name} 원고를 못 읽음: ${err.message}`);
-    }
+// 제품 공부(product)와 같은 회의 농업영어(english) 원고. 저장소에는 잠긴 것(lessons/lessons.enc.json)만 있다 (퇴사자가 못 보게, 2026-10-17).
+// box: 공개 원고에 그대로 넣는 잠긴 꼴(앱이 사내 코드로 푼다). plain: 녹음하려고 저장소 비밀값 LESSON_CODE로 푼 원문 (코드가 없으면 없음)
+function lessons(code = process.env.LESSON_CODE || '') {
+  let box;
+  try {
+    box = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'lessons', 'lessons.enc.json'), 'utf8'));
+  } catch (err) {
+    console.log(`제품 공부 원고를 못 읽음: ${err.message}`);
+    return {};
   }
-  return out.product ? out : undefined;
+  if (!code) { console.log('LESSON_CODE가 없어 제품 공부는 녹음하지 않음 (앱은 사내 코드로 풀어 폰 음성으로 읽는다)'); return { box }; }
+  try {
+    return { box, plain: lock.open(box, code) };
+  } catch (err) {
+    console.log(`제품 공부 원고를 풀지 못함 (LESSON_CODE가 맞는지 확인): ${err.message}`);
+    return { box };
+  }
 }
 
 async function archive(out, b, live, now, getText) {
@@ -445,14 +452,17 @@ if (require.main === module) {
       summaryKey: process.env.ANTHROPIC_API_KEY || '',
       summaryLimit: process.env.SUMMARY_LIMIT === undefined ? 300 : Number(process.env.SUMMARY_LIMIT),
     });
-    // 제품 공부 원고(평일 뉴스 뒤 한 회씩, 어느 회를 읽을지는 기기가 진도에 따라 고른다)
-    b.lessons = lessons();
+    // 제품 공부 원고(평일 뉴스 뒤 한 회씩, 어느 회를 읽을지는 기기가 진도에 따라 고른다). 녹음에만 원문을 쓰고, 공개 원고에는 잠긴 것만
+    const { box, plain } = lessons();
+    b.lessons = plain;
     // 원고 줄을 신경망 음성으로 미리 녹음 (기본: 무료 MS 엣지 음성, GOOGLE_TTS_KEY가 있으면 구글, TTS_ENGINE=off면 안 함). 녹음이 없으면 앱이 폰 음성으로 읽는다
     const key = process.env.GOOGLE_TTS_KEY || '';
     b.audio = await tts.record(b, {
       out, key, engine: process.env.TTS_ENGINE || (key ? 'google' : 'edge'), cache: process.env.TTS_CACHE || '', voice: process.env.TTS_VOICE || '',
       budget: Number(process.env.TTS_DAILY_CHARS) || 0, log: b.log, run: limiter(4),
     });
+    delete b.lessons; // 원문은 절대 올리지 않는다
+    if (box) b.lessonsEnc = box;
     fs.writeFileSync(path.join(out, 'briefing.json'), JSON.stringify(b, null, 1));
     fs.writeFileSync(path.join(out, 'briefing.txt'), speechText(b));
     // 앱의 '당겨서 새로 받기'가 먼저 확인하는 작은 파일: 원고 시각만 (1.3MB 원고를 받기 전에 새 원고가 있는지 안다)
