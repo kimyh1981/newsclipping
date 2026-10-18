@@ -22,7 +22,20 @@ import android.widget.TextView;
  * 웹 기사 목록의 ▶(newsclipping://play?t=기사 제목)로 열리면 그 기사부터 읽는다.
  */
 public class CaptionActivity extends Activity {
-    private TextView head, body, hint, origin;
+    private TextView head, body, hint, origin, time;
+    private ChapterBar bar;
+    /** 읽는 동안 0.5초마다 진행바와 시간 */
+    private final Runnable progress = new Runnable() {
+        @Override public void run() {
+            Chapters c = NewsService.chapters();
+            int line = NewsService.progressLine();
+            float[] t = NewsService.times(CaptionActivity.this);
+            if (!bar.dragging()) bar.set(c, line, t != null && t[1] > 0 && line >= 0 ? t[0] / t[1] : -1);
+            time.setText(NewsService.buffering() ? "기사를 불러오는 중…" : t != null && t[1] > 0 ? Rules.clock(t[0]) + " / " + Rules.clock(t[1]) : "");
+            bar.removeCallbacks(this);
+            if (NewsService.state() == NewsService.PLAYING) bar.postDelayed(this, 500);
+        }
+    };
     /** 빨리 듣기: 누른 채 0.25초면 2배, 두 번째로 누른 채면 3배 */
     private View content;
     private float holdSpeed, downX, downY;
@@ -85,6 +98,19 @@ public class CaptionActivity extends Activity {
         LinearLayout.LayoutParams sp = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(56));
         sp.bottomMargin = dp(12);
         col.addView(skip, sp);
+        // 홈 화면과 같은 진행바: 얼마나 남았는지 보고, 끌어서 그 언론사로 넘어간다 (주인 요청 2026-10-18)
+        bar = new ChapterBar(this, 0xFF0A84FF, 0xFF3A3A3C);
+        bar.setListener(new ChapterBar.Listener() {
+            @Override public void onScrub(int line) { }
+            @Override public void onSeek(int line) { NewsService.seek(line); }
+        });
+        col.addView(bar);
+        time = text(15, 0xFF8E8E93);
+        time.setGravity(Gravity.CENTER);
+        time.setFontFeatureSettings("tnum");
+        LinearLayout.LayoutParams tp = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        tp.bottomMargin = dp(12);
+        col.addView(time, tp);
         hint = text(17, 0xFF8E8E93);
         hint.setGravity(Gravity.CENTER);
         col.addView(hint);
@@ -169,12 +195,16 @@ public class CaptionActivity extends Activity {
     protected void onResume() {
         super.onResume();
         NewsService.onCaption = redraw;
+        NewsService.onProgress = progress;
         show();
+        progress.run();
     }
 
     @Override
     protected void onPause() {
         if (NewsService.onCaption == redraw) NewsService.onCaption = null;
+        if (NewsService.onProgress == progress) NewsService.onProgress = null;
+        bar.removeCallbacks(progress);
         super.onPause();
     }
 
