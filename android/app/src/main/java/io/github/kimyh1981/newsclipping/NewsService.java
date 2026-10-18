@@ -969,8 +969,8 @@ public class NewsService extends Service {
             int cur = 0;
             for (int s : paraStarts) if (s <= at) cur = s;
             int idx = paraStarts.indexOf(cur);
-            // 문단 첫머리를 막 지났으면 이전 문단, 문단 중간이면 이 문단 처음으로
-            target = (at - cur <= 0 && idx > 0) ? paraStarts.get(idx - 1) : cur;
+            // 문단 첫 두 문장 안이면 이전 문단, 그 뒤면 이 문단 처음으로 (첫 문장만 쳐서 아래로 쓸어도 제자리 같았다, 10/18)
+            target = (at - cur <= 1 && idx > 0) ? paraStarts.get(idx - 1) : cur;
         }
         if (target < 0) { jump(nextTarget()); return; } // 마지막 문단에서 위로: 헤드라인으로 돌아가 다음 기사
         List<Step> rest = new ArrayList<>(paraQueue.subList(target, paraQueue.size()));
