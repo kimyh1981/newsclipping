@@ -22,7 +22,27 @@ import android.widget.TextView;
  * 웹 기사 목록의 ▶(newsclipping://play?t=기사 제목)로 열리면 그 기사부터 읽는다.
  */
 public class CaptionActivity extends Activity {
-    private TextView head, body, hint, origin;
+    private TextView head, body, hint, origin, time;
+    private ChapterBar bar;
+    /** 읽는 동안 0.5초마다 진행바와 시간 */
+    private final Runnable progress = new Runnable() {
+        @Override public void run() {
+            Chapters c = NewsService.chapters();
+            int line = NewsService.progressLine();
+            float[] t = NewsService.times(CaptionActivity.this);
+            if (!bar.dragging()) bar.set(c, line, t != null && t[1] > 0 && line >= 0 ? t[0] / t[1] : -1);
+            time.setText(NewsService.buffering() ? "기사를 불러오는 중…" : t != null && t[1] > 0 ? Rules.clock(t[0]) + " / " + Rules.clock(t[1]) : "");
+            bar.removeCallbacks(this);
+            if (NewsService.state() == NewsService.PLAYING) bar.postDelayed(this, 500);
+        }
+    };
+    /** 빨리 듣기: 누른 채 0.25초면 2배, 두 번째로 누른 채면 3배 */
+    private View content;
+    private float holdSpeed, downX, downY;
+    private boolean boosted;
+    private final Runnable boostOn = () -> { boosted = true; NewsService.setBoost(holdSpeed >= 3f ? 3f : 2f); };
+
+    private boolean moved(MotionEvent e) { return Math.hypot(e.getX() - downX, e.getY() - downY) > dp(24); }
     /** 제품 공부 중: 농업영어로 넘기기, 농업영어 중: 이 회 마치기 */
     private Button skip;
     private final Runnable redraw = this::show;
@@ -78,6 +98,19 @@ public class CaptionActivity extends Activity {
         LinearLayout.LayoutParams sp = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(56));
         sp.bottomMargin = dp(12);
         col.addView(skip, sp);
+        // 홈 화면과 같은 진행바: 얼마나 남았는지 보고, 끌어서 그 언론사로 넘어간다 (주인 요청 2026-10-18)
+        bar = new ChapterBar(this, 0xFF0A84FF, 0xFF3A3A3C);
+        bar.setListener(new ChapterBar.Listener() {
+            @Override public void onScrub(int line) { }
+            @Override public void onSeek(int line) { NewsService.seek(line); }
+        });
+        col.addView(bar);
+        time = text(15, 0xFF8E8E93);
+        time.setGravity(Gravity.CENTER);
+        time.setFontFeatureSettings("tnum");
+        LinearLayout.LayoutParams tp = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        tp.bottomMargin = dp(12);
+        col.addView(time, tp);
         hint = text(17, 0xFF8E8E93);
         hint.setGravity(Gravity.CENTER);
         col.addView(hint);
@@ -96,7 +129,13 @@ public class CaptionActivity extends Activity {
         // 누르면 전체 듣기, 오른쪽에서 왼쪽으로 쓸면 다음 기사, 반대로 쓸면 이전 기사. 전체 듣기 중에는 어느 쪽이든 본문을 끝내고 헤드라인으로 돌아온다
         GestureDetector gestures = new GestureDetector(this, new GestureDetector.SimpleOnGestureListener() {
             @Override public boolean onDown(MotionEvent e) { return true; }
-            @Override public boolean onSingleTapUp(MotionEvent e) {
+            @Override public boolean onDoubleTapEvent(MotionEvent e) {
+                // 두 번째로 누른 채 0.25초: 3배속
+                if (e.getActionMasked() == MotionEvent.ACTION_DOWN) { holdSpeed = 3f; content.postDelayed(boostOn, 250); }
+                return true;
+            }
+            @Override public boolean onSingleTapConfirmed(MotionEvent e) {
+                if (boosted) return true; // 빨리 듣기였다: 누르기로 치지 않는다
                 NewsService.Caption c = NewsService.caption();
                 if (c != null && c.lesson > 0) NewsService.control(NewsService.state() == NewsService.PAUSED ? NewsService.ACTION_RESUME : NewsService.ACTION_PAUSE);
                 else if (NewsService.isRunning()) NewsService.control(NewsService.ACTION_MORE);
@@ -104,14 +143,33 @@ public class CaptionActivity extends Activity {
                 return true;
             }
             @Override public boolean onFling(MotionEvent a, MotionEvent b, float vx, float vy) {
-                if (a == null || !NewsService.isRunning()) return false;
-                float dx = b.getX() - a.getX();
-                if (Math.abs(dx) < dp(60) || Math.abs(dx) < Math.abs(b.getY() - a.getY())) return false;
+                if (a == null || !NewsService.isRunning() || boosted) return false;
+                float dx = b.getX() - a.getX(), dy = b.getY() - a.getY();
+                if (Math.abs(dy) > Math.abs(dx) && Math.abs(dy) >= dp(60)) { // 위로 쓸면 다음 문단, 아래로 쓸면 이전 문단
+                    NewsService.control(dy < 0 ? NewsService.ACTION_PARA_NEXT : NewsService.ACTION_PARA_PREV);
+                    return true;
+                }
+                if (Math.abs(dx) < dp(60) || Math.abs(dx) < Math.abs(dy)) return false;
                 NewsService.control(dx < 0 ? NewsService.ACTION_NEXT : NewsService.ACTION_PREV);
                 return true;
             }
         });
-        col.setOnTouchListener((v, e) -> gestures.onTouchEvent(e));
+        content = col;
+        col.setOnTouchListener((v, e) -> {
+            int act = e.getActionMasked();
+            if (act == MotionEvent.ACTION_DOWN && holdSpeed < 2f) { holdSpeed = 2f; content.postDelayed(boostOn, 250); } // 누른 채 0.25초: 2배속
+            if (act == MotionEvent.ACTION_MOVE && !boosted && moved(e)) content.removeCallbacks(boostOn); // 쓸기면 빨리 듣기가 아니다
+            if (act == MotionEvent.ACTION_DOWN) downX = e.getX();
+            if (act == MotionEvent.ACTION_DOWN) downY = e.getY();
+            boolean r = gestures.onTouchEvent(e);
+            if (act == MotionEvent.ACTION_UP || act == MotionEvent.ACTION_CANCEL) {
+                content.removeCallbacks(boostOn);
+                if (boosted) NewsService.setBoost(1f);
+                holdSpeed = 0f;
+                content.postDelayed(() -> boosted = false, 50); // 손을 뗀 직후의 '누르기'를 막고 풀어 준다
+            }
+            return r;
+        });
         setContentView(col);
         if (b == null) playLink(getIntent());
     }
@@ -137,12 +195,16 @@ public class CaptionActivity extends Activity {
     protected void onResume() {
         super.onResume();
         NewsService.onCaption = redraw;
+        NewsService.onProgress = progress;
         show();
+        progress.run();
     }
 
     @Override
     protected void onPause() {
         if (NewsService.onCaption == redraw) NewsService.onCaption = null;
+        if (NewsService.onProgress == progress) NewsService.onProgress = null;
+        bar.removeCallbacks(progress);
         super.onPause();
     }
 
@@ -173,10 +235,11 @@ public class CaptionActivity extends Activity {
             hint.setText(paused ? "멈춤 · 누르면 이어 듣기" : "왼쪽으로 넘기면 다음 문단 · 오른쪽은 이전 문단 · 누르면 멈춤");
             return;
         }
-        head.setText(c.full ? c.source + " · 전체 듣기 · " + c.title : c.source);
+        String fast = NewsService.boost() > 1f ? (NewsService.boost() >= 3f ? "▶▶▶ 3배 · " : "▶▶ 2배 · ") : "";
+        head.setText(fast + (c.full ? c.source + " · 전체 듣기 · " + c.title : c.source));
         // 헤드라인은 읽는 글 그대로, 전체 듣기는 지금 읽는 문장. 너무 긴 글(옛 원고의 본문 통째)은 기사 제목
         body.setText(c.text.length() > 240 ? c.title : c.text);
-        hint.setText(paused ? "멈춤" : c.title.isEmpty() ? "" : c.full ? "오른쪽으로 넘기면 헤드라인으로 돌아갑니다" : "누르면 전체 듣기 · 왼쪽으로 넘기면 다음 기사");
+        hint.setText(paused ? "멈춤" : c.title.isEmpty() ? "" : c.full ? "위·아래로 넘기면 문단 · 오른쪽은 헤드라인으로 · 누르고 있으면 빠르게" : "누르면 전체 듣기 · 왼쪽으로 넘기면 다음 기사 · 누르고 있으면 빠르게");
     }
 
     private TextView text(int sp, int color) {

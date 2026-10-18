@@ -56,6 +56,7 @@ public class NewsService extends Service {
     static final String ACTION_MORE = "more"; // 전체 듣기 (예전 알림의 '자세히'도 같은 동작)
     static final String ACTION_PREV = "prev";
     static final String ACTION_NEXT = "next";
+    static final String ACTION_PARA_NEXT = "para-next", ACTION_PARA_PREV = "para-prev";
     /** 제품 공부 중이면 같은 회의 농업영어로, 농업영어 중이면 그 회를 마치고 맺음말로 건너뛴다 */
     static final String ACTION_SKIP_LESSON = "skip-lesson";
     static final String ACTION_PAUSE = "pause";
@@ -317,6 +318,8 @@ public class NewsService extends Service {
         switch (action) {
             case ACTION_PREV: jump(inFull() ? nextTarget() : prevTarget()); break; // 전체 듣기 중 오른쪽 쓸기: 본문을 멈추고 헤드라인으로 돌아와 다음 기사부터 (주인 요청 2026-10-18)
             case ACTION_NEXT: jump(nextTarget()); break;
+            case ACTION_PARA_NEXT: paragraph(1); break;
+            case ACTION_PARA_PREV: paragraph(-1); break;
             case ACTION_MORE: full(); break;
             case ACTION_SKIP_LESSON: skipLesson(); break;
             case ACTION_PAUSE: pause(false); break;
@@ -338,7 +341,8 @@ public class NewsService extends Service {
             return START_NOT_STICKY;
         }
         String action = intent == null ? null : intent.getAction();
-        if (ACTION_MORE.equals(action) || ACTION_SKIP_LESSON.equals(action) || ACTION_PREV.equals(action) || ACTION_NEXT.equals(action) || ACTION_PAUSE.equals(action) || ACTION_RESUME.equals(action)) {
+        if (ACTION_MORE.equals(action) || ACTION_SKIP_LESSON.equals(action) || ACTION_PREV.equals(action) || ACTION_NEXT.equals(action) || ACTION_PAUSE.equals(action) || ACTION_RESUME.equals(action)
+                || ACTION_PARA_NEXT.equals(action) || ACTION_PARA_PREV.equals(action)) {
             handle(action);
             return START_NOT_STICKY;
         }
@@ -686,6 +690,7 @@ public class NewsService extends Service {
         if (job == null) { endWait(); return false; }
         if (!job.isDone()) {
             long waited = System.currentTimeMillis() - since;
+            if (boost >= 3f && waited > 300) setBoost(2f); // F1이 3배속을 못 따라간다: 저절로 2배속으로 (주인 요청 2026-10-18)
             if (waited > F1_WAIT_MS) { Log.w(TAG, "F1이 늦어 이 차례는 폰 음성으로"); endWait(); return false; }
             // 2.5초 넘게 걸리면 한 번 알려 준다: 기다리면 된다는 것을 (주인 요청 2026-10-17). 재생 차례 번호가 없는 말이라 순서는 그대로
             if (waited > 2500 && noticedFor != since) {
@@ -755,6 +760,7 @@ public class NewsService extends Service {
             mp.setOnCompletionListener(p -> done(g + ":"));
             mp.setOnErrorListener((p, what, extra) -> { done(g + ":"); return true; });
             mp.prepare();
+            if (boost != 1f) mp.setPlaybackParams(mp.getPlaybackParams().setSpeed(boost));
             mp.start();
             player = mp;
             return true;
@@ -891,19 +897,19 @@ public class NewsService extends Service {
             tts.speak("기사를 불러오고 있습니다.", TextToSpeech.QUEUE_FLUSH, speakParams, "wait"); // 차례 번호가 없는 말이라 순서는 그대로
         }, 1500);
         new Thread(() -> {
-            List<String> got;
+            List<List<String>> got;
             try {
                 got = ArticleReader.read(it.link);
             } catch (Exception e) {
                 Log.w(TAG, "원문을 열지 못함: " + e);
                 got = new ArrayList<>();
             }
-            List<String> sentences = got;
+            List<List<String>> paras = got;
             main.post(() -> {
                 if (g != fullGen || stopped || running != this) return; // 그사이 다른 곳으로 옮겼다
                 endWait();
-                if (sentences.isEmpty()) sentences.add("이 기사는 본문을 가져오지 못했습니다.");
-                playFull(i, sentences);
+                if (paras.isEmpty()) paras.add(new ArrayList<>(java.util.Collections.singletonList("이 기사는 본문을 가져오지 못했습니다.")));
+                playParas(i, paras);
             });
         }, "read-original").start();
     }
@@ -913,13 +919,77 @@ public class NewsService extends Service {
 
     /** 본문 문장들을 읽고, 이어서 다음 헤드라인부터 */
     private void playFull(int i, List<String> sentences) {
+        // 옛 원고(서버가 준 본문)는 문단을 몰라 세 문장씩 한 문단으로 본다
+        List<List<String>> paras = new ArrayList<>();
+        for (int k = 0; k < sentences.size(); k += 3) paras.add(new ArrayList<>(sentences.subList(k, Math.min(sentences.size(), k + 3))));
+        playParas(i, paras);
+    }
+
+    /** '전체 듣기' 차례에서 문단이 시작하는 자리 (위·아래로 쓸어 문단 넘기기) */
+    private List<Integer> paraStarts = new ArrayList<>();
+    private List<Step> paraQueue;
+
+    /** 문단별 본문을 읽고, 이어서 다음 헤드라인부터 */
+    private void playParas(int i, List<List<String>> paras) {
         int max = Math.min(3900, TextToSpeech.getMaxSpeechInputLength());
         List<Step> steps = new ArrayList<>();
+        List<Integer> starts = new ArrayList<>();
         int k = 0;
-        for (String sen : sentences) for (String part : Rules.chunks(sen, max)) steps.add(new Step("S" + i + "." + k++, part, 0));
+        for (List<String> p : paras) {
+            starts.add(steps.size());
+            for (String sen : p) for (String part : Rules.chunks(sen, max)) steps.add(new Step("S" + i + "." + k++, part, 0));
+        }
         steps.add(new Step("S" + i + ".p", "", 600));
         steps.addAll(stepsFrom(i + 1));
+        paraStarts = starts;
+        paraQueue = steps;
         play(steps);
+    }
+
+    /** 위로 쓸기(+1) 다음 문단, 아래로 쓸기(-1) 이전 문단. 전체 듣기가 아니면 제품 공부는 문단, 헤드라인은 다음·이전 기사 */
+    private void paragraph(int dir) {
+        if (!inFull() || queue != paraQueue || paraStarts.isEmpty()) {
+            jump(dir > 0 ? nextTarget() : prevTarget());
+            return;
+        }
+        int at = Math.max(0, pos - 1); // 지금 읽는 차례
+        int target = -1;
+        if (dir > 0) { for (int s : paraStarts) if (s > at) { target = s; break; } }
+        else {
+            int cur = 0;
+            for (int s : paraStarts) if (s <= at) cur = s;
+            int idx = paraStarts.indexOf(cur);
+            // 문단 첫머리를 막 지났으면 이전 문단, 문단 중간이면 이 문단 처음으로
+            target = (at - cur <= 0 && idx > 0) ? paraStarts.get(idx - 1) : cur;
+        }
+        if (target < 0) { jump(nextTarget()); return; } // 마지막 문단에서 위로: 헤드라인으로 돌아가 다음 기사
+        List<Step> rest = new ArrayList<>(paraQueue.subList(target, paraQueue.size()));
+        List<Integer> starts = new ArrayList<>();
+        for (int s : paraStarts) if (s >= target) starts.add(s - target);
+        if (paused) unpause();
+        paraStarts = starts;
+        paraQueue = rest;
+        play(rest);
+    }
+
+    // ── 빨리 듣기: 자막 화면을 누르고 있으면 2배, 두 번 눌러 유지하면 3배 (주인 요청 2026-10-18, 헤드라인·전체 듣기·제품 공부 모두) ──
+    private static volatile float boost = 1f;
+
+    /** 빠르기 배수 (1이면 보통). 녹음·F1 소리는 바로, 폰 음성은 다음 문장부터 */
+    static void setBoost(float x) {
+        boost = x;
+        NewsService s = running;
+        if (s != null) s.main.post(s::applyBoost);
+    }
+
+    static float boost() { return boost; }
+
+    private void applyBoost() {
+        if (player != null) {
+            try { player.setPlaybackParams(player.getPlaybackParams().setSpeed(boost)); } catch (Exception e) { Log.w(TAG, "배속 실패: " + e); }
+        }
+        if (tts != null) tts.setSpeechRate(new Prefs(this).rate() / 100f * boost);
+        stateChanged(); // 자막 화면의 배속 표시
     }
 
     private void onFocus(int change) {
@@ -1253,7 +1323,7 @@ public class NewsService extends Service {
         if (audio != null && playbackWatch != null) audio.unregisterAudioPlaybackCallback(playbackWatch);
         if (audio != null && modeWatch != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) audio.removeOnModeChangedListener((AudioManager.OnModeChangedListener) modeWatch);
         if (audio != null && focus != null) audio.abandonAudioFocusRequest(focus);
-        if (running == this) { running = null; chapters = null; progressLine = -1; buffering = false; progressChanged(); }
+        if (running == this) { running = null; chapters = null; progressLine = -1; buffering = false; boost = 1f; progressChanged(); }
         caption = null;
         stateChanged();
         stopForeground(STOP_FOREGROUND_REMOVE);

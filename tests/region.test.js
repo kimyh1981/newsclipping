@@ -35,3 +35,9 @@ test('원문 주소의 나라 도메인으로 해외 언론 기사의 나라를 
   assert.equal(countryOfLink('https://news.google.com/rss/articles/abc'), '');
   assert.equal(countryOfLink('not a url'), '');
 });
+
+test('해외 뉴스 가운데 한국 이야기는 한국으로 (주인 요청 2026-10-18)', () => {
+  assert.equal(regionOf('대한민국 정부, 베트남과 녹색 농업 협력', '베트남'), '베트남'); // 섹션 나라가 제목에 있으면 그 나라
+  assert.equal(regionOf('기아, 인도 공장 증설 발표', '미국'), '한국');
+  assert.equal(regionOf('K-푸드 수출 사상 최대', '미국'), '한국');
+});

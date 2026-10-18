@@ -30,7 +30,8 @@ public final class ArticleLive {
                 tried++;
                 List<String> s;
                 try {
-                    s = ArticleReader.read(link);
+                    s = new java.util.ArrayList<>();
+                    for (List<String> p : ArticleReader.read(link)) s.addAll(p);
                 } catch (Exception e) {
                     System.out.println("✗ " + src.getString("name") + " · 열지 못함 (" + e.getMessage() + ") " + link);
                     continue;

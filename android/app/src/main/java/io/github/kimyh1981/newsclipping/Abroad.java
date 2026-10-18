@@ -29,6 +29,7 @@ final class Abroad {
     static final String SECTION = "abroad-kw";
     static final String TITLE = "해외농업 키워드 뉴스";
     /** 키워드가 해외 언론사 기사 고르기에 작용하는 섹션 (나라와 상관없이) */
+    static final java.util.regex.Pattern KOREA = java.util.regex.Pattern.compile("한국(?!어)|대한민국|韓|서울|부산|인천|제주|삼성|SK하이닉스|현대차|기아|LG|롯데|한화|포스코|카카오|네이버|코스피|이재명|원화|K-?팝|K-?푸드|K-?뷰티");
     static final Set<String> FOREIGN_FARM = new HashSet<>(java.util.Arrays.asList(Extras.FERT_WORLD, "global-agri", "vietnam"));
 
     // ---- 번역 (키 없는 구글 번역, 서버 collect.js와 같은 주소) ----
@@ -130,7 +131,8 @@ final class Abroad {
         }
         if (pick == null) return Collections.emptyList();
         String bare = Extras.spoken(pickKo, "");
-        String spoken = c.ko + ", " + bare;
+        // 해외 뉴스인데 한국 이야기면 '한국,'으로 (주인 요청 2026-10-18). 서버 tools/region.js의 한국 낱말과 같다
+        String spoken = (KOREA.matcher(bare).find() && !bare.contains(c.ko) ? "한국" : c.ko) + ", " + bare;
         synchronized (seen) {
             String raw = sameKey(Extras.spoken(pick.title, pick.source));
             if (seen.contains(raw) || seen.contains(sameKey(bare))) return Collections.emptyList(); // 다른 나라가 방금 같은 기사를 골랐다

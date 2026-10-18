@@ -33,10 +33,28 @@ final class ArticleReader {
             + "|e-?mail\\s*:|\\bfax\\b|\\btel\\.|điện\\s*thoại|ghi\\s*rõ\\s*nguồn|<\\s*/?[a-zA-Z]|data-src|class=|src="); // 태그 흔적만 (영화 <기생충> 같은 꺾쇠는 본문)
 
     /** 원문 주소 → 읽을 문장들 (네트워크를 쓰므로 화면 밖 스레드에서). 외국어 기사는 우리말로 옮겨 읽는다 (제목처럼) */
-    static List<String> read(String url) throws Exception {
+    static List<List<String>> read(String url) throws Exception {
         String text = text(Extras.get(url, 15000)); // 늦는 사이트도 기다린다 (YTN 8초 초과, 10/18 점검)
         if (foreign(text)) text = translate(text);
-        return split(text);
+        return paragraphs(text);
+    }
+
+    /** 문단별 문장들 (자막 화면에서 위로 쓸면 다음 문단, 아래로 쓸면 이전 문단, 주인 요청 2026-10-18). 빈 문단은 뺀다 */
+    static List<List<String>> paragraphs(String text) {
+        List<List<String>> out = new ArrayList<>();
+        String last = "";
+        if (text == null) return out;
+        for (String p : text.split("\n")) {
+            if (!keep(p)) continue;
+            List<String> s = new ArrayList<>();
+            for (String x : split(p)) {
+                if (x.equals(last)) continue; // 문단을 넘어 같은 문장이 되풀이되면 한 번만
+                s.add(x);
+                last = x;
+            }
+            if (!s.isEmpty()) out.add(s);
+        }
+        return out;
     }
 
     /** 한글이 거의 없으면 외국어 기사 */
@@ -77,7 +95,9 @@ final class ArticleReader {
 
     /** 페이지 HTML → 읽을 문장들. 본문을 못 찾으면 빈 목록 (그러면 앱이 '본문을 가져오지 못했습니다'라고 하고 넘어간다) */
     static List<String> sentences(String html) {
-        return split(text(html));
+        List<String> all = new ArrayList<>();
+        for (List<String> p : paragraphs(text(html))) all.addAll(p);
+        return all;
     }
 
     /** 본문 문단 (줄마다 한 문단). 서버 articleText와 같은 순서: 네이버 본문 → article 안 p → 페이지 p → 기사 요약 */
