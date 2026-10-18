@@ -3,7 +3,7 @@
 다른 Claude 계정(또는 다른 개발자)이 이 저장소에서 바로 이어서 개발할 수 있도록 정리한 문서입니다.
 기능 설명·설치·설정 방법은 [README.md](README.md)에 자세히 있고, 이 문서는 **개발을 이어받는 데 필요한 것**만 모았습니다.
 
-- 현재 버전: **v1.73** (정식 `android/version.txt`, 라이트 `android/version-lite.txt`)
+- 현재 버전: **v1.74** (정식 `android/version.txt`, 라이트 `android/version-lite.txt`)
 - 웹: https://kimyh1981.github.io/newsclipping/
 - APK: https://github.com/kimyh1981/newsclipping/releases/latest/download/newsclipping.apk
 - 라이트 APK(제품 공부·농업영어 없음, '뉴스클리핑 라이트'): https://github.com/kimyh1981/newsclipping/releases/latest/download/newsclipping-lite.apk
@@ -121,6 +121,7 @@ Pages Source는 **GitHub Actions**로 설정되어 있어야 합니다.
 | #71 | 1.71 | 새로고침: 당기면 먼저 묻고(팝업에 지금 원고 시각) → 받기 누르면 확인 후 새 원고면 받음. 맨 위 원고 시각 줄은 평소 숨김. 홈의 '듣는 언론사' 글귀 뺌, 로고가 넘치면 위부터 채워 아래에서 잘림 |
 | #72 | 1.72 | 선명한 로고: 서버가 언론사마다 가장 큰 아이콘을 골라 `logos/`에 올림(`tools/logos.py`, 7일 캐시), 앱은 그것을 먼저 받음(폰 캐시 logos2) |
 | #73 | 1.73 | 제품 공부·농업영어 잠금(A안): 저장소·공개 원고에는 암호문만, 앱은 사내 코드로 풂(`LessonLock`, `tools/lessons-crypt.js`). 시작 화면(파란 바탕, 앱 아이콘을 눌러 열 때만 1.5초) |
+| #74 | 1.74 | 시작 화면의 앱 이름·소개 글을 가운데로. 사내 코드는 설치 후 한 번(그리고 코드가 바뀌면 한 번 더) 앱을 켤 때 묻되, 읽는 중(운전 중)이면 미룸. 취소하면 뉴스만 듣고, 차에서 아침마다 "사내 코드를 넣어 주세요"를 한 번 읽음(일부러 안 듣는 단추는 두지 않음) |
 
 자세한 내용은 각 PR 설명과 커밋 메시지를 보세요.
 

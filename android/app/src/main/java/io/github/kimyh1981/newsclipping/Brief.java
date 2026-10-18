@@ -170,6 +170,8 @@ final class Brief {
     final List<Lesson> lessons;
     /** 제품 공부가 잠겨 있는데 사내 코드가 없거나 틀려서 못 풀었다 (앱이 코드를 묻는다) */
     boolean lessonsLocked;
+    /** 잠금의 표시(salt): 다시 잠그면(사내 코드를 바꾸면) 달라진다. 앱은 이것이 바뀔 때만 다시 묻는다 */
+    String lessonsSeal = "";
     /** 잠긴 제품 공부(lessonsEnc)를 풀 사내 코드. Prefs가 읽어 넣는다 (라이트판은 코드를 넣는 곳이 없어 늘 잠김) */
     static volatile String lessonCode = "";
 
@@ -252,6 +254,7 @@ final class Brief {
         }
         Brief out = new Brief(b.getString("dateLabel"), auto == null || auto.optBoolean("play", true), sections, audioIds, audio == null ? "audio/" : audio.optString("base", "audio/"), lessons);
         out.lessonsLocked = locked;
+        out.lessonsSeal = enc == null ? "" : enc.optString("salt", "");
         return out;
     }
 

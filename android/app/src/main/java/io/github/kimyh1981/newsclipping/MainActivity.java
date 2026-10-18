@@ -424,6 +424,14 @@ public class MainActivity extends Activity {
         List<String> sites = b.sites(prefs.sources(), prefs.order());
         prefs.setLogoSites(sites);
         logos.setSites(sites);
+        // 앱을 켤 때 묻는다 (주인 요청 2026-10-18): 설치 후 한 번, 사내 코드가 바뀌면 한 번 더. 뉴스를 읽는 중(차에서 듣는 중)이면 묻지 않고 다음으로 미룬다.
+        if (BuildConfig.LESSONS && b.lessonsLocked && !codeAsked && (prefs.lessonOn() || prefs.englishOn())
+                && !b.lessonsSeal.equals(prefs.codeAskedSeal()) && !NewsService.isRunning()) {
+            codeAsked = true;
+            prefs.setCodeAskedSeal(b.lessonsSeal);
+            String why = prefs.lessonCode().isEmpty() ? null : "사내 코드가 바뀌었습니다. 새 코드를 넣어 주세요.";
+            if (splashing) afterSplash = () -> askLessonCode(why, false); else askLessonCode(why, false);
+        }
     }
 
     /** 깃허브에 새 버전이 있으면 맨 위에 '업데이트' 띠를 띄운다 (30분에 한 번만 확인) */
@@ -818,9 +826,11 @@ public class MainActivity extends Activity {
         s.addView(tile, new LinearLayout.LayoutParams(dp(112), dp(112)));
         TextView name = text(getApplicationInfo().loadLabel(getPackageManager()).toString(), 28, 0xFFFFFFFF);
         name.setTypeface(Typeface.DEFAULT_BOLD);
+        name.setGravity(Gravity.CENTER); // 글자 칸이 화면 너비라서 글자도 가운데로 (1.73에서 왼쪽에 붙었음)
         name.setPadding(0, dp(24), 0, dp(8));
         s.addView(name);
         TextView tag = text("출근길 1면 · 퇴근길 많이 본 뉴스", 15, 0xE6FFFFFF);
+        tag.setGravity(Gravity.CENTER);
         s.addView(tag);
         android.widget.FrameLayout box = new android.widget.FrameLayout(this);
         box.addView(s, new android.widget.FrameLayout.LayoutParams(android.widget.FrameLayout.LayoutParams.MATCH_PARENT, android.widget.FrameLayout.LayoutParams.MATCH_PARENT));
@@ -830,6 +840,7 @@ public class MainActivity extends Activity {
             cl.bottomMargin = dp(48);
             box.addView(co, cl);
         }
+        splashing = true;
         getWindow().setStatusBarColor(BRAND);
         getWindow().setNavigationBarColor(BRAND);
         View decor = getWindow().getDecorView();
@@ -842,6 +853,8 @@ public class MainActivity extends Activity {
                 getWindow().setStatusBarColor(bg);
                 getWindow().setNavigationBarColor(bg);
                 decor.setSystemUiVisibility(lightBars);
+                splashing = false;
+                if (afterSplash != null) { Runnable r = afterSplash; afterSplash = null; r.run(); }
             }).start();
         };
         s.setOnClickListener(v -> away.run());
@@ -1068,7 +1081,16 @@ public class MainActivity extends Activity {
     /** 언론사 체크 목록: 오늘 브리핑에 든 언론사 전체를 섹션별로 보여 주고, 고른 것만 읽는다 */
     /** 오늘 브리핑(섹션·언론사 목록)을 받아 next를 화면에서 실행한다. 직접 넣은 언론사도 목록에 넣는다 */
     /** 사내 코드를 묻는다: 맞으면 제품 공부를 연다 (퇴사자가 못 보게 잠가 둠, 2026-10-17). why: 다시 묻는 까닭 (처음이면 null) */
-    private void askLessonCode(String why) {
+    /** 이 화면을 연 동안 사내 코드를 한 번 물었다 (취소하면 다시 묻지 않는다) */
+    private boolean codeAsked;
+    /** 시작 화면이 떠 있다 / 시작 화면이 사라지면 할 일 */
+    private boolean splashing;
+    private Runnable afterSplash;
+
+    private void askLessonCode(String why) { askLessonCode(why, true); }
+
+    /** open: 맞으면 제품 공부 진도 화면을 연다 (앱을 켤 때 물은 것이면 열리기만 알린다) */
+    private void askLessonCode(String why, boolean open) {
         android.widget.EditText in = new android.widget.EditText(this);
         in.setHint("예: BP-XXXX-XXXX-XXXX");
         in.setSingleLine(true);
@@ -1082,9 +1104,14 @@ public class MainActivity extends Activity {
                 .setView(box)
                 .setPositiveButton("확인", (d, w) -> {
                     prefs.setLessonCode(in.getText().toString());
-                    withBrief(this::showLessons); // 새 코드로 다시 읽어 연다 (틀리면 다시 묻는다)
+                    // 새 코드로 다시 읽어 본다: 틀리면 다시 묻고, 맞으면 열거나 열렸다고 알린다
+                    withBrief(br -> {
+                        if (br.lessonsLocked) askLessonCode("사내 코드가 맞지 않습니다. 다시 확인해 주세요.", open);
+                        else if (open) showLessons(br);
+                        else android.widget.Toast.makeText(this, "제품 공부가 열렸습니다", android.widget.Toast.LENGTH_SHORT).show();
+                    });
                 })
-                .setNegativeButton("취소", null)
+                .setNegativeButton("취소", null) // 넘기면 뉴스만. 일부러 안 듣는 단추는 두지 않는다 (주인 2026-10-18): 차에서 아침마다 코드를 넣으라고 알린다
                 .show();
     }
 

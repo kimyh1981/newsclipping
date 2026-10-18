@@ -103,6 +103,8 @@ public class LessonsTest {
             assertEquals(4, ok.lessons.size());
             assertEquals("샘플 제품 1회", ok.lesson(1).title);
             assertEquals(4, ok.lesson(4).english.size());
+            assertEquals(new JSONObject(read("tests/fixtures/lessons-enc.json")).getString("salt"), ok.lessonsSeal); // 다시 잠그면 바뀌는 표시
+            assertEquals("", Brief.parse(read("tests/fixtures/briefing.json")).lessonsSeal);
         } finally {
             Brief.lessonCode = "";
         }

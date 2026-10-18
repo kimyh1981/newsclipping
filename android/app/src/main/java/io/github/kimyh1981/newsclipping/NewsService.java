@@ -92,6 +92,7 @@ public class NewsService extends Service {
     private final Map<String, Future<File>> f1Jobs = new ConcurrentHashMap<>();
     private File f1Dir;
     private static final int F1_AHEAD = 3;
+    static final String LOCKED_NOTICE = "오늘 제품 공부는 사내 코드를 넣어야 들을 수 있습니다. 앱을 열어 사내 코드를 넣어 주세요.";
     /** 다음 차례가 이만큼 안에 안 만들어지면 그 차례만 폰 음성으로 */
     private static final long F1_WAIT_MS = 20000;
     /** 읽을 차례들과 지금 차례. 한 차례가 끝나면 다음 차례를 튼다 */
@@ -436,6 +437,11 @@ public class NewsService extends Service {
             // 평일 아침이면 뉴스 뒤에 제품 공부 한 회 (주말·공휴일은 진도를 넘기지 않는다. 오후 원고에는 붙이지 않는다, 주인 요청 2026-10-14)
             if (BuildConfig.LESSONS && brief.playToday && !evening && (prefs.lessonOn() || prefs.englishOn()) && !brief.lessons.isEmpty()) {
                 script = Brief.withLesson(script, brief.lesson(prefs.lessonForToday(Lessons.numbers(brief.lessons), true)), prefs.lessonOn(), prefs.englishOn());
+            } else if (BuildConfig.LESSONS && brief.playToday && !evening && (prefs.lessonOn() || prefs.englishOn()) && brief.lessonsLocked && script.size() > 1) {
+                // 잠긴 제품 공부: 사내 코드가 없거나 바뀌었다. 맺음말 앞에 한 번 알린다 (주인 요청 2026-10-18)
+                script = new ArrayList<>(script);
+                script.add(script.size() - 1, new Brief.Line(LOCKED_NOTICE, null));
+                script.add(script.size() - 1, new Brief.Line("", null));
             }
         }
         if (!manual && lessonOnly == 0) new Prefs(this).markPlayed(Brief.evening(System.currentTimeMillis()));
