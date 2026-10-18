@@ -598,6 +598,7 @@ public class NewsService extends Service {
             // 통화·내비 안내·다른 앱 소리가 끼어들면 멈추고, 끝나면 멈춘 기사부터 이어 읽는다
             focus = new AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT).setAudioAttributes(attrs)
                     .setWillPauseWhenDucked(true)
+                    .setAcceptsDelayedFocusGain(true)
                     .setOnAudioFocusChangeListener(this::onFocus, main).build();
             audio.requestAudioFocus(focus); // 라디오·음악은 잠시 멈췄다가 끝나면 다시 나온다
             startedAt = System.currentTimeMillis();
@@ -613,9 +614,13 @@ public class NewsService extends Service {
             openCaptions();
             int first = lineOf(from != null ? from : new Prefs(this).resumeTitle());
             from = null;
-            if (first > 0) jump(first); else play(stepsFrom(0));
+            // 차 블루투스는 소리가 들어온 뒤에야 열려 첫머리를 먹는다 (2026-10-19 출근길): 소리 없는 소리로 먼저 열고 1초 뒤 읽는다
+            holdButtons(true);
+            main.postDelayed(() -> { if (!stopped && !paused) { if (first > 0) jump(first); else play(stepsFrom(0)); } }, WARM_MS);
         });
     }
+
+    private static final long WARM_MS = 1000, REWARM_MS = 600;
 
     private static final String PLAYING_TEXT = "읽는 중 · 이전 / 전체 듣기 / 다음";
 
@@ -676,7 +681,8 @@ public class NewsService extends Service {
             if (en) tts.setLanguage(Locale.US);
             else { tts.setLanguage(Locale.KOREAN); Voices.apply(tts, new Prefs(this)); }
         }
-        tts.speak(en ? s.text : Pron.say(s.text), TextToSpeech.QUEUE_FLUSH, speakParams, gen + ":" + s.id); // 자막은 쓴 글, 소리는 들리는 대로
+        tts.playSilentUtterance((long) (F1Engine.LEAD_SEC * 1000), TextToSpeech.QUEUE_FLUSH, "lead"); // 첫소리가 먹히지 않게 앞을 비운다
+        tts.speak(en ? s.text : Pron.say(s.text), TextToSpeech.QUEUE_ADD, speakParams, gen + ":" + s.id); // 자막은 쓴 글, 소리는 들리는 대로
     }
 
     private void startF1() {
@@ -1199,8 +1205,20 @@ public class NewsService extends Service {
     private void resume() {
         if (tts == null || stopped || !paused) return;
         stopAssistantWatch();
+        // 제미나이(안드로이드 오토)가 소리 차례를 아직 쥐고 있으면 읽어도 소리가 안 나고 시간만 갔다 (2026-10-19 출근길):
+        // 차례를 받을 때까지 멈춘 채 기다리고, 받으면(onFocus GAIN) 그때 이어 읽는다
+        int got = audio == null || focus == null ? AudioManager.AUDIOFOCUS_REQUEST_GRANTED : audio.requestAudioFocus(focus);
+        if (got != AudioManager.AUDIOFOCUS_REQUEST_GRANTED) {
+            Log.i(TAG, "소리 차례를 아직 못 받음(" + got + "): 받으면 이어 읽는다");
+            resumeOnGain = true;
+            pausedAt = System.currentTimeMillis();
+            startInForeground("잠깐 멈춤 · 음성 비서가 끝나면 이어 읽습니다");
+            return;
+        }
         unpause();
-        jump(Math.min(current, lines.size() - 1));
+        holdButtons(true); // 블루투스를 먼저 열고 조금 뒤 읽는다: 첫머리가 먹히지 않게
+        int at = Math.min(current, lines.size() - 1);
+        main.postDelayed(() -> { if (!stopped && !paused) jump(at); }, REWARM_MS);
     }
 
     private void unpause() {

@@ -62,12 +62,15 @@ final class F1Engine implements AutoCloseable {
         styleDp = styleTensor(st.getJSONObject("style_dp"));
     }
 
+    static final float LEAD_SEC = 0.2f;
+
     /** 한 줄을 소리(-1~1, 한 채널)로. 우리말은 한 덩이 120자까지, 덩이 사이는 0.3초 쉰다 (개발사 기본) */
     float[] synth(String text, String lang, float speed) throws OrtException {
         List<String> chunks = F1Text.chunks(text, "ko".equals(lang) ? 120 : 300);
         int silence = (int) (0.3f * sampleRate);
+        int lead = (int) (LEAD_SEC * sampleRate); // 앞을 비워 둔다: 차 스피커가 소리를 받기 시작하며 첫소리를 먹었다 (2026-10-19 출근길, 영어 단어가 통째로 빠짐)
         List<float[]> parts = new ArrayList<>();
-        int total = 0;
+        int total = lead;
         for (int i = 0; i < chunks.size(); i++) {
             float[] w = infer(chunks.get(i), lang, speed);
             if (i > 0) total += silence;
@@ -75,7 +78,7 @@ final class F1Engine implements AutoCloseable {
             total += w.length;
         }
         float[] out = new float[total];
-        int at = 0;
+        int at = lead;
         for (int i = 0; i < parts.size(); i++) {
             if (i > 0) at += silence;
             System.arraycopy(parts.get(i), 0, out, at, parts.get(i).length);
