@@ -113,7 +113,14 @@ public class NewsService extends Service {
     /** 내비 안내 음성이 나오는 동안 멈췄다 (끝나면 이어 읽는다) */
     private boolean navPaused;
     private AudioManager.AudioPlaybackCallback playbackWatch;
-    private final Runnable navResume = () -> { if (this.paused && this.navPaused) { this.navPaused = false; resume(); } };
+    private final Runnable navResume = () -> {
+        if (!this.paused || !this.navPaused) return;
+        if (voiceMode() || micBusy()) { if (!this.assistWatch) watchAssistant(); this.sawMic = true; return; } // 음성 비서·통화가 소리 길을 쥐고 있다: 놓으면 이어 읽는다
+        this.navPaused = false;
+        resume();
+    };
+    /** 소리 차례(포커스)를 마지막으로 돌려받은 상태인지 (잃으면 false) */
+    private boolean focusBack;
     /** 지금 읽는 원고 줄 번호 */
     private volatile int current;
     /** 통화·다른 앱 소리로 멈춘 상태. 다시 들으면 멈춘 기사 처음부터 이어 읽는다 */
@@ -1035,12 +1042,13 @@ public class NewsService extends Service {
     }
 
     private void onFocus(int change) {
+        focusBack = change == AudioManager.AUDIOFOCUS_GAIN;
         if (change == AudioManager.AUDIOFOCUS_GAIN) {
             // 통화가 끝나면 이어 읽는 건 차(블루투스 오디오)에서만: 폰 스피커로 듣다 받은 통화 뒤에는 멈춘 채 기다린다
             // 음성 비서(마이크를 쓴 앱)가 잠깐 가져간 것이면 스피커로 듣고 있었어도 이어 읽는다
             boolean assistant = sawMic && !callSincePause && !callNow();
             if (Rules.resumeOnGain(paused, resumeOnGain, System.currentTimeMillis() - pausedAt, AUTO_RESUME_MS, inCar(), assistant, navPaused)) {
-                if (voiceMode() || micBusy()) { if (!assistWatch) watchAssistant(); } // 음성 비서가 아직 소리 길을 쥐고 있다: 놓으면 이어 읽는다
+                if (voiceMode() || micBusy()) { if (!assistWatch) watchAssistant(); sawMic = true; } // 음성 비서가 아직 소리 길을 쥐고 있다: 놓으면 이어 읽는다
                 else { stopAssistantWatch(); navPaused = false; main.removeCallbacks(navResume); resume(); }
             } else if (paused) keepPaused(); // 손으로 멈췄거나 오래 멈춤: 이어 듣기를 누를 때까지 기다린다
         } else if (change == AudioManager.AUDIOFOCUS_LOSS && autoStart && retakes < 3 && System.currentTimeMillis() - startedAt < RETAKE_WINDOW_MS && !micBusy()) {
@@ -1168,6 +1176,10 @@ public class NewsService extends Service {
         int r = Rules.afterAssistant(sawMic, mic, audio.isMusicActive(), callSincePause, System.currentTimeMillis() - pausedAt, AUTO_RESUME_MS);
         if (r == Rules.ASSIST_GIVE_UP) {
             stopAssistantWatch();
+            if (focusBack && resumeOnGain) { // 다시 올 GAIN이 없다: 30분 '잠깐 멈춤'에 갇히지 않게 (교차 검토 2026-10-21)
+                if (!mic && !callNow()) resume(); else keepPaused();
+                return;
+            }
             if (!resumeOnGain) keepPaused(); // 소리를 아주 가져간 앱(음악 등): 이어 듣기를 기다린다. 잠깐 가져간 것은 돌려받을 때 판단
             return;
         }

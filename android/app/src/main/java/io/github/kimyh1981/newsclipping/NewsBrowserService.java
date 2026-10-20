@@ -23,7 +23,8 @@ public class NewsBrowserService extends MediaBrowserService {
             "com.google.android.carassistant",
             "com.google.android.googlequicksearchbox", // 구글 어시스턴트·제미나이
             "com.android.systemui",
-            "com.android.bluetooth"));
+            "com.android.bluetooth",
+            "com.google.android.bluetooth")); // 안드로이드 13부터 구글 폰의 블루투스
 
     @Override public void onCreate() {
         super.onCreate();

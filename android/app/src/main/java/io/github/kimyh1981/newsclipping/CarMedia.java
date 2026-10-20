@@ -2,6 +2,7 @@ package io.github.kimyh1981.newsclipping;
 
 import android.content.Context;
 import android.content.Intent;
+import android.media.MediaMetadata;
 import android.media.session.MediaSession;
 import android.media.session.PlaybackState;
 import android.os.Bundle;
@@ -37,6 +38,8 @@ final class CarMedia {
         session.setPlaybackState(new PlaybackState.Builder()
                 .setActions(PlaybackState.ACTION_PLAY | PlaybackState.ACTION_PLAY_FROM_MEDIA_ID | PlaybackState.ACTION_PLAY_FROM_SEARCH)
                 .setState(PlaybackState.STATE_STOPPED, PlaybackState.PLAYBACK_POSITION_UNKNOWN, 0f).build());
+        // 차 화면에 마지막 기사 제목이 남지 않게
+        session.setMetadata(new MediaMetadata.Builder().putString(MediaMetadata.METADATA_KEY_TITLE, "오늘의 뉴스").build());
         session.setActive(false);
     }
 }
