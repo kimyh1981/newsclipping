@@ -17,12 +17,11 @@ import java.util.Set;
  * 목록에는 '오늘의 뉴스' 하나: 누르면 읽기 시작. 오토·시스템·이 앱만 연결을 받는다
  */
 public class NewsBrowserService extends MediaBrowserService {
-    private static final String ROOT = "root", TODAY = "today";
+    private static final String ROOT = "root", TODAY = "today", AUTO = "com.google.android.projection.gearhead";
     private static final Set<String> CALLERS = new HashSet<>(Arrays.asList(
             "com.google.android.projection.gearhead", // 안드로이드 오토
             "com.google.android.carassistant",
             "com.google.android.googlequicksearchbox", // 구글 어시스턴트·제미나이
-            "com.android.systemui",
             "com.android.bluetooth",
             "com.google.android.bluetooth")); // 안드로이드 13부터 구글 폰의 블루투스
 
@@ -31,9 +30,18 @@ public class NewsBrowserService extends MediaBrowserService {
         setSessionToken(CarMedia.session(this).getSessionToken());
     }
 
+    /** 안드로이드 오토가 이 앱에 붙어 있는지 (차 모드 표시가 없는 오토도 차로 알아보려고) */
+    static volatile boolean autoConnected;
+
     @Override public BrowserRoot onGetRoot(String clientPackageName, int clientUid, Bundle rootHints) {
+        if (AUTO.equals(clientPackageName)) { autoConnected = true; new Prefs(this).noteAudio("안드로이드 오토 연결"); }
         boolean ok = clientUid == Process.myUid() || clientUid == Process.SYSTEM_UID || CALLERS.contains(clientPackageName);
         return ok ? new BrowserRoot(ROOT, null) : null;
+    }
+
+    @Override public boolean onUnbind(android.content.Intent intent) {
+        autoConnected = false; // 모두 떨어짐 (오토 연결 끝)
+        return super.onUnbind(intent);
     }
 
     @Override public void onLoadChildren(String parentId, Result<List<MediaBrowser.MediaItem>> result) {

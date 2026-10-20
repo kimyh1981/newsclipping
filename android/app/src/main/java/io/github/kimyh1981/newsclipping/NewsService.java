@@ -115,7 +115,7 @@ public class NewsService extends Service {
     private AudioManager.AudioPlaybackCallback playbackWatch;
     private final Runnable navResume = () -> {
         if (!this.paused || !this.navPaused) return;
-        if (voiceMode() || micBusy()) { if (!this.assistWatch) watchAssistant(); this.sawMic = true; return; } // 음성 비서·통화가 소리 길을 쥐고 있다: 놓으면 이어 읽는다
+        if (voiceMode()) { if (!this.assistWatch) watchAssistant(); this.sawMic = true; return; } // 음성 비서·통화가 소리 길을 쥐고 있다: 놓으면 이어 읽는다
         this.navPaused = false;
         resume();
     };
@@ -627,7 +627,7 @@ public class NewsService extends Service {
         });
     }
 
-    private static final long WARM_MS = 1000, REWARM_MS = 600;
+    private static final long WARM_MS = 1000, REWARM_MS = 1000; // 오토는 멈췄다 다시 열 때 0.6초로는 첫마디를 먹었다 (교차 검토 2026-10-21)
 
     private static final String PLAYING_TEXT = "읽는 중 · 이전 / 전체 듣기 / 다음";
 
@@ -1043,12 +1043,13 @@ public class NewsService extends Service {
 
     private void onFocus(int change) {
         focusBack = change == AudioManager.AUDIOFOCUS_GAIN;
+        new Prefs(this).noteAudio("소리 차례 " + focusName(change) + " · 모드 " + (audio == null ? -1 : audio.getMode()) + (inCar() ? " · 차" : "") + (micBusy() ? " · 마이크" : "") + (paused ? " · 멈춤중" : ""));
         if (change == AudioManager.AUDIOFOCUS_GAIN) {
             // 통화가 끝나면 이어 읽는 건 차(블루투스 오디오)에서만: 폰 스피커로 듣다 받은 통화 뒤에는 멈춘 채 기다린다
             // 음성 비서(마이크를 쓴 앱)가 잠깐 가져간 것이면 스피커로 듣고 있었어도 이어 읽는다
             boolean assistant = sawMic && !callSincePause && !callNow();
             if (Rules.resumeOnGain(paused, resumeOnGain, System.currentTimeMillis() - pausedAt, AUTO_RESUME_MS, inCar(), assistant, navPaused)) {
-                if (voiceMode() || micBusy()) { if (!assistWatch) watchAssistant(); sawMic = true; } // 음성 비서가 아직 소리 길을 쥐고 있다: 놓으면 이어 읽는다
+                if (voiceMode()) { if (!assistWatch) watchAssistant(); sawMic = true; } // 음성 비서가 아직 소리 길(통신 모드)을 쥐고 있다: 놓으면 이어 읽는다
                 else { stopAssistantWatch(); navPaused = false; main.removeCallbacks(navResume); resume(); }
             } else if (paused) keepPaused(); // 손으로 멈췄거나 오래 멈춤: 이어 듣기를 누를 때까지 기다린다
         } else if (change == AudioManager.AUDIOFOCUS_LOSS && autoStart && retakes < 3 && System.currentTimeMillis() - startedAt < RETAKE_WINDOW_MS && !micBusy()) {
@@ -1086,8 +1087,9 @@ public class NewsService extends Service {
                 }
                 if (nav) {
                     main.removeCallbacks(navResume);
-                    if (!paused) { pause(true); navPaused = true; }
+                    if (!paused) { pause(true); navPaused = true; new Prefs(NewsService.this).noteAudio("내비 안내 → 멈춤"); }
                 } else if (navPaused) {
+                    new Prefs(NewsService.this).noteAudio("내비 안내 끝 → 1초 뒤 이어 읽기");
                     main.removeCallbacks(navResume);
                     main.postDelayed(navResume, 1000);
                 }
@@ -1130,9 +1132,19 @@ public class NewsService extends Service {
         return false;
     }
 
+    private static String focusName(int change) {
+        switch (change) {
+            case AudioManager.AUDIOFOCUS_GAIN: return "돌려받음";
+            case AudioManager.AUDIOFOCUS_LOSS: return "잃음";
+            case AudioManager.AUDIOFOCUS_LOSS_TRANSIENT: return "잠깐 잃음";
+            case AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK: return "잠깐 잃음(작게)";
+            default: return String.valueOf(change);
+        }
+    }
+
     /** 차에서 듣는 중인지: 블루투스로 나가거나, 안드로이드 오토가 켜져 있으면(폰이 차 모드) */
     private boolean inCar() {
-        if (bluetoothOut()) return true;
+        if (bluetoothOut() || NewsBrowserService.autoConnected) return true;
         android.app.UiModeManager ui = getSystemService(android.app.UiModeManager.class);
         return ui != null && ui.getCurrentModeType() == android.content.res.Configuration.UI_MODE_TYPE_CAR;
     }
@@ -1236,11 +1248,13 @@ public class NewsService extends Service {
         int got = audio == null || focus == null ? AudioManager.AUDIOFOCUS_REQUEST_GRANTED : audio.requestAudioFocus(focus);
         if (got != AudioManager.AUDIOFOCUS_REQUEST_GRANTED) {
             Log.i(TAG, "소리 차례를 아직 못 받음(" + got + "): 받으면 이어 읽는다");
+            new Prefs(this).noteAudio("이어 읽기 보류: 소리 차례 못 받음 " + got);
             resumeOnGain = true;
             pausedAt = System.currentTimeMillis();
             startInForeground("잠깐 멈춤 · 음성 비서가 끝나면 이어 읽습니다");
             return;
         }
+        new Prefs(this).noteAudio("이어 읽기 · 모드 " + (audio == null ? -1 : audio.getMode()));
         unpause();
         holdButtons(true); // 블루투스를 먼저 열고 조금 뒤 읽는다: 첫머리가 먹히지 않게
         int at = Math.min(current, lines.size() - 1);
