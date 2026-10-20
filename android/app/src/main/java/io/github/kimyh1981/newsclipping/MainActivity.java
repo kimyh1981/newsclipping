@@ -247,6 +247,15 @@ public class MainActivity extends Activity {
         footer = text("", 13, secondary);
         footer.setGravity(Gravity.CENTER);
         footer.setPadding(0, dp(24), 0, 0);
+        // 누르면 차에서 남긴 기록 전체를 카톡·메일 등으로 보낸다 (주인이 보내야만 나간다)
+        footer.setOnClickListener(v -> {
+            String log = EventLog.all(this);
+            if (log.isEmpty()) return;
+            Intent send = new Intent(Intent.ACTION_SEND).setType("text/plain")
+                    .putExtra(Intent.EXTRA_SUBJECT, "뉴스클리핑 기록 " + BuildConfig.VERSION_NAME)
+                    .putExtra(Intent.EXTRA_TEXT, "뉴스클리핑 " + BuildConfig.VERSION_NAME + " 기록\n" + log);
+            startActivity(Intent.createChooser(send, "기록 보내기"));
+        });
         setPage.addView(footer);
 
         // 화면 = 지금 탭 + 아래 아이콘 탭 막대
@@ -540,7 +549,7 @@ public class MainActivity extends Activity {
         String last = prefs.lastPlayed();
         String button = prefs.lastButton();
         footer.setText("버전 " + BuildConfig.VERSION_NAME + (last.isEmpty() ? "" : " · 마지막 자동 재생 " + last) + (button.isEmpty() ? "" : "\n마지막 차 버튼 " + button)
-                + (prefs.audioLog().isEmpty() ? "" : "\n\n최근 소리 기록 (새것이 위)\n" + prefs.audioLog()));
+                + (prefs.audioLog().isEmpty() ? "" : "\n\n최근 소리 기록 (새것이 위) · 누르면 전체 기록 보내기\n" + prefs.audioLog()));
     }
 
     private void status(TextView v, boolean ok) {

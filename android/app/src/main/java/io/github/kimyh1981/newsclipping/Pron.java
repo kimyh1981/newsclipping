@@ -206,9 +206,10 @@ final class Pron {
     }
     private static final String UNIT = "%p|%포인트|%|퍼센트포인트|퍼센트|km/h|kWh|MWh|GWh|TWh|kW|MW|GW|km²|km2|㎢|km|kg|mg|μg|㎍|cm|mm|ml|mL|㎡|m²|m2|m|g|t|ℓ|L|ha|ppm|bp|GB|TB|MB|℃|°C|°";
     private static final Pattern NUM = Pattern.compile("(?<![\\w.-])(?:(?<![^\\s(])(-))?(\\d{1,3}(?:,\\d{3})+|\\d+)(?:\\.(\\d+))?(?:\\s*(" + UNIT + ")(?![A-Za-z])|(?!\\.?\\d)(?![A-Za-z]))");
-    private static final String COUNTER = "번째|시간|군데|차례|켤레|송이|그루|마리|가지|사람|그릇|자루|봉지|포기|마디|끼(?!리)|개(?!월|국|사|년|소|항|교|층|조)|명|살|곳|달(?!러)"
+    private static final String COUNTER = "번째|시간|군데|차례|켤레|송이|그루|마리|가지|사람|그릇|자루|봉지|포기|마디|끼(?!리)|개(?!월|국|사|년|소|항|교|층|조)|명|살|곳|달(?!러)|가구|바퀴|병(?!원|사|력|역|합|행|충|실|무|상|동|과|장|균)"
         + "|권(?!리|한|역|고|자|위)|잔(?!액|고|여)|벌(?!금|써|어)|채(?!권)|척|통(?!화|신|계|합|과|령)|장(?!관|기|애|면)|배(?!럴)"
         + "|번(?!째|지|호|길)(?!\\s?(?:출구|국도|지방도|도로|버스|타자|홀|게이트|트랙|채널|레인|환자|확진자|후보))";
+    private static final Pattern SPACE_BEFORE = Pattern.compile("(?:" + COUNTER + "|원|건|톤|명|곳|회)"); // 한자어로 읽은 숫자 뒤에 띄울 세는 말
     private static final Pattern NATIVE = Pattern.compile("^\\s?(?:" + COUNTER + ")");
     private static final Pattern DAE = Pattern.compile("^\\s?대(?=[가를의는도만와씩로]|\\s(?:이상|이하|가량|정도|씩|분)|[,.?!]|$)");
     private static final Pattern CLOCK = Pattern.compile("^\\s?시(?!간|장|즌|청|민|군|의회|의원|도|정|각|점|대|공|설|리즈)");
@@ -343,6 +344,7 @@ final class Pron {
         while (e.find()) e.appendReplacement(eb, Matcher.quoteReplacement(e.group(1) + " " + UNITS.get(e.group(2))));
         e.appendTail(eb);
         s = eb.toString();
+        s = s.replaceAll("(\\d)([만억조])(?=\\d)", "$1$2 "); // 2만6224 → 2만 6224: 붙여 넘기면 F1이 단위 글자를 빼먹었다 (2026-10-21)
         s = s.replaceAll("(\\d{4})\\s?[.\\-/]\\s?(\\d{1,2})\\s?[.\\-/]\\s?(\\d{1,2})(?!\\d)\\.?", "$1년 $2월 $3일");
         Matcher m = TIME.matcher(s);
         StringBuffer sb = new StringBuffer();
@@ -396,6 +398,7 @@ final class Pron {
                 if (minus != null) out = (unit != null && unit.matches(".*[℃°].*") ? "영하 " : "마이너스 ") + out;
                 if ("km/h".equals(unit)) out = "시속 " + out;
                 if (unit != null) out += " " + UNITS.get(unit);
+                else if (SPACE_BEFORE.matcher(rest).lookingAt()) out += " "; // 백 명, 육천이백이십사 명: 숫자 말과 세는 말을 띄운다
             }
             m.appendReplacement(sb, Matcher.quoteReplacement(out));
         }

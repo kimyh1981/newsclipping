@@ -114,13 +114,28 @@ public class NewsService extends Service {
     private boolean navPaused;
     private AudioManager.AudioPlaybackCallback playbackWatch;
     private final Runnable navResume = () -> {
-        if (!this.paused || !this.navPaused) return;
+        if (!this.paused || !this.navPaused || this.navActive || !this.focusBack) return; // 내비가 아직 말하거나 소리 차례를 쥐고 있으면 기다린다
         if (voiceMode()) { if (!this.assistWatch) watchAssistant(); this.sawMic = true; return; } // 음성 비서·통화가 소리 길을 쥐고 있다: 놓으면 이어 읽는다
         this.navPaused = false;
         resume();
     };
-    /** 소리 차례(포커스)를 마지막으로 돌려받은 상태인지 (잃으면 false) */
+    /** 내비 경고음·안내가 되풀이되는 구간: 끝나고 이만큼 조용해야 이어 읽는다 */
+    private static final long SETTLE_MS = 2000, NAV_SETTLE_MS = 2500;
+    private final Runnable settleResume = () -> {
+        if (!this.paused || !this.focusBack || !this.resumeOnGain || this.navActive) return;
+        this.navPaused = false;
+        this.main.removeCallbacks(this.navResume);
+        resume();
+    };
+    /** 소리 차례(포커스)를 쥐고 있는지: 받으면 true, 잃으면 false */
     private boolean focusBack;
+    /** 지금 내비 안내·경고음이 나는 중 */
+    private boolean navActive;
+    /** 저절로 이어 읽은 시각과, 그 직후 또 끊긴 횟수 (경고음이 되풀이되는 구간: 기다림을 2·4배로) */
+    private long autoResumedAt;
+    private int churn;
+
+    private long settle(long base) { return base << churn; }
     /** 지금 읽는 원고 줄 번호 */
     private volatile int current;
     /** 통화·다른 앱 소리로 멈춘 상태. 다시 들으면 멈춘 기사 처음부터 이어 읽는다 */
@@ -346,6 +361,7 @@ public class NewsService extends Service {
 
     private void handle(String action) {
         if (running != this || tts == null) return;
+        new Prefs(this).noteAudio("명령 " + action);
         switch (action) {
             case ACTION_PREV: jump(inFull() ? nextTarget() : prevTarget()); break; // 전체 듣기 중 오른쪽 쓸기: 본문을 멈추고 헤드라인으로 돌아와 다음 기사부터 (주인 요청 2026-10-18)
             case ACTION_NEXT: jump(nextTarget()); break;
@@ -603,18 +619,17 @@ public class NewsService extends Service {
             tts.setAudioAttributes(attrs);
             audio = getSystemService(AudioManager.class);
             // 통화·내비 안내·다른 앱 소리가 끼어들면 멈추고, 끝나면 멈춘 기사부터 이어 읽는다
-            focus = new AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT).setAudioAttributes(attrs)
-                    .setWillPauseWhenDucked(true)
-                    .setAcceptsDelayedFocusGain(true)
-                    .setOnAudioFocusChangeListener(this::onFocus, main).build();
-            audio.requestAudioFocus(focus); // 라디오·음악은 잠시 멈췄다가 끝나면 다시 나온다
+            // 차에서는 소리 차례를 '오래'로 받는다: 안드로이드 오토는 소리 차례를 오래 쥔 앱의 소리만 차로 보낸다.
+            // '잠깐'으로 받으면 내비·제미나이가 끝난 뒤 오토가 차 소리를 제 음악 앱에 돌려줘 읽어도 소리가 안 났다 (2026-10-21 교차 검토)
+            focus = focusRequest(inCar() ? AudioManager.AUDIOFOCUS_GAIN : AudioManager.AUDIOFOCUS_GAIN_TRANSIENT);
+            focusBack = audio.requestAudioFocus(focus) == AudioManager.AUDIOFOCUS_REQUEST_GRANTED; // 차 밖에서는 라디오·음악이 잠시 멈췄다가 끝나면 다시 나온다
             startedAt = System.currentTimeMillis();
             watchNavigation();
             watchCalls();
             tts.setOnUtteranceProgressListener(new UtteranceProgressListener() {
                 @Override public void onStart(String id) { }
                 @Override public void onDone(String id) { main.post(() -> done(id)); }
-                @Override public void onError(String id) { main.post(() -> done(id)); }
+                @Override public void onError(String id) { new Prefs(NewsService.this).noteAudio("폰 음성 오류 " + id); main.post(() -> done(id)); }
             });
             startSession();
             startInForeground(PLAYING_TEXT);
@@ -628,6 +643,13 @@ public class NewsService extends Service {
     }
 
     private static final long WARM_MS = 1000, REWARM_MS = 1000; // 오토는 멈췄다 다시 열 때 0.6초로는 첫마디를 먹었다 (교차 검토 2026-10-21)
+
+    private AudioFocusRequest focusRequest(int type) {
+        return new AudioFocusRequest.Builder(type).setAudioAttributes(attrs)
+                .setWillPauseWhenDucked(true)
+                .setAcceptsDelayedFocusGain(true)
+                .setOnAudioFocusChangeListener(this::onFocus, main).build();
+    }
 
     private static final String PLAYING_TEXT = "읽는 중 · 이전 / 전체 듣기 / 다음";
 
@@ -692,6 +714,31 @@ public class NewsService extends Service {
         tts.speak(en ? s.text : Pron.say(s.text), TextToSpeech.QUEUE_ADD, speakParams, gen + ":" + s.id); // 자막은 쓴 글, 소리는 들리는 대로
     }
 
+    /** 이 차례가 제품 공부·농업영어 줄인지 (줄 번호가 있는 차례만) */
+    private boolean lessonStep(Step s) {
+        if (!s.id.startsWith("L")) return false;
+        int i = Integer.parseInt(s.id.substring(1, s.id.indexOf('.')));
+        return i < lines.size() && lines.get(i).lesson > 0;
+    }
+
+    /** 제품 공부 소리를 남겨 두는 곳 (앱 데이터 안, 밖으로 나가지 않는다) */
+    private File keepDir() {
+        File d = new File(getFilesDir(), "f1lessons");
+        d.mkdirs();
+        return d;
+    }
+
+    /** 남겨 둔 제품 공부 소리가 300MB를 넘으면 오래된 것부터 지운다 */
+    private void pruneKeep() {
+        File[] all = keepDir().listFiles();
+        if (all == null) return;
+        long total = 0;
+        for (File x : all) total += x.length();
+        if (total <= 300L * 1024 * 1024) return;
+        java.util.Arrays.sort(all, (a, b) -> Long.compare(a.lastModified(), b.lastModified()));
+        for (File x : all) { if (total <= 250L * 1024 * 1024) break; total -= x.length(); x.delete(); }
+    }
+
     private void startF1() {
         f1Dir = new File(getCacheDir(), "f1clips");
         deleteTree(f1Dir); // 지난번에 만든 소리는 지운다
@@ -705,14 +752,17 @@ public class NewsService extends Service {
         boolean en = isEnglish(s);
         int rate = new Prefs(this).rate(); // 듣는 중에 빠르기를 바꾸면 미리 만든 소리 대신 새 빠르기로 다시 만든다
         String key = rate + "|" + (en ? "en|" : "ko|") + s.text;
+        boolean keep = lessonStep(s); // 제품 공부·농업영어는 내용이 그대로라 한 번 만든 소리를 폰에 남겨 둔다: 다음엔 기다림 없이 (주인 요청 2026-10-21)
+        if (keep) { File kept = new File(keepDir(), Brief.audioId(BuildConfig.VERSION_NAME + "|" + key) + ".wav"); if (kept.length() > 44) return f1Jobs.computeIfAbsent(key, k -> java.util.concurrent.CompletableFuture.completedFuture(kept)); }
         return f1Jobs.computeIfAbsent(key, k -> f1Pool.submit(() -> {
             F1Engine e = F1Voice.engine(this);
             if (e == null || stopped) return null;
-            File out = new File(f1Dir, Brief.audioId(k) + ".wav");
-            if (out.exists()) return out;
+            File out = keep ? new File(keepDir(), Brief.audioId(BuildConfig.VERSION_NAME + "|" + k) + ".wav") : new File(f1Dir, Brief.audioId(k) + ".wav");
+            if (out.exists() && out.length() > 44) return out;
             long t = System.currentTimeMillis();
             float[] pcm = F1Voice.synth(this, e, en ? s.text : Pron.say(s.text), en ? "en" : "ko", F1Voice.speed(rate));
             F1Engine.writeWav(pcm, e.sampleRate, out);
+            if (keep) pruneKeep();
             float x = pcm.length / (float) e.sampleRate / Math.max(0.001f, (System.currentTimeMillis() - t) / 1000f);
             new Prefs(this).setF1Speed(x);
             Log.i(TAG, "F1 " + s.text.length() + "자 · 실시간의 " + String.format(Locale.ROOT, "%.1f", x) + "배");
@@ -739,7 +789,7 @@ public class NewsService extends Service {
         if (!job.isDone()) {
             long waited = System.currentTimeMillis() - since;
             if (boost >= 3f && waited > 300) setBoost(2f); // F1이 3배속을 못 따라간다: 저절로 2배속으로 (주인 요청 2026-10-18)
-            if (waited > F1_WAIT_MS) { Log.w(TAG, "F1이 늦어 이 차례는 폰 음성으로"); endWait(); return false; }
+            if (waited > F1_WAIT_MS) { Log.w(TAG, "F1이 늦어 이 차례는 폰 음성으로"); new Prefs(this).noteAudio("F1 늦음 → 폰 음성 " + s.id); endWait(); return false; }
             // 2.5초 넘게 걸리면 한 번 알려 준다: 기다리면 된다는 것을 (주인 요청 2026-10-17). 재생 차례 번호가 없는 말이라 순서는 그대로
             if (waited > 2500 && noticedFor != since) {
                 noticedFor = since;
@@ -806,7 +856,7 @@ public class NewsService extends Service {
             mp.setAudioAttributes(attrs);
             mp.setDataSource(f.getPath());
             mp.setOnCompletionListener(p -> done(g + ":"));
-            mp.setOnErrorListener((p, what, extra) -> { done(g + ":"); return true; });
+            mp.setOnErrorListener((p, what, extra) -> { new Prefs(this).noteAudio("재생 오류 " + what + "/" + extra); done(g + ":"); return true; });
             mp.prepare();
             if (boost != 1f) mp.setPlaybackParams(mp.getPlaybackParams().setSpeed(boost));
             mp.start();
@@ -1043,6 +1093,7 @@ public class NewsService extends Service {
 
     private void onFocus(int change) {
         focusBack = change == AudioManager.AUDIOFOCUS_GAIN;
+        if (!focusBack) main.removeCallbacks(settleResume); // 다시 끊겼다: 기다리던 이어 읽기를 미룬다
         new Prefs(this).noteAudio("소리 차례 " + focusName(change) + " · 모드 " + (audio == null ? -1 : audio.getMode()) + (inCar() ? " · 차" : "") + (micBusy() ? " · 마이크" : "") + (paused ? " · 멈춤중" : ""));
         if (change == AudioManager.AUDIOFOCUS_GAIN) {
             // 통화가 끝나면 이어 읽는 건 차(블루투스 오디오)에서만: 폰 스피커로 듣다 받은 통화 뒤에는 멈춘 채 기다린다
@@ -1050,7 +1101,7 @@ public class NewsService extends Service {
             boolean assistant = sawMic && !callSincePause && !callNow();
             if (Rules.resumeOnGain(paused, resumeOnGain, System.currentTimeMillis() - pausedAt, AUTO_RESUME_MS, inCar(), assistant, navPaused)) {
                 if (voiceMode()) { if (!assistWatch) watchAssistant(); sawMic = true; } // 음성 비서가 아직 소리 길(통신 모드)을 쥐고 있다: 놓으면 이어 읽는다
-                else { stopAssistantWatch(); navPaused = false; main.removeCallbacks(navResume); resume(); }
+                else { stopAssistantWatch(); main.removeCallbacks(settleResume); main.postDelayed(settleResume, settle(SETTLE_MS)); }
             } else if (paused) keepPaused(); // 손으로 멈췄거나 오래 멈춤: 이어 듣기를 누를 때까지 기다린다
         } else if (change == AudioManager.AUDIOFOCUS_LOSS && autoStart && retakes < 3 && System.currentTimeMillis() - startedAt < RETAKE_WINDOW_MS && !micBusy()) {
             // 차에 연결되자마자 애플 뮤직·삼성 뮤직 같은 앱이 저절로 재생을 시작함: 소리를 되찾고 자막 화면을 다시 맨 위로
@@ -1085,13 +1136,16 @@ public class NewsService extends Service {
                     AudioAttributes a = c.getAudioAttributes();
                     if (a != null && a.getUsage() == AudioAttributes.USAGE_ASSISTANCE_NAVIGATION_GUIDANCE) nav = true;
                 }
+                boolean was = navActive;
+                navActive = nav;
                 if (nav) {
                     main.removeCallbacks(navResume);
+                    main.removeCallbacks(settleResume);
                     if (!paused) { pause(true); navPaused = true; new Prefs(NewsService.this).noteAudio("내비 안내 → 멈춤"); }
-                } else if (navPaused) {
-                    new Prefs(NewsService.this).noteAudio("내비 안내 끝 → 1초 뒤 이어 읽기");
+                } else if (navPaused && was) { // 내비 소리가 막 끝났을 때만 (다른 앱 소리 변화마다 미루지 않는다)
+                    new Prefs(NewsService.this).noteAudio("내비 소리 끝 → " + settle(NAV_SETTLE_MS) / 1000f + "초 조용하면 이어 읽기");
                     main.removeCallbacks(navResume);
-                    main.postDelayed(navResume, 1000);
+                    main.postDelayed(navResume, settle(NAV_SETTLE_MS));
                 }
             }
         };
@@ -1105,6 +1159,9 @@ public class NewsService extends Service {
             if (!autoResume) keepPaused();
             return;
         }
+        new Prefs(this).noteAudio("멈춤 (" + (autoResume ? "저절로 이어 읽기" : "손으로·오래") + ") · 줄 " + current + (inFull() ? " · 전체 듣기" : ""));
+        main.removeCallbacks(settleResume);
+        if (autoResume) churn = System.currentTimeMillis() - autoResumedAt < 10_000 ? Math.min(churn + 1, 2) : 0;
         resumeOnGain = autoResume;
         pausedAt = System.currentTimeMillis();
         foldClock(false); // 진행바 시간이 멈춘 자리에 선다
@@ -1140,6 +1197,14 @@ public class NewsService extends Service {
             case AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK: return "잠깐 잃음(작게)";
             default: return String.valueOf(change);
         }
+    }
+
+    /** 지금 소리 출력 장치 종류 (기록용: 8 블루투스 A2DP, 7 블루투스 통화, 2 폰 스피커, 11·22 USB 등) */
+    private String outputs() {
+        if (audio == null) return "?";
+        StringBuilder b = new StringBuilder();
+        for (android.media.AudioDeviceInfo d : audio.getDevices(AudioManager.GET_DEVICES_OUTPUTS)) b.append(b.length() == 0 ? "" : ",").append(d.getType());
+        return b.toString();
     }
 
     /** 차에서 듣는 중인지: 블루투스로 나가거나, 안드로이드 오토가 켜져 있으면(폰이 차 모드) */
@@ -1245,7 +1310,11 @@ public class NewsService extends Service {
         stopAssistantWatch();
         // 제미나이(안드로이드 오토)가 소리 차례를 아직 쥐고 있으면 읽어도 소리가 안 나고 시간만 갔다 (2026-10-19 출근길):
         // 차례를 받을 때까지 멈춘 채 기다리고, 받으면(onFocus GAIN) 그때 이어 읽는다
+        // 차에서는 소리 차례를 '오래'로 새로 받는다: 오토가 차 소리를 이 앱에 다시 잇게. 처음엔 차 연결을 몰랐어도 지금 기준으로 (교차 검토)
+        // 차가 아니면 내려놓지 않는다: 밑에 멈춰 있던 음악 앱이 잠깐 소리를 가져가 버린다
+        if (audio != null && focus != null && inCar()) { audio.abandonAudioFocusRequest(focus); focus = focusRequest(AudioManager.AUDIOFOCUS_GAIN); }
         int got = audio == null || focus == null ? AudioManager.AUDIOFOCUS_REQUEST_GRANTED : audio.requestAudioFocus(focus);
+        if (got == AudioManager.AUDIOFOCUS_REQUEST_GRANTED) focusBack = true;
         if (got != AudioManager.AUDIOFOCUS_REQUEST_GRANTED) {
             Log.i(TAG, "소리 차례를 아직 못 받음(" + got + "): 받으면 이어 읽는다");
             new Prefs(this).noteAudio("이어 읽기 보류: 소리 차례 못 받음 " + got);
@@ -1254,11 +1323,25 @@ public class NewsService extends Service {
             startInForeground("잠깐 멈춤 · 음성 비서가 끝나면 이어 읽습니다");
             return;
         }
-        new Prefs(this).noteAudio("이어 읽기 · 모드 " + (audio == null ? -1 : audio.getMode()));
+        new Prefs(this).noteAudio("이어 읽기 · 모드 " + (audio == null ? -1 : audio.getMode()) + " · 출력 " + outputs() + (audio != null && audio.isMusicActive() ? " · 다른 소리 남" : ""));
         unpause();
+        if (hold != null) { hold.release(); hold = null; } // 새 소리로 다시 연다: 끊겼던 소리 길을 새로 잇는다
         holdButtons(true); // 블루투스를 먼저 열고 조금 뒤 읽는다: 첫머리가 먹히지 않게
         int at = Math.min(current, lines.size() - 1);
-        main.postDelayed(() -> { if (!stopped && !paused) jump(at); }, REWARM_MS);
+        List<Step> rest = inFull() && queue == paraQueue && pos > 0 ? new ArrayList<>(queue.subList(pos - 1, queue.size())) : null;
+        int shift = pos - 1, g = gen;
+        autoResumedAt = System.currentTimeMillis();
+        main.postDelayed(() -> {
+            if (stopped || paused || gen != g) return; // 그사이 다음·이전·문단 넘기기를 했다
+            if (rest != null && queue == paraQueue) { // 전체 듣기 중이었다: 끊긴 그 문장부터 다시 (헤드라인으로 돌아가지 않는다, 2026-10-21 출근길)
+                List<Integer> starts = new ArrayList<>();
+                starts.add(0); // 끊긴 문장을 이 문단의 처음으로 (아래로 쓸면 앞 문단으로 가게)
+                for (int s : paraStarts) if (s > shift) starts.add(s - shift);
+                paraStarts = starts;
+                paraQueue = rest;
+                play(rest);
+            } else jump(at);
+        }, REWARM_MS);
     }
 
     private void unpause() {
@@ -1344,12 +1427,13 @@ public class NewsService extends Service {
                 if (k != null && k.getAction() == android.view.KeyEvent.ACTION_DOWN) new Prefs(NewsService.this).noteButton(android.view.KeyEvent.keyCodeToString(k.getKeyCode()).replace("KEYCODE_MEDIA_", ""));
                 return super.onMediaButtonEvent(i);
             }
-            @Override public void onSkipToNext() { handle(ACTION_NEXT); }
-            @Override public void onSkipToPrevious() { handle(ACTION_PREV); }
-            @Override public void onFastForward() { full(); }
-            @Override public void onPause() { pause(false); }
-            @Override public void onPlay() { playButton(); }
-            @Override public void onStop() { finish(); }
+            @Override public void onSkipToNext() { note("차·오토 다음"); handle(ACTION_NEXT); }
+            @Override public void onSkipToPrevious() { note("차·오토 이전"); handle(ACTION_PREV); }
+            @Override public void onFastForward() { note("차·오토 빨리감기"); full(); }
+            @Override public void onPause() { note("차·오토 멈춤"); pause(false); }
+            @Override public void onPlay() { note("차·오토 재생"); playButton(); }
+            @Override public void onStop() { note("차·오토 정지"); finish(); }
+            private void note(String s) { new Prefs(NewsService.this).noteAudio(s); }
         }, main);
         setState(PlaybackState.STATE_PLAYING);
         showLine(0);

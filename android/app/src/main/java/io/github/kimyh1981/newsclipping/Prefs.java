@@ -16,8 +16,10 @@ final class Prefs {
     static final int DEFAULT_END = 8 * 60;
 
     private final SharedPreferences p;
+    private final Context c;
 
     Prefs(Context c) {
+        this.c = c.getApplicationContext();
         p = c.getSharedPreferences("newsclipping", Context.MODE_PRIVATE);
         Brief.lessonCode = lessonCode(); // 원고를 읽기 전에 늘 Prefs를 만들므로 여기서 넣어 둔다
     }
@@ -186,15 +188,9 @@ final class Prefs {
     /** 마지막으로 받은 차·이어폰 버튼과 시각 (앱 화면 맨 아래에 보인다) */
     String lastButton() { return p.getString("lastButton", ""); }
     /** 차에서 소리 차례·내비·음성 비서가 어떻게 오갔는지 최근 8줄 (2026-10-21 교차 검토: 기기에서만 알 수 있는 것을 기록으로 확인) */
-    void noteAudio(String event) {
-        String line = new SimpleDateFormat("M/d HH:mm:ss", Locale.KOREA).format(new Date()) + " " + event;
-        String old = p.getString("audioLog", "");
-        String all = old.isEmpty() ? line : line + "\n" + old;
-        String[] rows = all.split("\n");
-        p.edit().putString("audioLog", String.join("\n", java.util.Arrays.copyOf(rows, Math.min(8, rows.length)))).apply();
-    }
+    void noteAudio(String event) { EventLog.note(c, event); }
 
-    String audioLog() { return p.getString("audioLog", ""); }
+    String audioLog() { return String.join("\n", EventLog.recent(c, 8)); }
 
     void noteButton(String key) { p.edit().putString("lastButton", new SimpleDateFormat("M/d HH:mm", Locale.KOREA).format(new Date()) + " " + key).apply(); }
 
