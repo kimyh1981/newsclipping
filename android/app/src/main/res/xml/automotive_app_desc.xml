@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 안드로이드 오토에 미디어 앱으로 알린다 (NewsBrowserService) -->
+<automotiveApp>
+    <uses name="media" />
+</automotiveApp>

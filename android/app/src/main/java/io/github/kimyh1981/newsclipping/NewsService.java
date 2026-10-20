@@ -651,7 +651,7 @@ public class NewsService extends Service {
         if (stopped || paused || tts == null) return;
         if (pos >= queue.size()) { completed = true; finish(); return; }
         Step s = queue.get(pos++);
-        holdButtons(true); // 차례마다 다시 틀어 '가장 최근에 소리 낸 앱'이 되게
+        holdButtons(true); // 멈췄다 다시 읽을 때 다시 튼다. 트는 중이면 그대로 (끊었다 틀면 차가 소리 길을 닫아 첫마디를 먹었다, 2026-10-20)
         if (s.id.startsWith("L")) {
             int i = Integer.parseInt(s.id.substring(1, s.id.indexOf('.')));
             current = i;
@@ -1039,8 +1039,10 @@ public class NewsService extends Service {
             // 통화가 끝나면 이어 읽는 건 차(블루투스 오디오)에서만: 폰 스피커로 듣다 받은 통화 뒤에는 멈춘 채 기다린다
             // 음성 비서(마이크를 쓴 앱)가 잠깐 가져간 것이면 스피커로 듣고 있었어도 이어 읽는다
             boolean assistant = sawMic && !callSincePause && !callNow();
-            if (paused && resumeOnGain && System.currentTimeMillis() - pausedAt < AUTO_RESUME_MS && (bluetoothOut() || assistant)) { stopAssistantWatch(); resume(); }
-            else if (paused) keepPaused(); // 손으로 멈췄거나 오래 멈춤: 이어 듣기를 누를 때까지 기다린다
+            if (Rules.resumeOnGain(paused, resumeOnGain, System.currentTimeMillis() - pausedAt, AUTO_RESUME_MS, inCar(), assistant, navPaused)) {
+                if (voiceMode() || micBusy()) { if (!assistWatch) watchAssistant(); } // 음성 비서가 아직 소리 길을 쥐고 있다: 놓으면 이어 읽는다
+                else { stopAssistantWatch(); navPaused = false; main.removeCallbacks(navResume); resume(); }
+            } else if (paused) keepPaused(); // 손으로 멈췄거나 오래 멈춤: 이어 듣기를 누를 때까지 기다린다
         } else if (change == AudioManager.AUDIOFOCUS_LOSS && autoStart && retakes < 3 && System.currentTimeMillis() - startedAt < RETAKE_WINDOW_MS && !micBusy()) {
             // 차에 연결되자마자 애플 뮤직·삼성 뮤직 같은 앱이 저절로 재생을 시작함: 소리를 되찾고 자막 화면을 다시 맨 위로
             retakes++;
@@ -1120,6 +1122,18 @@ public class NewsService extends Service {
         return false;
     }
 
+    /** 차에서 듣는 중인지: 블루투스로 나가거나, 안드로이드 오토가 켜져 있으면(폰이 차 모드) */
+    private boolean inCar() {
+        if (bluetoothOut()) return true;
+        android.app.UiModeManager ui = getSystemService(android.app.UiModeManager.class);
+        return ui != null && ui.getCurrentModeType() == android.content.res.Configuration.UI_MODE_TYPE_CAR;
+    }
+
+    /** 음성 비서·인터넷 통화가 소리 길을 쥐고 있는지 (이때 읽으면 차에서 소리가 안 나고 시간만 간다) */
+    private boolean voiceMode() {
+        return audio != null && audio.getMode() == AudioManager.MODE_IN_COMMUNICATION;
+    }
+
     /** 마이크를 쓰는 앱(음성 비서·통화)이 있는지 */
     private boolean micBusy() {
         return audio != null && !audio.getActiveRecordingConfigurations().isEmpty();
@@ -1147,7 +1161,7 @@ public class NewsService extends Service {
 
     private void checkAssistant() {
         if (!assistWatch || stopped || !paused || audio == null) { stopAssistantWatch(); return; }
-        boolean mic = micBusy();
+        boolean mic = micBusy() || voiceMode(); // 제미나이가 마이크를 놓아도 소리 길(통신 모드)을 잠시 더 쥔다: 그동안 읽으면 소리가 안 난다
         sawMic |= mic;
         boolean call = callNow();
         callSincePause |= call;
@@ -1263,11 +1277,13 @@ public class NewsService extends Service {
     /**
      * 차 핸들의 다음·이전 버튼은 안드로이드가 '가장 최근에 소리를 내기 시작한 앱'에 보낸다. 폰 음성은 음성 엔진 앱이 소리를 내고,
      * 차에 연결되면 음악 앱이 먼저 재생을 시작하므로, 그대로 두면 버튼이 음악 앱으로 간다.
-     * 읽는 동안 이 앱이 소리 없는 소리를 함께 틀고 차례마다 다시 시작해 버튼을 이 앱이 받는다.
+     * 읽는 동안 이 앱이 소리 없는 소리를 끊지 않고 함께 틀어 버튼을 이 앱이 받고, 차의 소리 길도 열어 둔다.
+     * 안드로이드 오토에서는 NewsBrowserService(오토용 미디어 앱)로 버튼을 받는다.
      */
     private void holdButtons(boolean on) {
         try {
             if (!on) { if (hold != null) hold.pause(); return; }
+            if (hold != null && hold.getPlayState() == AudioTrack.PLAYSTATE_PLAYING) return; // 이미 트는 중: 끊지 않는다
             if (hold == null) {
                 int rate = 8000, frames = rate / 2;
                 hold = new AudioTrack.Builder().setAudioAttributes(attrs)
@@ -1276,8 +1292,6 @@ public class NewsService extends Service {
                         .setTransferMode(AudioTrack.MODE_STATIC).setBufferSizeInBytes(frames * 4).build();
                 hold.write(new short[frames * 2], 0, frames * 2);
                 hold.setLoopPoints(0, frames, -1);
-            } else {
-                hold.pause();
             }
             hold.play();
         } catch (RuntimeException e) {
@@ -1296,7 +1310,7 @@ public class NewsService extends Service {
 
     /** 차의 미디어 버튼(핸들 리모컨): 다음·이전 = 다음·이전 기사, 일시정지·재생 = 멈춤·이어 듣기, 빨리 감기 = 전체 듣기. 차 화면에는 지금 기사 제목이 뜬다 */
     private void startSession() {
-        session = new MediaSession(this, "newsclipping");
+        session = CarMedia.session(this);
         session.setCallback(new MediaSession.Callback() {
             // 차 버튼이 앱까지 오는지 앱 화면 맨 아래에 남긴다 (다음 버튼이 안 먹힐 때 원인 찾기)
             @Override public boolean onMediaButtonEvent(Intent i) {
@@ -1372,7 +1386,7 @@ public class NewsService extends Service {
         if (f1Pool != null) f1Pool.shutdownNow();
         if (hold != null) { hold.release(); hold = null; }
         if (tts != null) { tts.stop(); tts.shutdown(); tts = null; }
-        if (session != null) { session.setActive(false); session.release(); session = null; }
+        if (session != null) { CarMedia.idle(this); session = null; } // 세션은 오토와 이어져 있어 없애지 않고 '재생하면 시작'으로 돌려놓는다
         main.removeCallbacks(navResume);
         stopAssistantWatch();
         if (audio != null && playbackWatch != null) audio.unregisterAudioPlaybackCallback(playbackWatch);

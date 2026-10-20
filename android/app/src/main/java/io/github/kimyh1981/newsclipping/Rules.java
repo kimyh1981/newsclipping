@@ -150,6 +150,15 @@ public final class Rules {
     static final long ASSIST_MIC_MS = 15000;
 
     /**
+     * 소리 차례를 돌려받았을 때(포커스 GAIN) 저절로 이어 읽을지.
+     * 차에서(블루투스·안드로이드 오토) 듣던 중이거나, 음성 비서가 잠깐 가져갔거나, 내비 안내로 멈췄으면 이어 읽는다.
+     * 예전엔 '블루투스로 소리가 나가는지'만 봐서 안드로이드 오토(USB·무선)에서는 내비 안내 뒤 멈춘 채로 남았다 (2026-10-20 퇴근길)
+     */
+    static boolean resumeOnGain(boolean paused, boolean autoResume, long pausedForMs, long limitMs, boolean inCar, boolean assistant, boolean navPaused) {
+        return paused && autoResume && pausedForMs < limitMs && (inCar || assistant || navPaused);
+    }
+
+    /**
      * 멈춘 뒤 마이크를 쓰는 앱이 보였고(음성 비서), 이제 마이크도 다른 소리도 멎었으면 QUIET (두 번 이어지면 이어 읽는다).
      * 통화가 끼었거나, 오래 지났거나, 마이크를 쓰는 앱이 끝내 안 보이면 GIVE_UP
      */
