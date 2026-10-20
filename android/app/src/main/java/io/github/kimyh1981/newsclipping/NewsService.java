@@ -703,6 +703,31 @@ public class NewsService extends Service {
         tts.speak(en ? s.text : Pron.say(s.text), TextToSpeech.QUEUE_ADD, speakParams, gen + ":" + s.id); // 자막은 쓴 글, 소리는 들리는 대로
     }
 
+    /** 이 차례가 제품 공부·농업영어 줄인지 (줄 번호가 있는 차례만) */
+    private boolean lessonStep(Step s) {
+        if (!s.id.startsWith("L")) return false;
+        int i = Integer.parseInt(s.id.substring(1, s.id.indexOf('.')));
+        return i < lines.size() && lines.get(i).lesson > 0;
+    }
+
+    /** 제품 공부 소리를 남겨 두는 곳 (앱 데이터 안, 밖으로 나가지 않는다) */
+    private File keepDir() {
+        File d = new File(getFilesDir(), "f1lessons");
+        d.mkdirs();
+        return d;
+    }
+
+    /** 남겨 둔 제품 공부 소리가 300MB를 넘으면 오래된 것부터 지운다 */
+    private void pruneKeep() {
+        File[] all = keepDir().listFiles();
+        if (all == null) return;
+        long total = 0;
+        for (File x : all) total += x.length();
+        if (total <= 300L * 1024 * 1024) return;
+        java.util.Arrays.sort(all, (a, b) -> Long.compare(a.lastModified(), b.lastModified()));
+        for (File x : all) { if (total <= 250L * 1024 * 1024) break; total -= x.length(); x.delete(); }
+    }
+
     private void startF1() {
         f1Dir = new File(getCacheDir(), "f1clips");
         deleteTree(f1Dir); // 지난번에 만든 소리는 지운다
@@ -716,14 +741,17 @@ public class NewsService extends Service {
         boolean en = isEnglish(s);
         int rate = new Prefs(this).rate(); // 듣는 중에 빠르기를 바꾸면 미리 만든 소리 대신 새 빠르기로 다시 만든다
         String key = rate + "|" + (en ? "en|" : "ko|") + s.text;
+        boolean keep = lessonStep(s); // 제품 공부·농업영어는 내용이 그대로라 한 번 만든 소리를 폰에 남겨 둔다: 다음엔 기다림 없이 (주인 요청 2026-10-21)
+        if (keep) { File kept = new File(keepDir(), Brief.audioId(BuildConfig.VERSION_NAME + "|" + key) + ".wav"); if (kept.length() > 44) return f1Jobs.computeIfAbsent(key, k -> java.util.concurrent.CompletableFuture.completedFuture(kept)); }
         return f1Jobs.computeIfAbsent(key, k -> f1Pool.submit(() -> {
             F1Engine e = F1Voice.engine(this);
             if (e == null || stopped) return null;
-            File out = new File(f1Dir, Brief.audioId(k) + ".wav");
-            if (out.exists()) return out;
+            File out = keep ? new File(keepDir(), Brief.audioId(BuildConfig.VERSION_NAME + "|" + k) + ".wav") : new File(f1Dir, Brief.audioId(k) + ".wav");
+            if (out.exists() && out.length() > 44) return out;
             long t = System.currentTimeMillis();
             float[] pcm = F1Voice.synth(this, e, en ? s.text : Pron.say(s.text), en ? "en" : "ko", F1Voice.speed(rate));
             F1Engine.writeWav(pcm, e.sampleRate, out);
+            if (keep) pruneKeep();
             float x = pcm.length / (float) e.sampleRate / Math.max(0.001f, (System.currentTimeMillis() - t) / 1000f);
             new Prefs(this).setF1Speed(x);
             Log.i(TAG, "F1 " + s.text.length() + "자 · 실시간의 " + String.format(Locale.ROOT, "%.1f", x) + "배");
