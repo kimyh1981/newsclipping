@@ -612,7 +612,9 @@ public class NewsService extends Service {
             tts.setAudioAttributes(attrs);
             audio = getSystemService(AudioManager.class);
             // 통화·내비 안내·다른 앱 소리가 끼어들면 멈추고, 끝나면 멈춘 기사부터 이어 읽는다
-            focus = new AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT).setAudioAttributes(attrs)
+            // 차에서는 소리 차례를 '오래'로 받는다: 안드로이드 오토는 소리 차례를 오래 쥔 앱의 소리만 차로 보낸다.
+            // '잠깐'으로 받으면 내비·제미나이가 끝난 뒤 오토가 차 소리를 제 음악 앱에 돌려줘 읽어도 소리가 안 났다 (2026-10-21 교차 검토)
+            focus = new AudioFocusRequest.Builder(inCar() ? AudioManager.AUDIOFOCUS_GAIN : AudioManager.AUDIOFOCUS_GAIN_TRANSIENT).setAudioAttributes(attrs)
                     .setWillPauseWhenDucked(true)
                     .setAcceptsDelayedFocusGain(true)
                     .setOnAudioFocusChangeListener(this::onFocus, main).build();
@@ -1264,6 +1266,8 @@ public class NewsService extends Service {
         stopAssistantWatch();
         // 제미나이(안드로이드 오토)가 소리 차례를 아직 쥐고 있으면 읽어도 소리가 안 나고 시간만 갔다 (2026-10-19 출근길):
         // 차례를 받을 때까지 멈춘 채 기다리고, 받으면(onFocus GAIN) 그때 이어 읽는다
+        // 소리 차례를 내려놓았다 새로 받는다: 오토가 차 소리를 이 앱에 다시 연결하게 (같은 요청을 다시 하면 그대로라 오토가 모를 수 있다)
+        if (audio != null && focus != null) audio.abandonAudioFocusRequest(focus);
         int got = audio == null || focus == null ? AudioManager.AUDIOFOCUS_REQUEST_GRANTED : audio.requestAudioFocus(focus);
         if (got != AudioManager.AUDIOFOCUS_REQUEST_GRANTED) {
             Log.i(TAG, "소리 차례를 아직 못 받음(" + got + "): 받으면 이어 읽는다");
@@ -1275,6 +1279,7 @@ public class NewsService extends Service {
         }
         new Prefs(this).noteAudio("이어 읽기 · 모드 " + (audio == null ? -1 : audio.getMode()) + " · 출력 " + outputs() + (audio != null && audio.isMusicActive() ? " · 다른 소리 남" : ""));
         unpause();
+        if (hold != null) { hold.release(); hold = null; } // 새 소리로 다시 연다: 끊겼던 소리 길을 새로 잇는다
         holdButtons(true); // 블루투스를 먼저 열고 조금 뒤 읽는다: 첫머리가 먹히지 않게
         int at = Math.min(current, lines.size() - 1);
         List<Step> rest = inFull() && queue == paraQueue && pos > 0 ? new ArrayList<>(queue.subList(pos - 1, queue.size())) : null;
