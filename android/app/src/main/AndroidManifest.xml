@@ -74,5 +74,18 @@
             android:name=".NewsService"
             android:exported="false"
             android:foregroundServiceType="mediaPlayback" />
+
+        <!-- 안드로이드 오토의 미디어 앱 목록에 올라 핸들 버튼(다음·이전·재생)을 받는다 -->
+        <service
+            android:name=".NewsBrowserService"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.media.browse.MediaBrowserService" />
+            </intent-filter>
+        </service>
+
+        <meta-data
+            android:name="com.google.android.gms.car.application"
+            android:resource="@xml/automotive_app_desc" />
     </application>
 </manifest>

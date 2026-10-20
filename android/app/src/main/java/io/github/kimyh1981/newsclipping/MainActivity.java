@@ -539,7 +539,8 @@ public class MainActivity extends Activity {
         status(overlayVal, Settings.canDrawOverlays(this));
         String last = prefs.lastPlayed();
         String button = prefs.lastButton();
-        footer.setText("버전 " + BuildConfig.VERSION_NAME + (last.isEmpty() ? "" : " · 마지막 자동 재생 " + last) + (button.isEmpty() ? "" : "\n마지막 차 버튼 " + button));
+        footer.setText("버전 " + BuildConfig.VERSION_NAME + (last.isEmpty() ? "" : " · 마지막 자동 재생 " + last) + (button.isEmpty() ? "" : "\n마지막 차 버튼 " + button)
+                + (prefs.audioLog().isEmpty() ? "" : "\n\n최근 소리 기록 (새것이 위)\n" + prefs.audioLog()));
     }
 
     private void status(TextView v, boolean ok) {

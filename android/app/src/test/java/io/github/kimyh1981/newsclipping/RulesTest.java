@@ -140,4 +140,16 @@ public class RulesTest {
         assertTrue(rows * g[0] + (rows - 1) * 10 <= 400);
         assertArrayEquals(new int[] {0, 0}, Rules.logoGrid(0, 300, 300, 10, 90, 30));
     }
+
+    // 안드로이드 오토(USB·무선)는 블루투스 출력이 아니어도 차다: 내비 안내 뒤 멈춘 채 남았다 (2026-10-20 퇴근길)
+    @Test public void resumesAfterFocusReturnsInCar() {
+        long lim = 10 * 60_000L;
+        assertTrue(Rules.resumeOnGain(true, true, 5000, lim, true, false, false));   // 오토·블루투스에서 내비 안내 뒤
+        assertTrue(Rules.resumeOnGain(true, true, 5000, lim, false, false, true));   // 내비 소리를 보고 멈춘 것
+        assertTrue(Rules.resumeOnGain(true, true, 5000, lim, false, true, false));   // 폰 스피커에서도 음성 비서 뒤에는
+        assertFalse(Rules.resumeOnGain(true, true, 5000, lim, false, false, false)); // 폰 스피커로 듣다 통화 뒤에는 기다린다
+        assertFalse(Rules.resumeOnGain(true, false, 5000, lim, true, false, false)); // 손으로 멈춘 것
+        assertFalse(Rules.resumeOnGain(true, true, lim + 1, lim, true, false, false)); // 너무 오래 멈춤
+        assertFalse(Rules.resumeOnGain(false, true, 5000, lim, true, false, false)); // 읽는 중
+    }
 }

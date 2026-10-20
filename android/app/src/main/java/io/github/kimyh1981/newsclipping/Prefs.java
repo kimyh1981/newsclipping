@@ -185,6 +185,17 @@ final class Prefs {
 
     /** 마지막으로 받은 차·이어폰 버튼과 시각 (앱 화면 맨 아래에 보인다) */
     String lastButton() { return p.getString("lastButton", ""); }
+    /** 차에서 소리 차례·내비·음성 비서가 어떻게 오갔는지 최근 8줄 (2026-10-21 교차 검토: 기기에서만 알 수 있는 것을 기록으로 확인) */
+    void noteAudio(String event) {
+        String line = new SimpleDateFormat("M/d HH:mm:ss", Locale.KOREA).format(new Date()) + " " + event;
+        String old = p.getString("audioLog", "");
+        String all = old.isEmpty() ? line : line + "\n" + old;
+        String[] rows = all.split("\n");
+        p.edit().putString("audioLog", String.join("\n", java.util.Arrays.copyOf(rows, Math.min(8, rows.length)))).apply();
+    }
+
+    String audioLog() { return p.getString("audioLog", ""); }
+
     void noteButton(String key) { p.edit().putString("lastButton", new SimpleDateFormat("M/d HH:mm", Locale.KOREA).format(new Date()) + " " + key).apply(); }
 
     /** 오늘 멈추거나 끈 기사 제목: 다시 들으면 거기서 시작한다. 날이 바뀌었거나 끝까지 들었으면 "" */
