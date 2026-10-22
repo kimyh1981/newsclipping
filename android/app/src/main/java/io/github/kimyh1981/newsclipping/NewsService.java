@@ -410,6 +410,8 @@ public class NewsService extends Service {
         }
         startInForeground("오늘의 뉴스를 가져오는 중");
         running = this;
+        Crash.noteLastExit(this); // 지난번에 앱이 어떻게 꺼졌는지 기록에 남긴다 (갑자기 꺼짐 원인 찾기, 2026-10-23)
+        new Prefs(this).noteAudio("읽기 시작 " + BuildConfig.VERSION_NAME);
         stateChanged();
         boolean manual = intent != null && intent.getBooleanExtra(EXTRA_MANUAL, false);
         autoStart = !manual;
@@ -1483,6 +1485,7 @@ public class NewsService extends Service {
     }
 
     private void finish() {
+        if (!stopped) new Prefs(this).noteAudio("읽기 끝" + (completed ? " (끝까지)" : ""));
         // 멈춤·끄기로 끝나면 그 기사를 기억해 오늘 다시 들을 때 거기서 시작하고, 끝까지 다 들었으면 다음엔 처음부터
         if (tts != null && !stopped) {
             Brief.Item at = completed ? null : stoppedAt();

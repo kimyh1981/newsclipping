@@ -38,6 +38,7 @@ final class Crash {
         File f = new File(c.getApplicationContext().getFilesDir(), FILE);
         Thread.UncaughtExceptionHandler prev = Thread.getDefaultUncaughtExceptionHandler();
         Thread.setDefaultUncaughtExceptionHandler((t, e) -> {
+            EventLog.note(c, "앱 오류로 꺼짐: " + e); // 사건 기록에도 남긴다
             try (FileOutputStream o = new FileOutputStream(f)) {
                 StringWriter w = new StringWriter();
                 e.printStackTrace(new PrintWriter(w));
@@ -45,6 +46,24 @@ final class Crash {
             } catch (Exception ignored) { }
             if (prev != null) prev.uncaughtException(t, e);
         });
+    }
+
+    /** 지난번 앱이 꺼진 까닭(시스템 기록)을 사건 기록에 한 번 남긴다: 오류·메모리 부족·사용자 종료·시스템 종료 등 (안드로이드 11부터) */
+    static void noteLastExit(Context c) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return;
+        try {
+            android.content.SharedPreferences p = c.getSharedPreferences("newsclipping", Context.MODE_PRIVATE);
+            ActivityManager am = (ActivityManager) c.getSystemService(Context.ACTIVITY_SERVICE);
+            List<ApplicationExitInfo> list = am.getHistoricalProcessExitReasons(c.getPackageName(), 0, 1);
+            if (list.isEmpty()) return;
+            ApplicationExitInfo x = list.get(0);
+            if (x.getTimestamp() <= p.getLong("exitLogged", 0)) return;
+            p.edit().putLong("exitLogged", x.getTimestamp()).apply();
+            String why = reason(x.getReason());
+            EventLog.note(c, "지난번 종료(" + new SimpleDateFormat("HH:mm:ss", Locale.KOREA).format(new Date(x.getTimestamp())) + "): "
+                    + (why != null ? why : "보통 종료 " + x.getReason()) + (x.getDescription() != null ? " · " + x.getDescription() : "")
+                    + String.format(Locale.ROOT, " · 메모리 %,dMB", x.getPss() / 1024));
+        } catch (Exception ignored) { }
     }
 
     /**
