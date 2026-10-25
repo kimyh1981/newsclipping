@@ -130,7 +130,7 @@ final class Pron {
     }
     private static final Pattern[] LATIN_RES = new Pattern[LATIN_ALL.length];
     static {
-        for (int i = 0; i < LATIN_ALL.length; i++) LATIN_RES[i] = Pattern.compile("(?<![A-Za-z0-9À-ɏ])" + Pattern.quote(LATIN_ALL[i][0]) + "(?![A-Za-z0-9À-ɏ]|[.-]\\d)" + JOSA);
+        for (int i = 0; i < LATIN_ALL.length; i++) LATIN_RES[i] = Pattern.compile("(?<![A-Za-z0-9À-ɏ])" + Pattern.quote(LATIN_ALL[i][0]) + "(?![A-Za-z0-9À-ɏ]|[.-]\\d)" + Pron.JOSA); // JOSA는 아래에 있어 이름을 앞에 붙인다(앞 참조 오류)
     }
     private static final Pattern DOTTED = Pattern.compile("(?<![A-Za-z0-9])((?:[A-Z]\\.){2,}[A-Z]?)(?![A-Za-z])");
     /** 한글 바로 뒤 괄호 속 영문(엡스타인(Epstein), 이산화탄소(CO2))은 한 번 더 읽지 않는다 */
