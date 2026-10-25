@@ -76,6 +76,286 @@
   ];
   // 알파벳 이름은 우리 방송에서 실제로 읽는 소리로 (C 씨, R 알, Z 제트)
   const ABC = ['에이', '비', '씨', '디', '이', '에프', '지', '에이치', '아이', '제이', '케이', '엘', '엠', '엔', '오', '피', '큐', '알', '에스', '티', '유', '브이', '더블유', '엑스', '와이', '제트'];
+  // 최근 10년 신문·방송에 자주 나온 영문 약어·이름·단위 (2026-10-26 주인 요청: 약어·단위를 엉터리로 읽었다)
+  // <사전: data/pron-dict.json에서 tools/pron-dict.js가 만든다. 손으로 고치지 말 것>
+  const DICT_WORDS = [
+    ["Champions League", "챔피언스리그"], ["Dutch Fertilizer", "더치 퍼틸라이저"], ["Kyiv Independent", "키이우 인디펜던트"], ["GlobalFoundries", "글로벌파운드리스"], ["Massey Ferguson", "매시 퍼거슨"], ["KVK-Sepahijala", "케이브이케이 세파히잘라"],
+    ["Premier League", "프리미어리그"], ["Silicon Valley", "실리콘밸리"], ["AgriSolutions", "애그리솔루션스"], ["ArcelorMittal", "아르셀로미탈"], ["Bankman-Fried", "뱅크먼프리드"], ["Biostimulants", "바이오스티뮬런트"],
+    ["Breakingviews", "브레이킹뷰스"], ["DSM-Firmenich", "디에스엠 피르메니히"], ["Druckenmiller", "드러켄밀러"], ["Louis Dreyfus", "루이 드레퓌스"], ["Mercedes-Benz", "메르세데스벤츠"], ["MicroStrategy", "마이크로스트래티지"],
+    ["biostimulants", "바이오스티뮬런트"], ["von der Leyen", "폰데어라이엔"], ["Abhiyan-Rabi", "아비얀 라비"], ["Agribusiness", "애그리비즈니스"], ["Agricultural", "애그리컬처럴"], ["Biostimulant", "바이오스티뮬런트"],
+    ["Character.AI", "캐릭터에이아이"], ["GLOBALG.A.P.", "글로벌갭"], ["GlobalG.A.P.", "글로벌갭"], ["Golden Globe", "골든글로브"], ["Hugging Face", "허깅페이스"], ["Nippon Steel", "일본제철"],
+    ["Novo Nordisk", "노보노디스크"], ["PetroVietnam", "페트로베트남"], ["Saudi Arabia", "사우디아라비아"], ["Technologies", "테크놀로지스"], ["Tokio Marine", "도쿄해상"], ["Westinghouse", "웨스팅하우스"],
+    ["World Series", "월드시리즈"], ["biostimulant", "바이오스티뮬런트"], ["Agriculture", "애그리컬처"], ["Antigravity", "안티그래비티"], ["AstraZeneca", "아스트라제네카"], ["BABYMONSTER", "베이비몬스터"],
+    ["Belaruskali", "벨라루스칼리"], ["Beyond Meat", "비욘드미트"], ["Blue Origin", "블루오리진"], ["Bridgestone", "브리지스톤"], ["Bridgewater", "브리지워터"], ["Burevestnik", "부레베스트니크"],
+    ["Capital One", "캐피털원"], ["Caterpillar", "캐터필러"], ["China Daily", "차이나데일리"], ["Corporation", "코퍼레이션"], ["Electronics", "일렉트로닉스"], ["FERTILIZERS", "퍼틸라이저스"],
+    ["Fertilisers", "퍼틸라이저스"], ["Fertilizers", "퍼틸라이저스"], ["Golden Dome", "골든돔"], ["Groundswell", "그라운드스웰"], ["Ho Chi Minh", "호찌민"], ["Hyperliquid", "하이퍼리퀴드"],
+    ["Kim Jong Un", "김정은"], ["Kim Jong-un", "김정은"], ["Kim Yo Jong", "김여정"], ["Kim Yo-jong", "김여정"], ["Kraft Heinz", "크래프트 하인즈"], ["LE SSERAFIM", "르세라핌"],
+    ["Lamborghini", "람보르기니"], ["Netherlands", "네덜란드"], ["New Holland", "뉴홀랜드"], ["Paetongtarn", "패통탄"], ["Paralympics", "패럴림픽"], ["Philippines", "필리핀"],
+    ["PlayStation", "플레이스테이션"], ["Real Madrid", "레알 마드리드"], ["Super Micro", "슈퍼마이크로"], ["Trichoderma", "트리코더마"], ["Wall Street", "월스트리트"], ["White House", "백악관"],
+    ["Xiaohongshu", "샤오훙수"], ["Al Jazeera", "알자지라"], ["AliExpress", "알리익스프레스"], ["Bangladesh", "방글라데시"], ["Blackstone", "블랙스톤"], ["Bundesliga", "분데스리가"],
+    ["California", "캘리포니아"], ["CloudFlare", "클라우드플레어"], ["Cloudflare", "클라우드플레어"], ["Coromandel", "코로만델"], ["Cybertruck", "사이버트럭"], ["Databricks", "데이터브릭스"],
+    ["ElevenLabs", "일레븐랩스"], ["Elevenlabs", "일레븐랩스"], ["Enza Zaden", "엔자 자덴"], ["ExxonMobil", "엑손모빌"], ["Fertiglobe", "퍼티글로브"], ["Fertilizer", "퍼틸라이저"],
+    ["Greenpeace", "그린피스"], ["HyperCLOVA", "하이퍼클로바"], ["Ivy League", "아이비리그"], ["John Deere", "존디어"], ["Mastercard", "마스터카드"], ["McDonald's", "맥도날드"],
+    ["Midjourney", "미드저니"], ["New Mexico", "뉴멕시코"], ["NotebookLM", "노트북엘엠"], ["Perplexity", "퍼플렉시티"], ["Pezeshkian", "페제시키안"], ["Phosphates", "포스페이츠"],
+    ["Prudential", "푸르덴셜"], ["Rebellions", "리벨리온"], ["Rijk Zwaan", "레이크 즈반"], ["Rocket Lab", "로켓랩"], ["Salesforce", "세일즈포스"], ["ServiceNow", "서비스나우"],
+    ["SharkNinja", "샤크닌자"], ["Skullcandy", "스컬캔디"], ["Smithfield", "스미스필드"], ["Snapdragon", "스냅드래곤"], ["Squid Game", "오징어 게임"], ["Stablecoin", "스테이블코인"],
+    ["Starshield", "스타실드"], ["Stellantis", "스텔란티스"], ["Stray Kids", "스트레이 키즈"], ["Super Bowl", "슈퍼볼"], ["Supermicro", "슈퍼마이크로"], ["TechCrunch", "테크크런치"],
+    ["TerraPower", "테라파워"], ["Volkswagen", "폭스바겐"], ["Washington", "워싱턴"], ["Xi Jinping", "시진핑"], ["Zuckerberg", "저커버그"], ["stablecoin", "스테이블코인"],
+    ["Abenomics", "아베노믹스"], ["Accenture", "액센츄어"], ["Ajinomoto", "아지노모토"], ["AlphaFold", "알파폴드"], ["Anthropic", "앤트로픽"], ["Argentina", "아르헨티나"],
+    ["Australia", "호주"], ["Avalanche", "아발란체"], ["BLACKPINK", "블랙핑크"], ["Barcelona", "바르셀로나"], ["Berkshire", "버크셔"], ["Billboard", "빌보드"],
+    ["BlackRock", "블랙록"], ["Blackpink", "블랙핑크"], ["Blackrock", "블랙록"], ["Blackwell", "블랙웰"], ["Bloomberg", "블룸버그"], ["Bluetooth", "블루투스"],
+    ["ByteDance", "바이트댄스"], ["Cambridge", "케임브리지"], ["Cavendish", "캐번디시"], ["Celltrion", "셀트리온"], ["Chainlink", "체인링크"], ["Changpeng", "창펑"],
+    ["Citigroup", "씨티그룹"], ["Coca-Cola", "코카콜라"], ["CoreWeave", "코어위브"], ["Economist", "이코노미스트"], ["Eurogroup", "유로그룹"], ["Fairtrade", "페어트레이드"],
+    ["FuriosaAI", "퓨리오사에이아이"], ["GLOBALGAP", "글로벌갭"], ["Gelsinger", "겔싱어"], ["Georgieva", "게오르기에바"], ["GlobalGAP", "글로벌갭"], ["Greenland", "그린란드"],
+    ["Hang Seng", "항셍"], ["Hezbollah", "헤즈볼라"], ["Hong Kong", "홍콩"], ["INDOPACOM", "인도페이콤"], ["Indonesia", "인도네시아"], ["Instacart", "인스타카트"],
+    ["Instagram", "인스타그램"], ["Iron Dome", "아이언돔"], ["Jerusalem", "예루살렘"], ["K-content", "케이콘텐츠"], ["K-culture", "케이컬처"], ["KOSDAQ150", "코스닥백오십"],
+    ["Kasetsart", "까셋삿"], ["Kellanova", "켈라노바"], ["Limagrain", "리마그레인"], ["Liverpool", "리버풀"], ["Lululemon", "룰루레몬"], ["Masayoshi", "마사요시"],
+    ["Microsoft", "마이크로소프트"], ["NASDAQ100", "나스닥백"], ["NIKKEI225", "닛케이이백이십오"], ["Nasdaq100", "나스닥백"], ["Netanyahu", "네타냐후"], ["Neuralink", "뉴럴링크"],
+    ["New Delhi", "뉴델리"], ["New Glenn", "뉴글렌"], ["New START", "뉴스타트"], ["Nikkei225", "닛케이이백이십오"], ["Novonesis", "노보네시스"], ["Novozymes", "노보자임스"],
+    ["Obamacare", "오바마케어"], ["Panasonic", "파나소닉"], ["Paramount", "파라마운트"], ["Pertamina", "페르타미나"], ["Pinduoduo", "핀둬둬"], ["Pinterest", "핀터레스트"],
+    ["Pivot Bio", "피벗바이오"], ["Princeton", "프린스턴"], ["Pyongyang", "평양"], ["Ramaphosa", "라마포사"], ["Ramaswamy", "라마스와미"], ["Robinhood", "로빈후드"],
+    ["Roscosmos", "로스코스모스"], ["SEVENTEEN", "세븐틴"], ["Sheinbaum", "셰인바움"], ["Singapore", "싱가포르"], ["Snowflake", "스노플레이크"], ["Starbucks", "스타벅스"],
+    ["Sutskever", "수츠케버"], ["Synaptics", "시냅틱스"], ["Tottenham", "토트넘"], ["Venezuela", "베네수엘라"], ["VnExpress", "브이엔익스프레스"], ["Wikipedia", "위키피디아"],
+    ["Wimbledon", "윔블던"], ["Worldcoin", "월드코인"], ["Zelenskyy", "젤렌스키"], ["Abhiyaan", "아비얀"], ["Afrikelp", "아프리켈프"], ["AgriFood", "애그리푸드"],
+    ["AgriTech", "애그리테크"], ["Agritech", "애그리테크"], ["Agrotech", "애그로테크"], ["Airlines", "에어라인스"], ["Al-Qaeda", "알카에다"], ["Albanese", "앨버니지"],
+    ["Bacillus", "바실러스"], ["Barclays", "바클레이스"], ["Barron's", "배런스"], ["Bessemer", "베세머"], ["BioPrime", "바이오프라임"], ["Bioworks", "바이오웍스"],
+    ["Broadcom", "브로드컴"], ["Brussels", "브뤼셀"], ["Cambodia", "캄보디아"], ["Cerebras", "세레브라스"], ["Coinbase", "코인베이스"], ["Colorado", "콜로라도"],
+    ["Columbia", "컬럼비아"], ["Covid-19", "코비드 일구"], ["DeSantis", "디샌티스"], ["DeepMind", "딥마인드"], ["DeepSeek", "딥시크"], ["Deepmind", "딥마인드"],
+    ["Deepseek", "딥시크"], ["Deloitte", "딜로이트"], ["Deutsche", "도이체"], ["Dogecoin", "도지코인"], ["DoorDash", "도어대시"], ["Ericsson", "에릭슨"],
+    ["Ethereum", "이더리움"], ["EuroChem", "유로켐"], ["Euronext", "유로넥스트"], ["Eurostat", "유로스타트"], ["Eurozone", "유로존"], ["Facebook", "페이스북"],
+    ["Fidelity", "피델리티"], ["Fonterra", "폰테라"], ["FoodTech", "푸드테크"], ["Foodtech", "푸드테크"], ["Glencore", "글렌코어"], ["Goolsbee", "굴스비"],
+    ["Gopinath", "고피나스"], ["Guardian", "가디언"], ["Guterres", "구테흐스"], ["Hassabis", "허사비스"], ["Hathaway", "해서웨이"], ["Holdings", "홀딩스"],
+    ["Holstein", "홀스타인"], ["IBOVESPA", "보베스파"], ["ICAR-KVK", "아이씨에이알 케이브이케이"], ["INTERPOL", "인터폴"], ["Interpol", "인터폴"], ["JPMorgan", "제이피모건"],
+    ["Jen-Hsun", "젠슨"], ["K-beauty", "케이뷰티"], ["KOSPI200", "코스피이백"], ["Kashkari", "카시카리"], ["Keytruda", "키트루다"], ["Khamenei", "하메네이"],
+    ["Kiyosaki", "기요사키"], ["Kuaishou", "콰이쇼우"], ["Lactalis", "락탈리스"], ["Le Monde", "르몽드"], ["Li Qiang", "리창"], ["LinkedIn", "링크드인"],
+    ["Litecoin", "라이트코인"], ["Lockheed", "록히드"], ["MERCOSUR", "메르코수르"], ["Mahindra", "마힌드라"], ["Mainichi", "마이니치"], ["Malaysia", "말레이시아"],
+    ["McDonald", "맥도날드"], ["McKinsey", "맥킨지"], ["Medicaid", "메디케이드"], ["Medicare", "메디케어"], ["Medvedev", "메드베데프"], ["Mercedes", "메르세데스"],
+    ["Mercosur", "메르코수르"], ["Michelin", "미쉐린"], ["Mondelez", "몬델리즈"], ["Monsanto", "몬산토"], ["Moonshot", "문샷"], ["Mounjaro", "마운자로"],
+    ["Nakamoto", "나카모토"], ["Neocloud", "네오클라우드"], ["Net-Zero", "넷제로"], ["New York", "뉴욕"], ["NewJeans", "뉴진스"], ["Newsweek", "뉴스위크"],
+    ["Nintendo", "닌텐도"], ["Northrop", "노스롭"], ["Novartis", "노바티스"], ["Olympics", "올림픽"], ["Oreshnik", "오레시니크"], ["PM-KISAN", "피엠키산"],
+    ["PM-Kisan", "피엠키산"], ["Pakistan", "파키스탄"], ["Palantir", "팔란티어"], ["Paradeep", "파라딥"], ["Paxlovid", "팍스로비드"], ["Pentagon", "펜타곤"],
+    ["Pershing", "퍼싱"], ["Petronas", "페트로나스"], ["PhosAgro", "포스아그로"], ["Polestar", "폴스타"], ["Politico", "폴리티코"], ["Polkadot", "폴카닷"],
+    ["Qualcomm", "퀄컴"], ["Raytheon", "레이시온"], ["Reliance", "릴라이언스"], ["Robotaxi", "로보택시"], ["Roullier", "룰리에"], ["SKUAST-K", "스쿠아스트 케이"],
+    ["SYNGENTA", "신젠타"], ["Sarandos", "서랜도스"], ["Scotland", "스코틀랜드"], ["Seedance", "시댄스"], ["Shandong", "산둥"], ["Shanghai", "상하이"],
+    ["Shenzhou", "선저우"], ["Snapchat", "스냅챗"], ["SoftBank", "소프트뱅크"], ["Softbank", "소프트뱅크"], ["Solidigm", "솔리다임"], ["Stanford", "스탠퍼드"],
+    ["Starlink", "스타링크"], ["Starship", "스타십"], ["Suleyman", "술레이만"], ["Syngenta", "신젠타"], ["Takaichi", "다카이치"], ["Telegram", "텔레그램"],
+    ["Thailand", "태국"], ["Tiangong", "톈궁"], ["Tomahawk", "토마호크"], ["Tuoi Tre", "뚜오이째"], ["Unilever", "유니레버"], ["Uralkali", "우랄칼리"],
+    ["VN-Index", "브이엔지수"], ["Vanguard", "뱅가드"], ["Ventures", "벤처스"], ["Viet Nam", "베트남"], ["WhatsApp", "왓츠앱"], ["Zelensky", "젤렌스키"],
+    ["Zepbound", "젭바운드"], ["net-zero", "넷제로"], ["AFRICOM", "아프리콤"], ["APR1400", "에이피알천사백"], ["ARIRANG", "아리랑"], ["Abhiyan", "아비얀"],
+    ["Acadian", "아카디안"], ["AirPods", "에어팟"], ["Alibaba", "알리바바"], ["Allianz", "알리안츠"], ["AlphaGo", "알파고"], ["America", "아메리카"],
+    ["Android", "안드로이드"], ["Applied", "어플라이드"], ["Arabica", "아라비카"], ["Arnault", "아르노"], ["Arsenal", "아스널"], ["Artemis", "아르테미스"],
+    ["Bangkok", "방콕"], ["Beijing", "베이징"], ["Benioff", "베니오프"], ["Bessent", "베선트"], ["Binance", "바이낸스"], ["Biobest", "바이오베스트"],
+    ["Biochar", "바이오차"], ["Bitcoin", "비트코인"], ["Bithumb", "빗썸"], ["Bovespa", "보베스파"], ["Britain", "영국"], ["Buffett", "버핏"],
+    ["CARICOM", "카리콤"], ["CENTCOM", "센트콤"], ["Capital", "캐피털"], ["Cardano", "카르다노"], ["Cargill", "카길"], ["Carlyle", "칼라일"],
+    ["Cartier", "까르띠에"], ["Case IH", "케이스 아이에이치"], ["Chambal", "참발"], ["Chelsea", "첼시"], ["Chevron", "셰브론"], ["Chouhan", "차우한"],
+    ["Citadel", "시타델"], ["Coinone", "코인원"], ["Comcast", "컴캐스트"], ["Copilot", "코파일럿"], ["Corteva", "코르테바"], ["Coupang", "쿠팡"],
+    ["Daimler", "다임러"], ["Deckers", "데커스"], ["Discord", "디스코드"], ["Disney+", "디즈니플러스"], ["Dodgers", "다저스"], ["Donbass", "돈바스"],
+    ["Dropbox", "드롭박스"], ["ENHYPEN", "엔하이픈"], ["EURATOM", "유라톰"], ["EUROPOL", "유로폴"], ["El Nino", "엘니뇨"], ["El Niño", "엘니뇨"],
+    ["Ellison", "엘리슨"], ["Embraer", "엠브라에르"], ["Embrapa", "엠브라파"], ["England", "잉글랜드"], ["Epstein", "엡스타인"], ["Erdogan", "에르도안"],
+    ["Erdoğan", "에르도안"], ["Europol", "유로폴"], ["Ferrari", "페라리"], ["Fortune", "포천"], ["Foxconn", "폭스콘"], ["Freddie", "프레디"],
+    ["Frontex", "프론텍스"], ["Furiosa", "퓨리오사"], ["GLONASS", "글로나스"], ["Gabbard", "개버드"], ["Gartner", "가트너"], ["Gazprom", "가스프롬"],
+    ["General", "제너럴"], ["Genesis", "제네시스"], ["Germany", "독일"], ["Goldman", "골드만"], ["Grammys", "그래미"], ["Grumman", "그러먼"],
+    ["Guizhou", "구이저우"], ["Hankook", "한국"], ["Harvard", "하버드"], ["Haryana", "하리아나"], ["Hassett", "해싯"], ["Hegseth", "헤그세스"],
+    ["Hershey", "허쉬"], ["Hitachi", "히타치"], ["Houthis", "후티"], ["Hugging", "허깅"], ["Hwasong", "화성"], ["Hyundai", "현대"],
+    ["ICRISAT", "이크리샛"], ["Iberico", "이베리코"], ["Infosys", "인포시스"], ["Invesco", "인베스코"], ["Jakarta", "자카르타"], ["Javelin", "재블린"],
+    ["K-drama", "케이드라마"], ["KATSEYE", "캣츠아이"], ["Kadyrov", "카디로프"], ["Kellogg", "켈로그"], ["Kennedy", "케네디"], ["Kinzhal", "킨잘"],
+    ["Kishida", "기시다"], ["Komatsu", "고마쓰"], ["Koppert", "코퍼트"], ["Kremlin", "크렘린"], ["Krugman", "크루그먼"], ["LPDDR5X", "엘피디디알파이브엑스"],
+    ["La Nina", "라니냐"], ["La Niña", "라니냐"], ["Lagarde", "라가르드"], ["Leavitt", "레빗"], ["Leqembi", "레켐비"], ["Lutnick", "러트닉"],
+    ["MANPADS", "맨패즈"], ["Ma'aden", "마덴"], ["MacBook", "맥북"], ["Machado", "마차도"], ["Mamdani", "맘다니"], ["Marvell", "마벨"],
+    ["Masters", "마스터스"], ["Meituan", "메이퇀"], ["MetLife", "메트라이프"], ["MiniMax", "미니맥스"], ["Mistral", "미스트랄"], ["Moderna", "모더나"],
+    ["Moody's", "무디스"], ["Mustafa", "무스타파"], ["Myanmar", "미얀마"], ["Nadella", "나델라"], ["Navalny", "나발니"], ["Navarro", "나바로"],
+    ["NetZero", "넷제로"], ["Netflix", "넷플릭스"], ["Nigeria", "나이지리아"], ["Non-GMO", "논 지엠오"], ["Nordisk", "노디스크"], ["NuScale", "뉴스케일"],
+    ["Nutrien", "뉴트리엔"], ["Omicron", "오미크론"], ["Optimus", "옵티머스"], ["Ozempic", "오젬픽"], ["Patriot", "패트리엇"], ["PepsiCo", "펩시코"],
+    ["Philips", "필립스"], ["Polygon", "폴리곤"], ["Pony.ai", "포니에이아이"], ["Porsche", "포르쉐"], ["Prabowo", "프라보워"], ["Rakuten", "라쿠텐"],
+    ["Rapidus", "라피더스"], ["Renault", "르노"], ["Reuters", "로이터"], ["Revolut", "레볼루트"], ["Robusta", "로부스타"], ["Ronaldo", "호날두"],
+    ["Rosatom", "로사톰"], ["Rosneft", "로스네프트"], ["Roubini", "루비니"], ["Roundup", "라운드업"], ["Samsung", "삼성"], ["SanDisk", "샌디스크"],
+    ["Sandisk", "샌디스크"], ["Sankalp", "산칼프"], ["Schmidt", "슈미트"], ["Schumer", "슈머"], ["Semafor", "세마포"], ["Sephora", "세포라"],
+    ["Sequoia", "세쿼이아"], ["Serie A", "세리에 아"], ["Shivraj", "시브라지"], ["Shopify", "쇼피파이"], ["Siemens", "지멘스"], ["Spotify", "스포티파이"],
+    ["Sputnik", "스푸트니크"], ["Starmer", "스타머"], ["Summers", "서머스"], ["Taliban", "탈레반"], ["Tamiflu", "타미플루"], ["Tencent", "텐센트"],
+    ["ThaiGAP", "타이갭"], ["Tiffany", "티파니"], ["Toshiba", "도시바"], ["Trudeau", "트뤼도"], ["Türkiye", "튀르키예"], ["US Open", "유에스오픈"],
+    ["Ukraine", "우크라이나"], ["Unitree", "유니트리"], ["Upstage", "업스테이지"], ["VNINDEX", "브이엔지수"], ["Valagro", "발라그로"], ["Variety", "버라이어티"],
+    ["VietGAP", "비엣갭"], ["Vietnam", "베트남"], ["VinFast", "빈패스트"], ["Viterra", "비테라"], ["Vuitton", "비통"], ["Walmart", "월마트"],
+    ["Wang Yi", "왕이"], ["Windows", "윈도"], ["Witkoff", "위트코프"], ["Workday", "워크데이"], ["Wozniak", "워즈니악"], ["Yankees", "양키스"],
+    ["Yomiuri", "요미우리"], ["YouTube", "유튜브"], ["Youtube", "유튜브"], ["arabica", "아라비카"], ["biochar", "바이오차"], ["bitcoin", "비트코인"],
+    ["iShares", "아이셰어즈"], ["non-GMO", "논 지엠오"], ["robusta", "로부스타"], ["ATACMS", "에이태큼스"], ["Abbott", "애보트"], ["Ackman", "애크먼"],
+    ["Adidas", "아디다스"], ["Africa", "아프리카"], ["AgTech", "애그테크"], ["AgriSA", "애그리에스에이"], ["Agtech", "애그테크"], ["Airbnb", "에어비앤비"],
+    ["Airbus", "에어버스"], ["Altman", "올트먼"], ["Amazon", "아마존"], ["Amodei", "아모데이"], ["Anutin", "아누틴"], ["Apollo", "아폴로"],
+    ["Aramco", "아람코"], ["BRANDT", "브랜트"], ["Bayern", "바이에른"], ["Berlin", "베를린"], ["Boeing", "보잉"], ["Bostic", "보스틱"],
+    ["Bowman", "보먼"], ["Brazil", "브라질"], ["Brexit", "브렉시트"], ["C.Vale", "세발레"], ["CIMMYT", "심밋"], ["CRISPR", "크리스퍼"],
+    ["Caixin", "차이신"], ["Canada", "캐나다"], ["Cannes", "칸"], ["Carney", "카니"], ["Cathie", "캐시"], ["Chanel", "샤넬"],
+    ["Circle", "서클"], ["Claude", "클로드"], ["Costco", "코스트코"], ["Cramer", "크레이머"], ["Crimea", "크림반도"], ["Cursor", "커서"],
+    ["D-Wave", "디웨이브"], ["DALL-E", "달리"], ["DEFCON", "데프콘"], ["Danone", "다논"], ["Darfur", "다르푸르"], ["Disney", "디즈니"],
+    ["Donald", "도널드"], ["Donbas", "돈바스"], ["Doosan", "두산"], ["Dorsey", "도시"], ["DuPont", "듀폰"], ["EBITDA", "에비타"],
+    ["ECOWAS", "에코와스"], ["EXAONE", "엑사원"], ["Eagles", "이글스"], ["Europe", "유럽"], ["Evonik", "에보닉"], ["Exaone", "엑사원"],
+    ["Exynos", "엑시노스"], ["Falcon", "팰컨"], ["Fannie", "패니"], ["Farage", "패라지"], ["Forbes", "포브스"], ["France", "프랑스"],
+    ["Fulvic", "풀빅"], ["GPT-4o", "지피티포오"], ["GSOMIA", "지소미아"], ["Galaxy", "갤럭시"], ["Gallup", "갤럽"], ["Gemini", "제미나이"],
+    ["Geneva", "제네바"], ["Giants", "자이언츠"], ["Gilead", "길리어드"], ["GitHub", "깃허브"], ["Google", "구글"], ["Grammy", "그래미"],
+    ["Grossi", "그로시"], ["HANARO", "하나로"], ["HIMARS", "하이마스"], ["Hanwha", "한화"], ["Hanwoo", "한우"], ["Harris", "해리스"],
+    ["Hermes", "에르메스"], ["Hermès", "에르메스"], ["Hinton", "힌턴"], ["Hopper", "호퍼"], ["Houthi", "후티"], ["Huawei", "화웨이"],
+    ["Hubble", "허블"], ["Ishiba", "이시바"], ["Israel", "이스라엘"], ["Jaguar", "재규어"], ["Jensen", "젠슨"], ["Jerome", "제롬"],
+    ["K-FOOD", "케이푸드"], ["K-Food", "케이푸드"], ["K-food", "케이푸드"], ["KRX300", "케이알엑스삼백"], ["KUBOTA", "구보타"], ["Kanana", "카나나"],
+    ["Kelpak", "켈팍"], ["Kharif", "카리프"], ["Kioxia", "키옥시아"], ["Klarna", "클라르나"], ["Korbit", "코빗"], ["Kraken", "크라켄"],
+    ["Krishi", "크리시"], ["Kubota", "구보타"], ["Kugler", "쿠글러"], ["Kuiper", "카이퍼"], ["Kuroda", "구로다"], ["LGBTQ+", "엘지비티큐플러스"],
+    ["LPDDR5", "엘피디디알파이브"], ["LPDDR6", "엘피디디알식스"], ["LaLiga", "라리가"], ["Labubu", "라부부"], ["Lavrov", "라브로프"], ["Le Pen", "르펜"],
+    ["LeBron", "르브론"], ["Lenovo", "레노버"], ["London", "런던"], ["Luckin", "루이싱"], ["Maaden", "마덴"], ["Macron", "마크롱"],
+    ["Maduro", "마두로"], ["Manila", "마닐라"], ["Marcos", "마르코스"], ["Martin", "마틴"], ["Mekong", "메콩"], ["Meloni", "멜로니"],
+    ["Mexico", "멕시코"], ["MiG-29", "미그이십구"], ["Micron", "마이크론"], ["Mizuho", "미즈호"], ["Morgan", "모건"], ["Mosaic", "모자이크"],
+    ["Moscow", "모스크바"], ["MotoGP", "모토지피"], ["Motors", "모터스"], ["Moutai", "마오타이"], ["Mumbai", "뭄바이"], ["Murati", "무라티"],
+    ["NASCAR", "나스카"], ["NIKKEI", "닛케이"], ["Napoli", "나폴리"], ["Nestle", "네슬레"], ["Nestlé", "네슬레"], ["Newsom", "뉴섬"],
+    ["Nikkei", "닛케이"], ["Nippon", "닛폰"], ["Nissan", "닛산"], ["Nomura", "노무라"], ["Nscale", "엔스케일"], ["Nufarm", "누팜"],
+    ["Nvidia", "엔비디아"], ["Odisha", "오디샤"], ["Ohtani", "오타니"], ["OneWeb", "원웹"], ["Oracle", "오라클"], ["Oscars", "오스카"],
+    ["Oxford", "옥스퍼드"], ["Padres", "파드리스"], ["PayPal", "페이팔"], ["PayPay", "페이페이"], ["Pelosi", "펠로시"], ["Peskov", "페스코프"],
+    ["Pfizer", "화이자"], ["Pichai", "피차이"], ["Powell", "파월"], ["Punjab", "펀자브"], ["RIMPAC", "림팩"], ["Reddit", "레딧"],
+    ["Ripple", "리플"], ["Rivian", "리비안"], ["Russia", "러시아"], ["S&P500", "에스앤피오백"], ["SENSEX", "센섹스"], ["SKUAST", "스쿠아스트"],
+    ["Saigon", "사이공"], ["Sakata", "사카타"], ["Sanofi", "사노피"], ["Sarmat", "사르마트"], ["Saylor", "세일러"], ["Scholz", "숄츠"],
+    ["Schwab", "슈왑"], ["Sensex", "센섹스"], ["Shahed", "샤헤드"], ["Sinwar", "신와르"], ["Solana", "솔라나"], ["Sonnet", "소네트"],
+    ["SpaceX", "스페이스엑스"], ["Stripe", "스트라이프"], ["Subaru", "스바루"], ["Sundar", "순다르"], ["Suzuki", "스즈키"], ["Taipei", "타이베이"],
+    ["Taiwan", "대만"], ["Target", "타깃"], ["Taurus", "타우러스"], ["Tedros", "테드로스"], ["Tehran", "테헤란"], ["Tether", "테더"],
+    ["TikTok", "틱톡"], ["Tiktok", "틱톡"], ["Tinubu", "티누부"], ["To Lam", "또 럼"], ["Toyota", "도요타"], ["Turkey", "튀르키예"],
+    ["Tô Lâm", "또 럼"], ["UNAIDS", "유엔에이즈"], ["UNFCCC", "유엔에프씨씨씨"], ["UNIFIL", "유니필"], ["Uniqlo", "유니클로"], ["United", "유나이티드"],
+    ["V-NAND", "브이낸드"], ["Viksit", "빅싯"], ["Wagner", "바그너"], ["Waller", "월러"], ["Warner", "워너"], ["Warren", "워런"],
+    ["Wegovy", "위고비"], ["Wilmar", "윌마"], ["Xiaomi", "샤오미"], ["Xinhua", "신화"], ["YANMAR", "얀마"], ["Yanmar", "얀마"],
+    ["Yellen", "옐런"], ["Yonhap", "연합"], ["YouGov", "유고브"], ["fulvic", "풀빅"], ["iPhone", "아이폰"], ["ADAMA", "아다마"],
+    ["AIPAC", "에이팩"], ["ANZUS", "앤저스"], ["ATEEZ", "에이티즈"], ["AWACS", "에이왁스"], ["Abbas", "아바스"], ["Acron", "아크론"],
+    ["Adobe", "어도비"], ["Alexa", "알렉사"], ["Angus", "앵거스"], ["Anwar", "안와르"], ["Apple", "애플"], ["Asahi", "아사히"],
+    ["Axios", "악시오스"], ["BAYER", "바이엘"], ["Baidu", "바이두"], ["Banga", "방가"], ["Barra", "바라"], ["Bayer", "바이엘"],
+    ["Bezos", "베이조스"], ["Biden", "바이든"], ["Bixby", "빅스비"], ["Bondi", "본디"], ["Bosch", "보쉬"], ["Bunge", "번기"],
+    ["Burry", "버리"], ["Busan", "부산"], ["Bybit", "바이비트"], ["CADIZ", "차디즈"], ["CAR-T", "카티"], ["CELAC", "셀락"],
+    ["CF100", "씨에프백"], ["CHIPS", "칩스"], ["CLAAS", "클라스"], ["CODEX", "코덱스"], ["COFCO", "코프코"], ["COFIX", "코픽스"],
+    ["COMEX", "코멕스"], ["CONAB", "코나브"], ["COP16", "콥십육"], ["COP26", "콥이십육"], ["COP27", "콥이십칠"], ["COP28", "콥이십팔"],
+    ["COP29", "콥이십구"], ["COP30", "콥삼십"], ["COP31", "콥삼십일"], ["COP32", "콥삼십이"], ["COVAX", "코백스"], ["Canva", "캔바"],
+    ["Chase", "체이스"], ["Chery", "체리"], ["China", "중국"], ["Cisco", "시스코"], ["Claas", "클라스"], ["Codex", "코덱스"],
+    ["Conab", "코나브"], ["Covid", "코비드"], ["DARPA", "다르파"], ["DINKs", "딩크"], ["Daiso", "다이소"], ["Dalio", "달리오"],
+    ["Dario", "다리오"], ["Davos", "다보스"], ["DeepX", "딥엑스"], ["Deere", "디어"], ["Delhi", "델리"], ["Demis", "데미스"],
+    ["Depot", "디포"], ["Dimon", "다이먼"], ["Dutch", "네덜란드"], ["Ebola", "에볼라"], ["Egypt", "이집트"], ["Emart", "이마트"],
+    ["Emmys", "에미"], ["Exxon", "엑손"], ["F-15K", "에프십오케이"], ["F-35A", "에프삼십오에이"], ["FA-50", "에프에이오십"], ["FAANG", "팡"],
+    ["Fargo", "파고"], ["Fendt", "펜트"], ["Figma", "피그마"], ["Fitch", "피치"], ["GB200", "지비이백"], ["GB300", "지비삼백"],
+    ["GDDR6", "지디디알식스"], ["GDDR7", "지디디알세븐"], ["GLP-1", "지엘피원"], ["GPT-4", "지피티포"], ["GPT-5", "지피티파이브"], ["GPT-6", "지피티식스"],
+    ["Gates", "게이츠"], ["Geely", "지리"], ["Gemma", "젬마"], ["Gen Z", "젠지"], ["GenAI", "젠에이아이"], ["Gmail", "지메일"],
+    ["Gopax", "고팍스"], ["Greer", "그리어"], ["Group", "그룹"], ["Gucci", "구찌"], ["HACCP", "해썹"], ["HAMAS", "하마스"],
+    ["HBM3E", "에이치비엠쓰리이"], ["HBM4E", "에이치비엠포이"], ["Haier", "하이얼"], ["Haifa", "하이파"], ["Haiku", "하이쿠"], ["Hamas", "하마스"],
+    ["Hanoi", "하노이"], ["Honda", "혼다"], ["Huang", "황"], ["Humic", "휴믹"], ["Hynix", "하이닉스"], ["ICEYE", "아이스아이"],
+    ["IELTS", "아이엘츠"], ["IFFCO", "이프코"], ["ILLIT", "아일릿"], ["IRENA", "이레나"], ["India", "인도"], ["Intel", "인텔"],
+    ["Ipsos", "입소스"], ["Isaan", "이산"], ["Italy", "이탈리아"], ["JADIZ", "자디즈"], ["Jamie", "제이미"], ["Japan", "일본"],
+    ["Jassy", "재시"], ["Jones", "존스"], ["K-ETS", "케이 이티에스"], ["K-GAP", "케이갭"], ["K-Pop", "케이팝"], ["KADIZ", "카디즈"],
+    ["KAMAZ", "카마즈"], ["KF-16", "케이에프십육"], ["KF-21", "케이에프이십일"], ["KODEX", "코덱스"], ["KOSEF", "코세프"], ["KSTAR", "케이스타"],
+    ["Kakao", "카카오"], ["Kenya", "케냐"], ["Kisan", "키산"], ["Kling", "클링"], ["Korea", "코리아"], ["Kurly", "컬리"],
+    ["Kursk", "쿠르스크"], ["Kyodo", "교도"], ["L-SAM", "엘샘"], ["LASER", "레이저"], ["LIBOR", "리보"], ["LIDAR", "라이다"],
+    ["Larry", "래리"], ["LeCun", "르쿤"], ["Lexus", "렉서스"], ["Libor", "리보"], ["Lidar", "라이다"], ["Lilly", "릴리"],
+    ["Llama", "라마"], ["Lotte", "롯데"], ["Louis", "루이"], ["Lucid", "루시드"], ["M-SAM", "엠샘"], ["MATIF", "마티프"],
+    ["Manus", "마누스"], ["Mazda", "마쓰다"], ["Merck", "머크"], ["Messi", "메시"], ["Micro", "마이크로"], ["Midea", "메이디"],
+    ["Milei", "밀레이"], ["Miran", "마이런"], ["Mixue", "미쉐"], ["NIFTY", "니프티"], ["NK603", "엔케이육공삼"], ["NORAD", "노라드"],
+    ["NYMEX", "나이멕스"], ["Naver", "네이버"], ["Nifty", "니프티"], ["Nokia", "노키아"], ["Oatly", "오틀리"], ["Obama", "오바마"],
+    ["Orban", "오르반"], ["Orbán", "오르반"], ["Oscar", "오스카"], ["PAC-2", "팩투"], ["PAC-3", "팩쓰리"], ["PM2.5", "피엠이쩜오"],
+    ["Paris", "파리"], ["Patel", "파텔"], ["Pepsi", "펩시"], ["Posco", "포스코"], ["Prada", "프라다"], ["Pupuk", "푸푹"],
+    ["Putin", "푸틴"], ["QAFCO", "카프코"], ["Qatar", "카타르"], ["RADAR", "레이더"], ["RE100", "알이백"], ["REDD+", "레드플러스"],
+    ["Radar", "레이더"], ["Roche", "로슈"], ["Rolex", "롤렉스"], ["Rubin", "루빈"], ["Rubio", "루비오"], ["Rutte", "뤼터"],
+    ["S-400", "에스사백"], ["SAARC", "사크"], ["SABIC", "사빅"], ["SIPRI", "시프리"], ["SONAR", "소나"], ["START", "스타트"],
+    ["STOXX", "스톡스"], ["Sachs", "삭스"], ["Satya", "사티아"], ["Saudi", "사우디"], ["Seoul", "서울"], ["Shein", "쉬인"],
+    ["Shell", "셸"], ["Slack", "슬랙"], ["Soros", "소로스"], ["Spain", "스페인"], ["Steel", "스틸"], ["Steve", "스티브"],
+    ["Stoxx", "스톡스"], ["Sudan", "수단"], ["Super", "슈퍼"], ["TIGER", "타이거"], ["TIMAC", "티막"], ["TOEFL", "토플"],
+    ["TOEIC", "토익"], ["TOPIX", "토픽스"], ["TWICE", "트와이스"], ["Takii", "다키이"], ["Terra", "테라"], ["Tesla", "테슬라"],
+    ["Texas", "텍사스"], ["Thiel", "틸"], ["Tinto", "틴토"], ["Tokio", "도쿄"], ["Tokyo", "도쿄"], ["Topix", "토픽스"],
+    ["Trump", "트럼프"], ["Tyson", "타이슨"], ["UAN28", "유에이엔 이십팔"], ["UAN30", "유에이엔 삼십"], ["UAN32", "유에이엔 삼십이"], ["UNIDO", "유니도"],
+    ["USB-C", "유에스비씨"], ["Upbit", "업비트"], ["Vance", "밴스"], ["Volvo", "볼보"], ["WASDE", "와스디"], ["Wagyu", "와규"],
+    ["Warsh", "워시"], ["Waymo", "웨이모"], ["Wells", "웰스"], ["XPeng", "샤오펑"], ["Xi'an", "시안"], ["Xpeng", "샤오펑"],
+    ["YIMBY", "임비"], ["Yahoo", "야후"], ["Zeekr", "지커"], ["aespa", "에스파"], ["eVTOL", "이브이톨"], ["humic", "휴믹"],
+    ["hynix", "하이닉스"], ["i-SMR", "아이에스엠알"], ["macOS", "맥오에스"], ["A100", "에이백"], ["ADIZ", "아디즈"], ["AESA", "에이사"],
+    ["AGCO", "아그코"], ["AGRA", "아그라"], ["AGRI", "아그리"], ["AGRO", "아그로"], ["AIoT", "에이아이오티"], ["AMEX", "아멕스"],
+    ["ASEM", "아셈"], ["ASIC", "에이식"], ["Agro", "아그로"], ["AmEx", "아멕스"], ["Amex", "아멕스"], ["Arla", "알라"],
+    ["Asia", "아시아"], ["B-1B", "비원비"], ["B-52", "비오십이"], ["B200", "비이백"], ["B300", "비삼백"], ["BASF", "바스프"],
+    ["Bali", "발리"], ["Bank", "뱅크"], ["Benz", "벤츠"], ["Bild", "빌트"], ["Bill", "빌"], ["Bose", "보스"],
+    ["Brin", "브린"], ["CBAM", "씨밤"], ["CBOT", "시봇"], ["COAT", "코트"], ["CUDA", "쿠다"], ["Citi", "씨티"],
+    ["Cook", "쿡"], ["Corp", "코프"], ["D.C.", "디씨"], ["DART", "다트"], ["DDR4", "디디알포"], ["DDR5", "디디알파이브"],
+    ["DINK", "딩크"], ["DOGE", "도지"], ["DeFi", "디파이"], ["Defi", "디파이"], ["Dell", "델"], ["Doge", "도지"],
+    ["EBay", "이베이"], ["EFTA", "에프타"], ["ENSO", "엔소"], ["Elon", "일론"], ["Emmy", "에미"], ["Eric", "에릭"],
+    ["F-16", "에프십육"], ["F-22", "에프이십이"], ["F-35", "에프삼십오"], ["FANG", "팡"], ["FEMA", "피마"], ["FIBA", "피바"],
+    ["FIRE", "파이어"], ["FLUX", "플럭스"], ["FTSE", "풋시"], ["Face", "페이스"], ["Fink", "핑크"], ["Ford", "포드"],
+    ["Fund", "펀드"], ["GMAT", "지맷"], ["GOAT", "고트"], ["Gaza", "가자"], ["GenZ", "젠지"], ["Grab", "그랩"],
+    ["Grok", "그록"], ["H100", "에이치백"], ["H1N1", "에이치일엔일"], ["H200", "에이치이백"], ["H3N2", "에이치삼엔이"], ["H5N1", "에이치오엔일"],
+    ["H5N6", "에이치오엔육"], ["H5N8", "에이치오엔팔"], ["H7N9", "에이치칠엔구"], ["H9N2", "에이치구엔이"], ["HBM3", "에이치비엠쓰리"], ["HBM4", "에이치비엠포"],
+    ["Hang", "항"], ["Home", "홈"], ["Huma", "휴마"], ["ICAO", "이카오"], ["ISIS", "아이시스"], ["ITER", "이터"],
+    ["Iger", "아이거"], ["Ikea", "이케아"], ["IonQ", "아이온큐"], ["Iran", "이란"], ["JAXA", "작사"], ["JDAM", "제이댐"],
+    ["JGAP", "제이갭"], ["Jack", "잭"], ["Jeff", "제프"], ["Jobs", "잡스"], ["KASA", "카사"], ["KIKO", "키코"],
+    ["KOSA", "코사"], ["KOVO", "코보"], ["Kiev", "키이우"], ["Kimi", "키미"], ["Koch", "코크"], ["Kyiv", "키이우"],
+    ["LIFE", "라이프"], ["LUNA", "루나"], ["Laos", "라오스"], ["Lego", "레고"], ["Lula", "룰라"], ["Luna", "루나"],
+    ["Lyft", "리프트"], ["MAGA", "마가"], ["MOOC", "무크"], ["MQ-9", "엠큐나인"], ["Mark", "마크"], ["Merz", "메르츠"],
+    ["Meta", "메타"], ["Mets", "메츠"], ["Modi", "모디"], ["Mpox", "엠폭스"], ["Muse", "뮤즈"], ["Musk", "머스크"],
+    ["NAMA", "나마"], ["NEIS", "나이스"], ["NICE", "나이스"], ["NOAA", "노아"], ["Nike", "나이키"], ["Noem", "놈"],
+    ["Novo", "노보"], ["Olam", "올람"], ["Opus", "오퍼스"], ["P2O5", "인산"], ["PISA", "피사"], ["PM10", "피엠십"],
+    ["Padi", "파디"], ["Qwen", "큐원"], ["RAND", "랜드"], ["RISE", "라이즈"], ["RQ-4", "알큐포"], ["Rabi", "라비"],
+    ["SAGA", "사가"], ["SBTi", "에스비티아이"], ["SM-3", "에스엠쓰리"], ["SM-6", "에스엠식스"], ["SOFA", "소파"], ["SOFR", "소파"],
+    ["SPAM", "스팸"], ["STEM", "스템"], ["SaaS", "사스"], ["Seng", "셍"], ["Siri", "시리"], ["Sony", "소니"],
+    ["Sora", "소라"], ["Spam", "스팸"], ["T-50", "티오십"], ["TASS", "타스"], ["TEPS", "텝스"], ["TIME", "타임"],
+    ["Temu", "테무"], ["Toss", "토스"], ["Tron", "트론"], ["UNEP", "유넵"], ["USDA", "유에스디에이"], ["USIM", "유심"],
+    ["Uber", "우버"], ["Ueda", "우에다"], ["Vale", "발레"], ["Vera", "베라"], ["Visa", "비자"], ["WADA", "와다"],
+    ["Web3", "웹쓰리"], ["XBOX", "엑스박스"], ["Xbox", "엑스박스"], ["YARA", "야라"], ["Yale", "예일"], ["Yara", "야라"],
+    ["Yelp", "옐프"], ["Zara", "자라"], ["Zika", "지카"], ["Zoom", "줌"], ["a16z", "에이식스틴지"], ["aT센터", "에이티센터"],
+    ["dLLM", "디엘엘엠"], ["eBay", "이베이"], ["eSIM", "이심"], ["iMac", "아이맥"], ["iPad", "아이패드"], ["mRNA", "엠알엔에이"],
+    ["mpox", "엠폭스"], ["sLLM", "에스엘엘엠"], ["A.X", "에이닷엑스"], ["ACE", "에이스"], ["Arm", "암"], ["B-2", "비투"],
+    ["BYD", "비야디"], ["CH4", "씨에이치포"], ["CO2", "씨오투"], ["CO₂", "씨오투"], ["D.C", "디씨"], ["DAX", "닥스"],
+    ["Dow", "다우"], ["EXO", "엑소"], ["FED", "연준"], ["Fed", "연준"], ["H20", "에이치이십"], ["ICE", "아이스"],
+    ["IVE", "아이브"], ["Inc", "인크"], ["IoT", "아이오티"], ["Jio", "지오"], ["K+S", "케이플러스에스"], ["K2O", "케이투오"],
+    ["KCl", "케이씨엘"], ["Kia", "기아"], ["LIV", "리브"], ["Ltd", "리미티드"], ["N2O", "아산화질소"], ["NH3", "암모니아"],
+    ["NIO", "니오"], ["NO2", "이산화질소"], ["NOx", "녹스"], ["Nio", "니오"], ["PIM", "핌"], ["PS5", "피에스파이브"],
+    ["PS6", "피에스식스"], ["PSY", "싸이"], ["PhD", "피에이치디"], ["PwC", "피더블유씨"], ["SKY", "스카이"], ["SO2", "이산화황"],
+    ["SOx", "속스"], ["Sam", "샘"], ["SoC", "에스오씨"], ["Tim", "팀"], ["VIX", "빅스"], ["Veo", "비오"],
+    ["WSJ", "월스트리트저널"], ["Wiz", "위즈"], ["iOS", "아이오에스"], ["iPS", "아이피에스"], ["sLM", "에스엘엠"], ["xAI", "엑스에이아이"],
+    ["F1", "에프원"], ["K2", "케이투"], ["K9", "케이나인"], ["Xi", "시진핑"], ["aT", "에이티"], ["pH", "피에이치"],
+  ];
+  // 단위: [쓴 글, 숫자 뒤에서 읽는 말, 숫자 없이도 바꿀지(1), 숫자 앞에 붙는 말(시속·리터당)]
+  const DICT_UNITS = [
+    ["bushels", "부셸", 0, ""], ["EFLOPS", "엑사플롭스", 0, ""], ["PFLOPS", "페타플롭스", 0, ""], ["TFLOPS", "테라플롭스", 0, ""], ["bushel", "부셸", 0, ""],
+    ["kg/10a", "킬로그램", 0, "십 아르당"], ["km/kWh", "킬로미터", 0, "킬로와트시당"], ["tCO2eq", "이산화탄소환산톤", 0, ""], ["Bq/kg", "베크렐", 0, "킬로그램당"], ["CO2eq", "이산화탄소 환산", 0, ""],
+    ["FLOPS", "플롭스", 1, ""], ["MMBTU", "백만 비티유", 0, ""], ["MMBtu", "백만 비티유", 1, ""], ["Wh/kg", "와트시", 0, "킬로그램당"], ["acres", "에이커", 0, ""],
+    ["bbl/d", "배럴", 0, "하루"], ["bu/ac", "부셸", 0, "에이커당"], ["kg/ha", "킬로그램", 0, "헥타르당"], ["kgf·m", "킬로그램포스미터", 0, ""], ["knots", "노트", 0, ""],
+    ["mS/cm", "밀리지멘스퍼센티미터", 0, ""], ["mSv/h", "밀리시버트", 0, "시간당"], ["mg/dL", "밀리그램", 0, "데시리터당"], ["mg/kg", "밀리그램", 0, "킬로그램당"], ["mm/hr", "밀리미터", 0, "시간당"],
+    ["mmBtu", "백만 비티유", 0, ""], ["tCO2e", "이산화탄소환산톤", 0, ""], ["°Brix", "브릭스", 0, ""], ["µSv/h", "마이크로시버트", 0, "시간당"], ["µg/m³", "마이크로그램", 0, "세제곱미터당"],
+    ["μSv/h", "마이크로시버트", 0, "시간당"], ["μg/m3", "마이크로그램", 0, "세제곱미터당"], ["μg/m³", "마이크로그램", 0, "세제곱미터당"], ["Bq/L", "베크렐", 0, "리터당"], ["Brix", "브릭스", 0, ""],
+    ["GB/s", "기가바이트", 0, "초당"], ["Gbps", "기가비피에스", 0, ""], ["Kbps", "킬로비피에스", 0, ""], ["Kcal", "킬로칼로리", 0, ""], ["MB/s", "메가바이트", 0, "초당"],
+    ["Mbps", "메가비피에스", 0, ""], ["Mtoe", "백만 티오이", 0, ""], ["TB/s", "테라바이트", 0, "초당"], ["Tbps", "테라비피에스", 0, ""], ["Wh/L", "와트시", 0, "리터당"],
+    ["acre", "에이커", 0, ""], ["brix", "브릭스", 0, ""], ["bu/a", "부셸", 0, "에이커당"], ["dS/m", "데시지멘스퍼미터", 0, ""], ["g/km", "그램", 0, "킬로미터당"],
+    ["inch", "인치", 0, ""], ["kbps", "킬로비피에스", 0, ""], ["kcal", "킬로칼로리", 1, ""], ["kg/a", "킬로그램", 0, "아르당"], ["kg·m", "킬로그램미터", 0, ""],
+    ["km/L", "킬로미터", 0, "리터당"], ["km/s", "킬로미터", 0, "초속"], ["m3/s", "세제곱미터", 0, "초당"], ["mbar", "밀리바", 0, ""], ["mg/L", "밀리그램", 0, "리터당"],
+    ["mg/l", "밀리그램", 0, "리터당"], ["mm/h", "밀리미터", 0, "시간당"], ["mmHg", "수은주밀리미터", 0, ""], ["m³/s", "세제곱미터", 0, "초당"], ["nits", "니트", 0, ""],
+    ["sqft", "제곱피트", 0, ""], ["t/ha", "톤", 0, "헥타르당"], ["tons", "톤", 0, ""], ["㎍/m³", "마이크로그램", 0, "세제곱미터당"], ["Btu", "비티유", 1, ""],
+    ["GHz", "기가헤르츠", 0, ""], ["GPa", "기가파스칼", 0, ""], ["GWp", "기가와트피크", 0, ""], ["KWh", "킬로와트시", 0, ""], ["Kwh", "킬로와트시", 0, ""],
+    ["MBq", "메가베크렐", 0, ""], ["MHz", "메가헤르츠", 0, ""], ["MPa", "메가파스칼", 0, ""], ["MVA", "메가볼트암페어", 0, ""], ["MWp", "메가와트피크", 0, ""],
+    ["N·m", "뉴턴미터", 0, ""], ["THz", "테라헤르츠", 0, ""], ["Ton", "톤", 0, ""], ["atm", "기압", 0, ""], ["b/d", "배럴", 0, "하루"],
+    ["bar", "바", 0, ""], ["bbl", "배럴", 1, ""], ["bpd", "배럴", 0, "하루"], ["bps", "베이시스포인트", 0, ""], ["cal", "칼로리", 0, ""],
+    ["cm2", "제곱센티미터", 0, ""], ["cm²", "제곱센티미터", 0, ""], ["cm³", "세제곱센티미터", 0, ""], ["dBA", "데시벨", 0, ""], ["dpi", "디피아이", 0, ""],
+    ["fps", "에프피에스", 0, ""], ["ft²", "제곱피트", 0, ""], ["g/L", "그램", 0, "리터당"], ["gal", "갤런", 0, ""], ["hPa", "헥토파스칼", 0, ""],
+    ["hrs", "시간", 0, ""], ["kBq", "킬로베크렐", 0, ""], ["kHz", "킬로헤르츠", 0, ""], ["kPa", "킬로파스칼", 0, ""], ["kVA", "킬로볼트암페어", 0, ""],
+    ["kWh", "킬로와트시", 1, ""], ["kWp", "킬로와트피크", 0, ""], ["kgf", "킬로그램포스", 0, ""], ["kwh", "킬로와트시", 0, ""], ["lbs", "파운드", 0, ""],
+    ["mAh", "밀리암페어시", 0, ""], ["mSv", "밀리시버트", 0, ""], ["mcg", "마이크로그램", 0, ""], ["min", "분", 0, ""], ["mm2", "제곱밀리미터", 0, ""],
+    ["mm²", "제곱밀리미터", 0, ""], ["mph", "마일", 0, "시속"], ["nit", "니트", 0, ""], ["nmi", "해리", 0, ""], ["ozt", "트로이온스", 0, ""],
+    ["ppb", "피피비", 0, ""], ["ppi", "피피아이", 0, ""], ["ppm", "피피엠", 1, ""], ["ppt", "피피티", 0, ""], ["psi", "피에스아이", 0, ""],
+    ["rpm", "알피엠", 0, ""], ["sec", "초", 0, ""], ["toe", "티오이", 0, ""], ["ton", "톤", 0, ""], ["°Bx", "브릭스", 0, ""],
+    ["µSv", "마이크로시버트", 0, ""], ["μSv", "마이크로시버트", 0, ""], ["㎍/㎥", "마이크로그램", 0, "세제곱미터당"], ["㎥/s", "세제곱미터", 0, "초당"], ["%P", "퍼센트포인트", 0, ""],
+    ["Ah", "암페어시", 0, ""], ["BP", "베이시스포인트", 0, ""], ["Bq", "베크렐", 0, ""], ["EB", "엑사바이트", 0, ""], ["GJ", "기가줄", 0, ""],
+    ["Gb", "기가비트", 0, ""], ["Gt", "기가톤", 0, ""], ["Gy", "그레이", 0, ""], ["HP", "마력", 0, ""], ["Hz", "헤르츠", 0, ""],
+    ["KM", "킬로미터", 0, ""], ["KW", "킬로와트", 0, ""], ["Kg", "킬로그램", 0, ""], ["Km", "킬로미터", 0, ""], ["Kw", "킬로와트", 0, ""],
+    ["MJ", "메가줄", 0, ""], ["MM", "밀리미터", 0, ""], ["MT", "톤", 0, ""], ["Mb", "메가비트", 0, ""], ["Mt", "메가톤", 0, ""],
+    ["Nm", "뉴턴미터", 0, ""], ["PB", "페타바이트", 0, ""], ["Pa", "파스칼", 0, ""], ["Sv", "시버트", 0, ""], ["TW", "테라와트", 0, ""],
+    ["Tb", "테라비트", 0, ""], ["Wh", "와트시", 0, ""], ["ZB", "제타바이트", 0, ""], ["ac", "에이커", 0, ""], ["bu", "부셸", 0, ""],
+    ["cc", "시시", 0, ""], ["cm", "센티미터", 1, ""], ["dB", "데시벨", 0, ""], ["dL", "데시리터", 0, ""], ["ft", "피트", 0, ""],
+    ["ha", "헥타르", 1, ""], ["hp", "마력", 0, ""], ["hr", "시간", 0, ""], ["kA", "킬로암페어", 0, ""], ["kB", "킬로바이트", 0, ""],
+    ["kJ", "킬로줄", 0, ""], ["kL", "킬로리터", 0, ""], ["kN", "킬로뉴턴", 0, ""], ["kV", "킬로볼트", 0, ""], ["kg", "킬로그램", 1, ""],
+    ["km", "킬로미터", 1, ""], ["kΩ", "킬로옴", 0, ""], ["lb", "파운드", 0, ""], ["m3", "세제곱미터", 0, ""], ["mA", "밀리암페어", 0, ""],
+    ["mV", "밀리볼트", 0, ""], ["mW", "밀리와트", 0, ""], ["mi", "마일", 0, ""], ["mm", "밀리미터", 1, ""], ["ms", "밀리초", 0, ""],
+    ["m³", "세제곱미터", 0, ""], ["ng", "나노그램", 0, ""], ["nm", "나노미터", 0, ""], ["ns", "나노초", 0, ""], ["oz", "온스", 1, ""],
+    ["tf", "톤포스", 0, ""], ["yd", "야드", 0, ""], ["°F", "도", 0, "화씨"], ["µg", "마이크로그램", 0, ""], ["µm", "마이크로미터", 0, ""],
+    ["µs", "마이크로초", 0, ""], ["μL", "마이크로리터", 0, ""], ["μm", "마이크로미터", 0, ""], ["μs", "마이크로초", 0, ""], ["V", "볼트", 0, ""],
+    ["W", "와트", 0, ""], ["Å", "옹스트롬", 0, ""], ["Ω", "옴", 0, ""], ["℉", "도", 0, "화씨"], ["㎃", "밀리암페어", 0, ""],
+    ["㎅", "킬로바이트", 0, ""], ["㎆", "메가바이트", 0, ""], ["㎇", "기가바이트", 0, ""], ["㎈", "칼로리", 0, ""], ["㎉", "킬로칼로리", 0, ""],
+    ["㎎", "밀리그램", 0, ""], ["㎐", "헤르츠", 0, ""], ["㎑", "킬로헤르츠", 0, ""], ["㎒", "메가헤르츠", 0, ""], ["㎓", "기가헤르츠", 0, ""],
+    ["㎖", "밀리리터", 0, ""], ["㎗", "데시리터", 0, ""], ["㎘", "킬로리터", 0, ""], ["㎚", "나노미터", 0, ""], ["㎛", "마이크로미터", 0, ""],
+    ["㎟", "제곱밀리미터", 0, ""], ["㎠", "제곱센티미터", 0, ""], ["㎤", "세제곱센티미터", 0, ""], ["㎥", "세제곱미터", 0, ""], ["㎧", "미터", 0, "초속"],
+    ["㎩", "파스칼", 0, ""], ["㎪", "킬로파스칼", 0, ""], ["㎫", "메가파스칼", 0, ""], ["㎱", "나노초", 0, ""], ["㎲", "마이크로초", 0, ""],
+    ["㎳", "밀리초", 0, ""], ["㎸", "킬로볼트", 0, ""], ["㎽", "밀리와트", 0, ""], ["㏃", "베크렐", 0, ""], ["㏄", "시시", 0, ""],
+    ["㏈", "데시벨", 0, ""], ["㏋", "마력", 0, ""], ["㏙", "피피엠", 0, ""], ["㏜", "시버트", 0, ""],
+  ];
+  // </사전>
 
   // '역(驛)' 앞 받침에 ㄴ이 덧나고 ㄹ 뒤에서는 ㄹ로 (서울역 [서울력], 강남역 [강남녁]).
   // 지역·영역·구역·무역·방역처럼 '역'이 붙어 한 낱말인 말(보호구역, 자유무역)은 뺀다.
@@ -153,7 +433,11 @@
     cm: '센티미터', mm: '밀리미터', ml: '밀리리터', mL: '밀리리터', '㎡': '제곱미터', 'm²': '제곱미터', m2: '제곱미터', m: '미터', g: '그램', t: '톤',
     'ℓ': '리터', L: '리터', ha: '헥타르', ppm: '피피엠', bp: '베이시스포인트', GB: '기가바이트', TB: '테라바이트', MB: '메가바이트', '℃': '도', '°C': '도', '°': '도',
   };
-  const UNIT = '%p|%포인트|%|퍼센트포인트|퍼센트|km/h|kWh|MWh|GWh|TWh|kW|MW|GW|km²|km2|㎢|km|kg|mg|μg|㎍|cm|mm|ml|mL|㎡|m²|m2|m|g|t|ℓ|L|ha|ppm|bp|GB|TB|MB|℃|°C|°';
+  UNITS['m/s'] = '미터';
+  const PRE = {}; // 숫자 앞에 붙여 읽는 말: 리터당 오백 밀리그램, 화씨 백 도, 하루 이백만 배럴
+  for (const [u, sound, , pre] of DICT_UNITS) if (!UNITS[u]) { UNITS[u] = sound; if (pre) PRE[u] = pre; }
+  const UNIT = [...new Set(['%p', '%포인트', '%', '퍼센트포인트', '퍼센트', 'km/h', 'm/s', 'kWh', 'MWh', 'GWh', 'TWh', 'kW', 'MW', 'GW', 'km²', 'km2', '㎢', 'km', 'kg', 'mg', 'μg', '㎍', 'cm', 'mm', 'ml', 'mL', '㎡', 'm²', 'm2', 'm', 'g', 't', 'ℓ', 'L', 'ha', 'ppm', 'bp', 'GB', 'TB', 'MB', '℃', '°C', '°', ...DICT_UNITS.map((x) => x[0])])]
+    .sort((a, b) => b.length - a.length).map(escape).join('|');
   // 마이너스는 앞이 비었을 때만 (코로나-19의 -는 마이너스가 아니다)
   const NUM = new RegExp(`(?<![\\w.-])(?:(?<![^\\s(])(-))?(\\d{1,3}(?:,\\d{3})+|\\d+)(?:\\.(\\d+))?(?:\\s*(${UNIT})(?![A-Za-z])|(?!\\.?\\d)(?![A-Za-z]))`, 'g');
   // 1~99를 고유어로 읽는 세는 말 (개월·개국·달러·통화·번지·번 출구처럼 한자어로 읽는 말은 뺀다)
@@ -195,6 +479,9 @@
   const CODE_AFTER = new RegExp(`${AMOUNT}\\s?(${CODE}|元|円|đ)(?![A-Za-z])${JOSA}`, 'g');
   const CODE_BEFORE = new RegExp(`(?<![A-Za-z])(${CODE})\\s?${AMOUNT}${JOSA}`, 'g');
   const CHINA = /중국|위안|인민폐|China|Chinese|CNY|RMB/;
+  // 'A/B' 꼴의 '당': 3만 동/kg, $100/t, 500mg/L, 1,200원/kg (방송은 '킬로그램당 삼만 동'으로 읽는다)
+  const PRE_BIG = new RegExp(`((?:\\d{1,3}(?:,\\d{3})+|\\d+)(?:\\.\\d+)?(?:\\s?[조억만천])+)\\s?(${Object.keys(PRE).sort((a, b) => b.length - a.length).map(escape).join('|')})(?![A-Za-z])`, 'g');
+  const PER = new RegExp(`((?:(?:US\\$|\\$|€|£|¥|₩)\\s?)?(?:\\d{1,3}(?:,\\d{3})+|\\d+)(?:\\.\\d+)?(?:\\s?[조억만천])*\\s?(?:${UNIT}|원|달러|동|위안|엔|유로|루피아|루피|바트|헤알|링깃|페소|파운드|${CODE})?)\\s?\\/\\s?(${UNIT})(?![A-Za-z])`, 'g');
 
   function money(s) {
     const yen = CHINA.test(s) ? '위안' : '엔';
@@ -244,8 +531,10 @@
     s = plain(s).replace(/코로나\s?-?19/g, '코로나 일구').replace(/영하\s?-(?=\d)/g, '영하 ').replace(/(\d)\s?a당/g, '$1아르당').replace(/시속\s?(\d[\d,.]*)\s?km\/h/g, '$1km/h');
     // 5·18, 6·25, 10·15 대책처럼 날짜로 이름 붙인 일은 오일팔, 육이오, 십일오로
     s = s.replace(/(?<![\d.])(\d{1,2})\s?·\s?(\d{1,2})(?![\d.])/g, (m, a, b) => sino(a) + b.split('').map((c) => DIG[c]).join(''));
+    s = s.replace(PRE_BIG, (m, n, u) => `${PRE[u]} ${n} ${UNITS[u]}`); // 하루 200만 배럴: 앞에 붙는 말은 숫자 전체 앞에
     // 480만 t, 132만ha처럼 만·억 뒤의 단위
     s = s.replace(new RegExp(`(\\d[만억조천])\\s?(${UNIT})(?![A-Za-z])`, 'g'), (m, n, u) => `${n} ${UNITS[u]}`);
+    s = s.replace(PER, (m, a, u) => `${UNITS[u]}당 ${a.trim()}`);
     // 2만6224처럼 만·억·조 뒤에 바로 숫자: 띄워서 '이만 육천이백이십사'로 (붙여 넘기면 F1이 단위 글자를 빼먹고 '육이이사'로 읽었다, 2026-10-21)
     s = s.replace(/(\d)([만억조])(?=\d)/g, '$1$2 ');
     s = s.replace(/(\d{4})\s?[.\-/]\s?(\d{1,2})\s?[.\-/]\s?(\d{1,2})(?!\d)\.?/g, '$1년 $2월 $3일');
@@ -273,6 +562,8 @@
       if (frac) out += `쩜${frac.split('').map((c) => DIG[c]).join('')}`;
       if (minus) out = `${/[℃°]/.test(unit || '') ? '영하' : '마이너스'} ${out}`;
       if (unit === 'km/h') out = `시속 ${out}`;
+      if (unit === 'm/s') out = `초속 ${out}`;
+      if (PRE[unit]) out = `${PRE[unit]} ${out}`;
       if (unit) out += ` ${UNITS[unit]}`;
       else if (SPACE_BEFORE.test(rest)) out += ' '; // 백 명, 육천이백이십사 명: 숫자 말과 세는 말을 띄운다
       return out;
@@ -288,21 +579,27 @@
     return s;
   }
 
-  const LATIN_RES = LATIN.map(([w, sound]) => [new RegExp(`(?<![A-Za-z0-9])${escape(w)}(?![A-Za-z0-9])`, 'g'), sound]);
-  // 네 글자 이상인데 모음과 자음이 번갈아 낱말처럼 읽히는 것(AGRI, COAT, KODEX)은 낱자로 끊지 않고 엔진에 맡긴다
-  const WORDLIKE = /^[^AEIOU]?[AEIOU][^AEIOU]{1,2}[AEIOU]|[^AEIOU][AEIOU]{2}[^AEIOU]/;
+  const LATIN_ALL = (() => {
+    const seen = new Set(LATIN.map((x) => x[0]));
+    const out = [...LATIN];
+    for (const [w, sound] of DICT_WORDS) if (!seen.has(w)) { seen.add(w); out.push([w, sound]); }
+    for (const [u, sound, alone] of DICT_UNITS) if (alone && !seen.has(u)) { seen.add(u); out.push([u, sound]); } // kg당 → 킬로그램당
+    return out.sort((a, b) => b[0].length - a[0].length);
+  })();
+  const LATIN_RES = LATIN_ALL.map(([w, sound]) => [new RegExp(`(?<![A-Za-z0-9À-ɏ])${escape(w)}(?![A-Za-z0-9À-ɏ]|[.-]\\d)${JOSA}`, 'g'), sound]);
   const spell = (w) => w.split('').map((c) => ABC[c.charCodeAt(0) - 65]).join('');
   function latin(s) {
-    for (const [re, sound] of LATIN_RES) s = s.replace(re, sound);
+    for (const [re, sound] of LATIN_RES) s = s.replace(re, (m, j) => josa(sound, j));
+    s = s.replace(/(?<![A-Za-z0-9])((?:[A-Z]\.){2,}[A-Z]?)(?![A-Za-z])/g, (m) => spell(m.replace(/\./g, ''))); // B.C., A.W. → 비씨, 에이더블유
     s = s.replace(/(?<![A-Za-z0-9])([A-Z]{1,3})\s?&\s?([A-Z]{1,3})(?![A-Za-z])/g, (m, a, b) => `${spell(a)}앤${spell(b)}`); // R&D, S&P, AT&T
-    s = s.replace(/(?<![A-Za-z0-9])[A-Z]{2,5}(?![A-Za-z0-9])(?!-\d)/g, (w) => (w.length > 3 && WORDLIKE.test(w) ? w : spell(w)));
-    return s.replace(/(?<![A-Za-z0-9])[A-Z](?=-?[가-힣])/g, spell); // A씨, K-푸드, Z세대
+    s = s.replace(/(?<![A-Za-z0-9À-ɏ])[A-Z]{2,5}(?![A-Za-z0-9À-ɏ])(?!-\d)/g, spell); // 사전에 없는 대문자 약어는 낱자로 (USDA가 영문 그대로 남았다, 2026-10-26)
+    return s.replace(/(?<![A-Za-z0-9À-ɏ])[A-Z](?=-?[가-힣]|[^A-Za-z0-9À-ɏ]|$)/g, spell); // A씨, K-푸드, Z세대, 홀로 선 X·J
   }
 
   // english: 다국어 음성용. 영문(NATO·AI·R&D)을 우리말 소리로 바꾸지 않고 그대로 두어 음성이 미국식 영어로 읽게 한다
   function say(text, opts = {}) {
     if (!text) return text;
-    const s = numbers(text);
+    const s = numbers(opts.english ? text : text.replace(/([가-힣])\s?\(([A-Za-z][A-Za-z0-9 .,'&+-]*)\)/g, '$1'));
     const en = opts.english ? s.replace(/([A-Za-z])\s?&\s?(?=[A-Za-z])/g, '$1 and ') : latin(s);
     return pauses(stations(adnominal(words(symbols(en)))));
   }
