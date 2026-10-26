@@ -204,7 +204,11 @@ final class ArticleReader {
         // 비무장지대(DMZ) → 비무장지대. 뒤에 조사가 붙으면 앞 빈칸까지 지운다: '구매력 을'처럼 조사만 떨어져 들렸다 (2026-10-27)
         Matcher pm = PAREN.matcher(s);
         StringBuffer pb = new StringBuffer();
-        while (pm.find()) pm.appendReplacement(pb, pm.end() < s.length() && s.charAt(pm.end()) >= '가' && s.charAt(pm.end()) <= '힣' ? "" : " ");
+        while (pm.find()) {
+            boolean glued = pm.end() < s.length() && s.charAt(pm.end()) >= '가' && s.charAt(pm.end()) <= '힣';
+            boolean spaced = Character.isWhitespace(pm.group().charAt(0)); // '정부는 (가칭)농업위원회를': 괄호 앞이 띄어져 있었으면 뒤는 새 낱말이다
+            pm.appendReplacement(pb, glued && !spaced ? "" : " ");
+        }
         pm.appendTail(pb);
         s = pb.toString();
         s = s.replaceAll("[\\u4e00-\\u9fff]+", ""); // 한자는 읽지 않는다

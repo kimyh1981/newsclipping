@@ -147,6 +147,13 @@ public class ArticleReaderTest {
         assertEquals(java.util.Arrays.asList("3.5% 올랐다.", "이어 발표했다."), ArticleReader.split("3.5% 올랐다. 이어 발표했다.")); // 바뀌면 안 됨
     }
 
+    @Test public void spacedBracketBeforeNewWordKeepsTheSpace() {
+        String s = String.join(" ", ArticleReader.split("정부는 (가칭)농업위원회를 만들기로 했다고 관계자가 오늘 밝혔다고 전했다."));
+        assertTrue(s, s.startsWith("정부는 농업위원회를"));
+        String t = String.join(" ", ArticleReader.split("중앙회가 막강한 구매력(바잉 파워)을 바탕으로 제조사와 직접 협상한다고 밝혔다."));
+        assertTrue(t, t.contains("구매력을"));
+    }
+
     @Test public void keepsParagraphBoundaries() {
         List<List<String>> p = ArticleReader.paragraphs(ArticleReader.text(PAGE));
         assertEquals(2, p.size()); // 문단 둘 (군글 문단은 빠짐)
