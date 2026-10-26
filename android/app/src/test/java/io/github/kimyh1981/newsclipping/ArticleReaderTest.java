@@ -77,6 +77,17 @@ public class ArticleReaderTest {
         assertFalse(ArticleReader.foreign(P1 + " KIA와 LG가 맞붙었다."));
     }
 
+    // 2026-10-27 출근길: 팜인사이트 분석 기사(약 8천 자)가 6천 자에서 끊기고, '…왔다.' 같은 짧은 한 줄 문단이 빠졌다
+    @Test public void longArticlesAndShortSentenceParagraphsAreRead() {
+        StringBuilder page = new StringBuilder("<article>");
+        for (int i = 0; i < 80; i++) page.append("<p>").append(i).append("번째 문단입니다. 농민들이 밤잠을 설치며 절규하는 이유는 명확하다고 관계자는 설명했다.</p>");
+        page.append("<p>고랭지 무는 생산비조차 건지지 못했다.</p><p>■ 소제목</p><p>마지막 문단은 끝까지 읽어야 한다고 강조했다고 전했다.</p></article>");
+        String all = String.join(" ", ArticleReader.sentences(page.toString()));
+        assertTrue(all.contains("고랭지 무는 생산비조차 건지지 못했다.")); // 본문 안 짧은 문장
+        assertTrue(all.contains("마지막 문단은 끝까지")); // 6천 자를 넘어도 끝까지
+        assertFalse(all.contains("소제목")); // 문장이 아닌 짧은 줄은 그대로 뺀다
+    }
+
     @Test public void keepsParagraphBoundaries() {
         List<List<String>> p = ArticleReader.paragraphs(ArticleReader.text(PAGE));
         assertEquals(2, p.size()); // 문단 둘 (군글 문단은 빠짐)

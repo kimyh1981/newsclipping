@@ -16,7 +16,7 @@ final class ArticleReader {
     private ArticleReader() {}
 
     /** 이보다 길면 본문이 아니라 목록·댓글이 섞였다고 보고 자른다 */
-    static final int MAX_CHARS = 6000;
+    static final int MAX_CHARS = 20000; // 6,000자에서 긴 분석 기사 뒷부분이 잘렸다 (팜인사이트 8천 자, 2026-10-27). 넘으면 문단 경계에서 자른다
 
     private static final Pattern DROP_BLOCKS = Pattern.compile("(?is)<(script|style|noscript|svg|iframe|form|nav|footer|header|aside|figcaption|button|select)[\\s>].*?</\\1>");
     private static final Pattern PARA = Pattern.compile("(?is)<p[\\s>].*?</p>");
@@ -45,7 +45,7 @@ final class ArticleReader {
         String last = "";
         if (text == null) return out;
         for (String p : text.split("\n")) {
-            if (!keep(p)) continue;
+            if (!keep(p, true)) continue;
             List<String> s = new ArrayList<>();
             for (String x : split(p)) {
                 if (x.equals(last)) continue; // 문단을 넘어 같은 문장이 되풀이되면 한 번만
@@ -109,13 +109,13 @@ final class ArticleReader {
             StringBuilder out = new StringBuilder();
             for (String t : lines.split("\n")) {
                 String p = Extras.clean(t);
-                if (keep(p)) out.append(p).append('\n');
+                if (keep(p, true)) out.append(p).append('\n');
             }
             if (out.length() >= 60) return cap(out.toString());
         }
         Matcher art = ARTICLE.matcher(clean);
-        String text = art.find() ? paras(art.group()) : "";
-        if (text.length() < 80) text = paras(clean); // 짧은 기사(두세 문단)도 본문으로 읽는다
+        String text = art.find() ? paras(art.group(), true) : "";
+        if (text.length() < 80) text = paras(clean, false); // 짧은 기사(두세 문단)도 본문으로 읽는다
         if (text.length() < 80) {
             Matcher m = META_DESC.matcher(clean);
             text = m.find() ? Extras.clean(m.group(1)) : "";
@@ -124,21 +124,29 @@ final class ArticleReader {
         return cap(text);
     }
 
-    private static String paras(String scope) {
+    private static String paras(String scope, boolean body) {
         StringBuilder out = new StringBuilder();
         Matcher m = PARA.matcher(scope);
         while (m.find()) {
             String p = Extras.clean(m.group().replaceAll("(?i)<br\\s*/?>", " "));
-            if (keep(p)) out.append(p).append('\n');
+            if (keep(p, body)) out.append(p).append('\n');
         }
         return out.toString();
     }
 
     /** 본문 문단인가: 너무 짧거나(메뉴·단추), 군글이면 버린다. 머리말·기자 이름·이메일·주소는 지운 뒤 판단 */
     static boolean keep(String p) {
-        String t = tidy(p);
-        return t.length() >= 40 && !JUNK.matcher(t).find();
+        return keep(p, false);
     }
+
+    /** 본문 안(body)에서는 40자보다 짧아도 '…다.'처럼 문장으로 끝나면 읽는다 ('고랭지 무는 … 왔다.'가 빠졌다, 2026-10-27) */
+    static boolean keep(String p, boolean body) {
+        String t = tidy(p);
+        if (JUNK.matcher(t).find()) return false;
+        return t.length() >= 40 || body && t.length() >= 10 && SENTENCE_END.matcher(t).find();
+    }
+
+    private static final Pattern SENTENCE_END = Pattern.compile("[가-힣][.?!]['\"’”]?$");
 
     /** 문단 앞뒤 군말을 지운다: [서울=뉴시스], (사진=연합뉴스), 홍길동 기자 =, 이메일, 주소 (서버 cleanParas와 같은 규칙) */
     static String tidy(String p) {
@@ -158,7 +166,9 @@ final class ArticleReader {
     }
 
     private static String cap(String text) {
-        return text.length() > MAX_CHARS ? text.substring(0, MAX_CHARS) : text;
+        if (text.length() <= MAX_CHARS) return text;
+        int cut = text.lastIndexOf('\n', MAX_CHARS);
+        return text.substring(0, cut > 0 ? cut + 1 : MAX_CHARS);
     }
 
     /** 문단들 → 문장들. 소리 내어 읽기 좋게 다듬는다 (서버 speechSentences의 주요 규칙) */
@@ -166,7 +176,7 @@ final class ArticleReader {
         List<String> out = new ArrayList<>();
         if (text == null || text.trim().isEmpty()) return out;
         StringBuilder all = new StringBuilder();
-        for (String p : text.split("\n")) if (keep(p)) all.append(tidy(p)).append(' ');
+        for (String p : text.split("\n")) if (keep(p, true)) all.append(tidy(p)).append(' ');
         String s = Normalizer.normalize(all.toString(), Normalizer.Form.NFKC);
         s = s.replaceAll("\\s*(?:[가-힣]{3}\\s+){0,2}[가-힣]{2,4}\\s*(?:기자|특파원|객원기자)\\s*=\\s*", ". "); // 부제 … 홍길동 기자 = 본문 → 부제. 본문
         s = s.replaceAll("\\(\\s*[^()]{1,20}\\s*\\)", " "); // 비무장지대(DMZ) → 비무장지대

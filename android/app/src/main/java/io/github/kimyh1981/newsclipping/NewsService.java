@@ -921,6 +921,16 @@ public class NewsService extends Service {
     }
 
     /** 자막 화면 '원문 보기': 지금(또는 방금) 읽은 기사의 원문 주소. 없으면 "" */
+    /** 지금 기사 제목 (공유용, 없으면 "") */
+    static String currentTitle() {
+        NewsService s = running;
+        if (s == null || s.lines.isEmpty()) return "";
+        int i = Math.min(s.current, s.lines.size() - 1);
+        while (i > 0 && s.lines.get(i).item == null) i--;
+        Brief.Item it = s.lines.get(i).item;
+        return it == null ? "" : it.title;
+    }
+
     static String currentLink() {
         NewsService s = running;
         if (s == null || s.lines.isEmpty()) return "";

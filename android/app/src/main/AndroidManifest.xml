@@ -16,6 +16,8 @@
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
     <queries>
+        <!-- 자막 화면 '카톡 공유'가 카카오톡을 바로 연다 -->
+        <package android:name="com.kakao.talk" />
         <intent>
             <action android:name="android.intent.action.TTS_SERVICE" />
         </intent>
