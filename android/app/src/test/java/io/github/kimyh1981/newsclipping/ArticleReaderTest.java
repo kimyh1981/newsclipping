@@ -88,6 +88,65 @@ public class ArticleReaderTest {
         assertFalse(all.contains("소제목")); // 문장이 아닌 짧은 줄은 그대로 뺀다
     }
 
+    /** 본문 문장 나누기 → 소리 글 (앱 '전체 듣기' 경로). 문장은 " / "로 잇는다 */
+    private static String heard(String text) {
+        StringBuilder b = new StringBuilder();
+        for (String x : ArticleReader.split(text)) b.append(b.length() > 0 ? " / " : "").append(Pron.say(x));
+        return b.toString();
+    }
+
+    // 2026-10-27 주인 '9,11 테러를 구 십일로 읽는다': NFKC가 ㆍ를 옛 자모로 바꿔 지워졌다. 가운뎃점 닮은 기호는 먼저 ·로
+    @Test public void middleDotVariantsAreReadAsDates() {
+        assertEquals("9·11 테러 25주년을 맞아 추모식이 열렸다.", ArticleReader.split("9ㆍ11 테러 25주년을 맞아 추모식이 열렸다.").get(0));
+        assertEquals("구일일 테러 이십오주년을 맞아 추모식이 열렸다.", heard("9ㆍ11 테러 25주년을 맞아 추모식이 열렸다."));
+        assertEquals("구일일 테러 이십오주년을 맞아 추모식이 열렸다.", heard("9‧11 테러 25주년을 맞아 추모식이 열렸다."));
+        assertEquals("오일팔 민주화운동 기념식이 열렸다.", heard("5ㆍ18 민주화운동 기념식이 열렸다."));
+        assertEquals("선별, 포장, 출하를 한곳에서 맡는다.", heard("선별ㆍ포장ㆍ출하를 한곳에서 맡는다.")); // 지금은 '선별포장'으로 붙었다
+    }
+
+    // 숫자 아닌 ~는 쉼표가 아니라 '에서', 범위 앞 숫자에도 단위 (2026-10-27)
+    @Test public void tildeIsReadAsRange() {
+        assertEquals("서울~부산 구간이 막혔다.", ArticleReader.split("서울~부산 구간이 막혔다.").get(0)); // 자막은 쓴 글 그대로
+        assertEquals("서울에서 부산 구간이 막혔다.", heard("서울~부산 구간이 막혔다."));
+        assertEquals("오전 아홉 시에서 오후 여섯 시까지 문을 연다.", heard("오전 9시~오후 6시까지 문을 연다."));
+        assertEquals("삼월에서 사월에 씨를 뿌린다.", heard("3~4월에 씨를 뿌린다."));
+        assertEquals("시월 일일에서 십오일 접수한다.", heard("10월 1~15일 접수한다."));
+    }
+
+    // 괄호를 지운 자리에 조사만 떨어져 들렸다 ('구매력 을'), 약어 풀이는 풀이를 읽는다 (2026-10-27)
+    @Test public void parenthesesDoNotLeaveLoneParticles() {
+        assertEquals("구매력을 바탕으로 성장했다.", ArticleReader.split("구매력(바잉 파워)을 바탕으로 성장했다.").get(0));
+        assertEquals("지목이 산이라는 이유로 막혔다.", ArticleReader.split("지목(地目)이 산이라는 이유로 막혔다.").get(0));
+        assertEquals("국제통화기금이 전망을 내놨다.", ArticleReader.split("IMF(국제통화기금)가 전망을 내놨다.").get(0)); // 받침에 맞춰 '가'→'이'
+        assertEquals("조류인플루엔자 등 질병이 늘었다.", ArticleReader.split("AI(조류인플루엔자) 등 질병이 늘었다.").get(0));
+        // 바뀌면 안 됨
+        assertEquals("비무장지대 일대에서 훈련했다.", ArticleReader.split("비무장지대(DMZ) 일대에서 훈련했다.").get(0));
+        assertEquals("정부는 대책을 내놨다.", ArticleReader.split("(서울=연합뉴스) 정부는 대책을 내놨다.").get(0));
+        assertEquals("조류인플루엔자가 퍼졌다.", ArticleReader.split("조류인플루엔자(AI)가 퍼졌다.").get(0));
+        assertEquals("GDP는 늘었다.", ArticleReader.split("GDP(명목 기준)는 늘었다.").get(0)); // 풀이가 아닌 덧붙임은 읽지 않는다
+    }
+
+    // 큰따옴표는 남겨 Pron이 인용 앞에서 쉬게 한다. 마침표에서 잘린 인용(홀수 따옴표)은 따옴표를 지운다 (2026-10-27)
+    @Test public void doubleQuotesKeptForQuotePause() {
+        String q = "이 회장은 \"한돈산업은 농업 생산액 1위 품목이지만 낡은 규제에 묶여 있다\"고 말했다.";
+        assertEquals(q, ArticleReader.split(q).get(0));
+        assertEquals("이 회장은, 한돈산업은 농업 생산액 일위 품목이지만, 낡은 규제에 묶여 있다고 말했다.", heard(q));
+        List<String> two = ArticleReader.split("그는 \"농협은 민간 조직이다. 정부가 간섭해선 안 된다\"고 말했다.");
+        assertEquals(2, two.size());
+        assertEquals("그는 농협은 민간 조직이다.", two.get(0));
+        assertEquals("정부가 간섭해선 안 된다고 말했다.", two.get(1));
+        assertEquals("농민들이 설립한 민간 자주 조직이다.", ArticleReader.split("농민들이 설립한 '민간 자주 조직'이다.").get(0)); // 작은따옴표는 지금처럼 지운다
+    }
+
+    // 2026. 10. 27. 은 세 문장으로 잘렸고, U.S.는 통째로 사라졌다 (2026-10-27)
+    @Test public void datesAndInitialsAreNotSentenceEnds() {
+        assertEquals(java.util.Arrays.asList("2026년 10월 27일 발표했다."), ArticleReader.split("2026. 10. 27. 발표했다."));
+        assertEquals("이천이십육년 시월 이십칠일 발표했다.", heard("2026. 10. 27. 발표했다."));
+        assertEquals(java.util.Arrays.asList("U.S. 농무부는 전망을 내놨다."), ArticleReader.split("U.S. 농무부는 전망을 내놨다."));
+        assertEquals("유에스 농무부는 전망을 내놨다.", heard("U.S. 농무부는 전망을 내놨다."));
+        assertEquals(java.util.Arrays.asList("3.5% 올랐다.", "이어 발표했다."), ArticleReader.split("3.5% 올랐다. 이어 발표했다.")); // 바뀌면 안 됨
+    }
+
     @Test public void keepsParagraphBoundaries() {
         List<List<String>> p = ArticleReader.paragraphs(ArticleReader.text(PAGE));
         assertEquals(2, p.size()); // 문단 둘 (군글 문단은 빠짐)

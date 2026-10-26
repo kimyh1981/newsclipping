@@ -171,26 +171,63 @@ final class ArticleReader {
         return text.substring(0, cut > 0 ? cut + 1 : MAX_CHARS);
     }
 
+    /** 20자 이하 괄호 (앞 빈칸까지) */
+    private static final Pattern PAREN = Pattern.compile("\\s*\\(\\s*[^()]{1,20}\\s*\\)");
+    /** U.S. 같은 점 찍은 머리글자 */
+    private static final Pattern INITIALS = Pattern.compile("(?<![A-Za-z])((?:[A-Z]\\.){2,})");
+    /** 영문 약어 + 우리말 풀이: 풀이를 읽는다 (IMF(국제통화기금)가 → 국제통화기금이, 2026-10-27) */
+    private static final Pattern GLOSS = Pattern.compile("(?<![A-Za-z])([A-Z]{2,6})\\s?\\(([가-힣]{3,15}(?: [가-힣]{2,8})?)\\)(으로|로|을|를|은|는|과|와|이(?![가-힣])|가(?![가-힣]))?");
+    /** 이런 말이 든 괄호는 풀이가 아니라 덧붙임이다 (GDP(명목 기준)) */
+    private static final Pattern NOT_GLOSS = Pattern.compile("기준|대비|명목|실질|잠정|추정|예상|전년|전월|포함|제외|단위|평균|누적|이하|이상|미만|초과");
+
+    static String gloss(String s) {
+        Matcher m = GLOSS.matcher(s);
+        StringBuffer sb = new StringBuffer();
+        while (m.find()) {
+            String r = NOT_GLOSS.matcher(m.group(2)).find() ? m.group() : Pron.josa(m.group(2), m.group(3));
+            m.appendReplacement(sb, Matcher.quoteReplacement(r));
+        }
+        m.appendTail(sb);
+        return sb.toString();
+    }
+
     /** 문단들 → 문장들. 소리 내어 읽기 좋게 다듬는다 (서버 speechSentences의 주요 규칙) */
     static List<String> split(String text) {
         List<String> out = new ArrayList<>();
         if (text == null || text.trim().isEmpty()) return out;
         StringBuilder all = new StringBuilder();
         for (String p : text.split("\n")) if (keep(p, true)) all.append(tidy(p)).append(' ');
-        String s = Normalizer.normalize(all.toString(), Normalizer.Form.NFKC);
+        // 가운뎃점 닮은 기호는 NFKC 전에 ·로: NFKC가 ㆍ를 옛 한글 자모로 바꿔 소리에서 지워졌다 ('9ㆍ11'을 '구십일'로, 2026-10-27)
+        String s = Normalizer.normalize(all.toString().replaceAll("[ㆍᆞ‧⋅・･∙]", "·"), Normalizer.Form.NFKC);
         s = s.replaceAll("\\s*(?:[가-힣]{3}\\s+){0,2}[가-힣]{2,4}\\s*(?:기자|특파원|객원기자)\\s*=\\s*", ". "); // 부제 … 홍길동 기자 = 본문 → 부제. 본문
-        s = s.replaceAll("\\(\\s*[^()]{1,20}\\s*\\)", " "); // 비무장지대(DMZ) → 비무장지대
+        s = gloss(s); // IMF(국제통화기금)가 → 국제통화기금이
+        // 비무장지대(DMZ) → 비무장지대. 뒤에 조사가 붙으면 앞 빈칸까지 지운다: '구매력 을'처럼 조사만 떨어져 들렸다 (2026-10-27)
+        Matcher pm = PAREN.matcher(s);
+        StringBuffer pb = new StringBuffer();
+        while (pm.find()) pm.appendReplacement(pb, pm.end() < s.length() && s.charAt(pm.end()) >= '가' && s.charAt(pm.end()) <= '힣' ? "" : " ");
+        pm.appendTail(pb);
+        s = pb.toString();
         s = s.replaceAll("[\\u4e00-\\u9fff]+", ""); // 한자는 읽지 않는다
-        s = s.replaceAll("[\"“”‘’'`]", "");
-        s = s.replaceAll("…|\\.{3,}", ", ").replaceAll("(\\d)\\s*~\\s*(?=\\d)", "$1에서 ").replace("~", ", ");
+        s = s.replaceAll("[‘’'`]", ""); // 큰따옴표는 남긴다: 인용 앞 쉼을 Pron이 만들고 지운다 (2026-10-27)
+        // 숫자 아닌 ~(서울~부산, 9시~오후 6시)는 Pron이 '에서'로 읽는다 (쉼표로 바꾸면 '서울, 부산'으로 들렸다, 2026-10-27)
+        s = s.replaceAll("…|\\.{3,}", ", ").replaceAll("(\\d)\\s*~\\s*(?=\\d)", "$1에서 ");
         s = s.replaceAll("\\s+", " ");
         s = s.replaceAll("(\\d)\\.(?=\\d)", "$1․"); // 3.5% 의 점에서 자르지 않는다
+        // 2026. 10. 27. 같은 날짜와 U.S. 같은 머리글자의 점에서 자르지 않는다 (날짜는 세 문장으로, U.S.는 통째로 사라졌다, 2026-10-27)
+        s = s.replaceAll("(\\d{4})\\.\\s?(\\d{1,2})\\.\\s?(\\d{1,2})\\.?", "$1년 $2월 $3일");
+        Matcher im = INITIALS.matcher(s);
+        StringBuffer ib = new StringBuffer();
+        while (im.find()) im.appendReplacement(ib, Matcher.quoteReplacement(im.group(1).replace('.', '․')));
+        im.appendTail(ib);
+        s = ib.toString();
         Matcher m = Pattern.compile("[^.?!。]+(?:[.?!。]+|$)").matcher(s);
         while (m.find()) {
             String x = m.group().replace('․', '.').replaceAll("^[\\s,]+|[\\s,]+$", "");
+            // 큰따옴표가 홀수면(여러 문장 인용이 마침표에서 잘림) 이 문장의 큰따옴표를 모두 지운다: 자막이 깨지고 쉼이 엉뚱해진다
+            if (x.replaceAll("[^\"“”]", "").length() % 2 == 1) x = x.replaceAll("[\"“”]", "").trim();
             x = x.replaceAll("^[가-힣]{2,4}\\s*(?:기자|특파원)\\s+(?=\\S)", ""); // 문장 앞 '고봉준 기자 프로야구…'
             if (!x.matches(".*[가-힣a-zA-Z0-9]{2}.*")) continue;
-            x = x.matches(".*[.?!]$") ? x : x + ".";
+            x = x.matches(".*[.?!][\"”]?$") ? x : x + ".";
             if (!out.isEmpty() && out.get(out.size() - 1).equals(x)) continue; // 같은 문장이 잇따르면 한 번만 (요약문 반복)
             out.add(x);
         }

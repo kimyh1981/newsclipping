@@ -42,11 +42,14 @@ final class Pron {
             WORD_RES[i] = Pattern.compile((WORDS[i][0].charAt(0) == '대' ? AFTER_COUNT : "") + "(^|[^가-힣])" + Pattern.quote(WORDS[i][0]) + (WORDS[i][2].isEmpty() ? "" : "(?!" + WORDS[i][2] + ")"));
         }
     }
-    private static final Pattern ADNOMINAL = Pattern.compile("([가-힣]) (수|것|줄|바)(?=[^가-힣]|$|[가도는밖조만을이은으에])");
+    private static final Pattern ADNOMINAL = Pattern.compile("([가-힣]) (수|것|줄(?!이)|바)(?=[^가-힣]|$|[가도는밖조만을이은으에])");
     private static final Pattern STATION = Pattern.compile("([가-힣]{2,})역(?=[^가-힣]|$|에|으로|까지|앞|광장|사거리|인근|일대|부근|과|의|은|을|이|도)");
     private static final Pattern NOT_STATION = Pattern.compile("(지|영|구|권|해|수|무|방|검|통|번|징|용|병|공|노|배|광|현|반)$");
     private static final Pattern LEAD = Pattern.compile("^(그러나|하지만|그런데|그러면서|또한|한편|특히|다만|따라서|아울러|반면|게다가|결국|실제로|앞서|이에 따라|이와 함께|이에 대해)\\s+(?!,)");
     private static final Pattern LINK = Pattern.compile("(했고|됐고|였고|었고|았고|겠고|있고|없고|이고|하며|되며|이며|으며|었으며|였으며|했으며|면서|지만|는데|은데|으나|었으나|했으나|라며|다며)\\s");
+    /** 특히·또한 같은 말 바로 뒤가 꾸미는 말이면 쉬지 않는다: '특히, 중요한 것은'은 말이 끊겼다 (2026-10-27) */
+    private static final Pattern LEAD_SOFT = Pattern.compile("특히|또한|다만|결국|실제로|앞서");
+    private static final Pattern ADN = Pattern.compile("[가-힣]*(?:한|은|는|인|된|던|운|른|린|진|난|할|될|울)");
     private static final Pattern SENTENCE = Pattern.compile("[^.?!]+[.?!]*");
     private static final Pattern ACCORDING = Pattern.compile("(에 따르면)\\s(?!,)");
 
@@ -221,7 +224,12 @@ final class Pron {
             String sent = m.group();
             int k = 0;
             while (k < sent.length() && Character.isWhitespace(sent.charAt(k))) k++;
-            String t = LEAD.matcher(sent.substring(k)).replaceFirst("$1, ");
+            String t = sent.substring(k);
+            Matcher lm = LEAD.matcher(t);
+            if (lm.find()) {
+                String next = t.substring(lm.end()).split("\\s", -1)[0];
+                if (!(LEAD_SOFT.matcher(lm.group(1)).matches() && ADN.matcher(next).matches())) t = lm.group(1) + ", " + t.substring(lm.end());
+            }
             t = ACCORDING.matcher(t).replaceAll("$1, ");
             if (t.length() >= 30) t = links(t);
             m.appendReplacement(sb, Matcher.quoteReplacement(sent.substring(0, k) + t));
@@ -237,7 +245,13 @@ final class Pron {
             String before = t.substring(0, m.start());
             before = before.substring(before.lastIndexOf(',') + 1);
             String after = t.substring(m.end()).split("[,.?!]", -1)[0];
-            String r = before.length() >= 12 && after.length() >= 10 ? m.group(1) + ", " : m.group();
+            // 이음 끝 바로 뒤가 같은 꾸밈 안이면 쉬지 않는다 (주인 '말이 엉뚱하게 떨어진다', 2026-10-27)
+            String[] next = t.substring(m.end()).split("\\s+", -1);
+            String end = m.group(1), n0 = next[0], n1 = next.length > 1 ? next[1] : "";
+            boolean keep = end.equals("이고") && before.endsWith("적") && n0.matches("[가-힣]+(?:적인|한|운|은|른)") // 자율적이고 민주적인 조직
+                    || (end.endsWith("며") || end.endsWith("면서")) && !end.matches(".*[라다]며") && n0.matches("[가-힣]{2,}(?:하는|되는)") // 결합하며 급변하는 시대
+                    || end.matches(".*[라다]며") && n0.endsWith("게") && n1.matches("[가-힣]+(?:은|는|한|된|던|운)"); // 입법이라며 의기양양하게 내놓은
+            String r = !keep && before.length() >= 12 && after.length() >= 10 ? m.group(1) + ", " : m.group();
             m.appendReplacement(sb, Matcher.quoteReplacement(r));
         }
         m.appendTail(sb);
@@ -322,7 +336,8 @@ final class Pron {
                 + "|원|달러|동|위안|엔|유로|루피아|루피|바트|헤알|링깃|페소|파운드|" + codes + ")?)\\s?/\\s?(" + UNIT + ")(?![A-Za-z])");
     }
 
-    private static String josa(String word, String p) {
+    /** 낱말 뒤 조사를 받침에 맞춘다 (ArticleReader도 쓴다: IMF(국제통화기금)가 → 국제통화기금이) */
+    static String josa(String word, String p) {
         if (p == null) return word;
         int j = jong(word.charAt(word.length() - 1));
         boolean has = j != 0;
@@ -353,7 +368,13 @@ final class Pron {
         m.appendTail(sb);
         return sb.toString();
     }
-    private static final Pattern EVENT = Pattern.compile("(?<![\\d.])(\\d{1,2})\\s?·\\s?(\\d{1,2})(?![\\d.])");
+    // 날짜 이름(5·18, 9·11)과 숫자·숫자(20·30대, 24·25일)를 가려 읽는다. '20·30대'를 '이십삼영대'로 읽었다 (2026-10-27)
+    private static final String EVENT_NOUN = "(?:부동산\\s?)?(?:테러|사태|사건|참사|운동|민주화운동|혁명|항쟁|민주항쟁|전쟁|선언|공동선언|합의|군사합의|대책|조치|총선|대선|지방선거|선거|정상회담|특별법|기념식|기념일|쿠데타|계엄|비상계엄)";
+    /** 9.11 테러, 9/11 테러, 9,11 테러 → 9·11 (뒤에 사건 이름이 있을 때만) */
+    private static final Pattern EVENT_SEP = Pattern.compile("(?<![\\d.,/])([1-9]|1[0-2])\\s?[./,]\\s?(?=(?:[1-9]|[12]\\d|3[01])(?![\\d%.,])\\s?" + Pron.EVENT_NOUN + ")");
+    private static final Pattern EVENT = Pattern.compile("(?<![\\d.])(\\d{1,2})\\s?·\\s?(\\d{1,2})(?!\\d|\\.\\d)(?=(일(?!본|대|부|반|선|자)|월|년(?!대)|분기|학년|층|호선|대)?)");
+    /** 3~4월 → 3월에서 4월: 앞 숫자의 단위가 빠져 '삼에서 사월'로 들렸다 (2026-10-27) */
+    private static final Pattern RANGE_UNIT = Pattern.compile("(?<![\\d.,])(\\d{1,4})\\s*(?:~|-|에서\\s?)(\\d{1,4})\\s?(월|일|년|시|세|위|차|분기|학년)(?=[^가-힣]|$|에|의|은|는|이|가|을|를|도|만|까지|부터|께|쯤|경|간|씩|로)");
     private static final Pattern BIG_UNIT = Pattern.compile("(\\d[만억조천])\\s?(" + UNIT + ")(?![A-Za-z])");
     private static final Pattern FRACTION = Pattern.compile("(?<![\\d/.])(\\d{1,3})/(\\d{1,3})(?![\\d/])");
 
@@ -387,6 +408,27 @@ final class Pron {
         return String.join(" ", parts);
     }
 
+    /** 한 자리씩: 18 → 일팔 */
+    private static String digits1(String b) {
+        StringBuilder r = new StringBuilder();
+        for (char c : b.toCharArray()) r.append(DIG[c - '0']);
+        return r.toString();
+    }
+
+    /** a·b 읽기 (js/pron.js의 EVENT와 같게). unit은 뒤에 붙은 일·월·대 같은 말, 없으면 null */
+    private static String event(String m, String a, String b, String unit) {
+        int x = Integer.parseInt(a), y = Integer.parseInt(b);
+        if (unit != null && (x >= 10 || y >= 10)) { // 둘 다 한 자리면 이어 읽는다 (1·2위 일이위, 3·4분기 삼사분기)
+            if (unit.equals("대")) {
+                if (x % 10 != 0 || y % 10 != 0) return sino(a) + digits1(b); // 10·15대책 같은 이름은 사건 읽기
+                return y == x + 10 ? DIG[x / 10] + DIG[y / 10] + "십" : sino(a) + " " + sino(b); // 20·30대 이삼십대, 20·40대 이십 사십대
+            }
+            return sino(a) + " " + sino(b); // 24·25일 이십사 이십오일, 11·12월 십일 십이월
+        }
+        if (x == 0 || y == 0 || x > 12 || y > 31) return m; // 날짜가 아니면 그대로 (기호 규칙이 띄어 읽는다)
+        return sino(a) + (y % 10 == 0 || (x == 12 && y == 12) ? sino(b) : digits1(b)); // 5·18 오일팔, 4·10 사십, 12·12 십이십이
+    }
+
     private static String nativeNum(int n) {
         if (n == 20) return "스무";
         return N10[n / 10] + N1[n % 10];
@@ -399,19 +441,16 @@ final class Pron {
             char c = s.charAt(i);
             b.append(c >= '０' && c <= '９' || "％～：＋－．".indexOf(c) >= 0 ? (char) (c - 0xfee0) : c);
         }
-        return b.toString().replaceAll("[∼〜]", "~").replace("㎞", "km").replace("㎏", "kg").replace("㎜", "mm").replace("㎝", "cm").replace("㏊", "ha").replace("㎾", "kW").replace("㎿", "MW").replaceAll("[ㆍ・•∙]", "·");
+        return b.toString().replaceAll("[∼〜]", "~").replace("㎞", "km").replace("㎏", "kg").replace("㎜", "mm").replace("㎝", "cm").replace("㏊", "ha").replace("㎾", "kW").replace("㎿", "MW").replaceAll("[ㆍᆞ‧⋅・･∙•]", "·"); // '9‧11'을 '구 십일'로 읽었다 (2026-10-27)
     }
 
     static String numbers(String s) {
         s = plain(s).replaceAll("코로나\\s?-?19", "코로나 일구").replaceAll("영하\\s?-(?=\\d)", "영하 ").replaceAll("(\\d)\\s?a당", "$1아르당").replaceAll("시속\\s?(\\d[\\d,.]*)\\s?km/h", "$1km/h");
         // 5·18, 6·25, 10·15 대책처럼 날짜로 이름 붙인 일은 오일팔, 육이오, 십일오로
+        s = EVENT_SEP.matcher(s).replaceAll("$1·");
         Matcher e = EVENT.matcher(s);
         StringBuffer eb = new StringBuffer();
-        while (e.find()) {
-            StringBuilder r = new StringBuilder(sino(e.group(1)));
-            for (char c : e.group(2).toCharArray()) r.append(DIG[c - '0']);
-            e.appendReplacement(eb, r.toString());
-        }
+        while (e.find()) e.appendReplacement(eb, Matcher.quoteReplacement(event(e.group(), e.group(1), e.group(2), e.group(3))));
         e.appendTail(eb);
         s = eb.toString();
         e = PRE_BIG.matcher(s); // 하루 200만 배럴: 앞에 붙는 말은 숫자 전체 앞에 (js/pron.js와 같게)
@@ -454,6 +493,7 @@ final class Pron {
         }
         m.appendTail(sb);
         s = sb.toString();
+        s = RANGE_UNIT.matcher(s).replaceAll("$1$3에서 $2$3"); // 3~4월 삼월에서 사월
         s = s.replaceAll("(\\d)\\s*~\\s*(?=\\d)", "$1에서 ").replaceAll("(\\d)-(?=\\d)", "$1에서 ").replaceAll("(\\d)\\s?:\\s?(?=\\d)", "$1 대 ");
         m = NUM.matcher(s);
         sb = new StringBuffer();
@@ -494,11 +534,51 @@ final class Pron {
         return sb.toString();
     }
 
+    // 괄호 뒤에 조사가 붙으면 괄호째 지운다(조사만 떨어져 들렸다), 큰따옴표 인용 앞은 쉰다, 짧은 가운뎃점 나열은 붙이거나 띄운다 (2026-10-27)
+    private static final Pattern PAREN_JOSA = Pattern.compile("[ \\t]*\\([^()]{1,30}\\)(?=(?:은|는|이|가|을|를|의|에서|에|으로|로|과|와|도|만)(?![가-힣]))"); // 쌀값(80kg 기준)은 → 쌀값은
+    private static final Pattern QUOTE_OPEN = Pattern.compile("([^\\s\"“(,])(?<!이른바|소위|일명|이름하여)[ \\t]+[\"“](?=[^\"“”]{12,}[\"”](?!는|란|라는|이라는|이란|던))"); // 이 회장은 "…" → 이 회장은, …
+    private static final Pattern QUOTE_NEXT = Pattern.compile("[\"”](이?라며|며|면서|라면서|고)[ \\t]+[\"“]"); // …있다"며 "냄새… → 있다며, 냄새
+    private static final Pattern DOT_LIST = Pattern.compile("([가-힣]+)((?:[ \\t]*·[ \\t]*[가-힣]+)+)(?=([ \\t]+[가-힣]+)?)");
+    private static final Pattern DOT_LIST_NOT = Pattern.compile("[ \\t]+(?:등|및|또는|가운데|중)");
+    private static final Pattern DOT_LIST_JOSA = Pattern.compile("(?:은|는|이|가|을|를|에|와|과|도|만|로|서|지|터)$");
+    private static final Pattern TILDE = Pattern.compile("(?<=\\S)[ \\t]*~[ \\t]*(?=\\S)"); // 서울~부산 서울에서 부산
+
+    /** 가운뎃점 나열: 한 음절 약칭은 붙이고(한미일), 뒤 명사를 꾸미는 짧은 나열은 띄우고(법적 제도적 걸림돌), 나머지는 쉼표로 (뒤에서) */
+    private static String dotList(String s) {
+        Matcher m = DOT_LIST.matcher(s);
+        StringBuffer sb = new StringBuffer();
+        while (m.find()) {
+            java.util.List<String> items = new java.util.ArrayList<>();
+            items.add(m.group(1));
+            String[] rest = m.group(2).split("·", -1);
+            for (int i = 1; i < rest.length; i++) items.add(rest[i].trim());
+            boolean shortHeads = true;
+            for (int i = 0; i < items.size() - 1; i++) if (items.get(i).length() != 1) shortHeads = false;
+            String r = m.group();
+            if (shortHeads) r = String.join("", items); // 한·미·일 한미일, 농·축협 농축협
+            else {
+                String last = items.get(items.size() - 1).replaceAll("의$", "");
+                boolean small = items.size() <= 3;
+                for (String x : items) if (x.length() > 4) small = false;
+                String next = m.group(3);
+                if (small && next != null && !DOT_LIST_NOT.matcher(next).matches() && !DOT_LIST_JOSA.matcher(last).find()) r = String.join(" ", items); // 법적·제도적 걸림돌
+            }
+            m.appendReplacement(sb, Matcher.quoteReplacement(r));
+        }
+        m.appendTail(sb);
+        return sb.toString();
+    }
+
     static String symbols(String s) {
+        s = PAREN_JOSA.matcher(s).replaceAll("");
+        s = QUOTE_OPEN.matcher(s).replaceAll("$1, ");
+        s = QUOTE_NEXT.matcher(s).replaceAll("$1, ");
+        s = dotList(s);
+        s = TILDE.matcher(s).replaceAll("에서 ");
         s = s.replaceAll("[“”\"‘’'`「」『』《》〈〉<>\\[\\]【】※\\u1100-\\u11ff]", "").replaceAll("[()]", ", ").replaceAll("…|\\.{2,}", ", ");
         s = s.replaceAll("[ \\t]*↑", " 상승").replaceAll("[ \\t]*↓", " 하락").replaceAll("[▲▼△▽▶▷►◀◁◆◇■□●○◎★☆→←↔⇒⇨▸▪]", ", ").replaceAll("\\b[vV][sS]\\b\\.?", " 대 ");
         s = s.replaceAll("[ \\t]*[|/·][ \\t]*", ", ").replace("&", " 앤 ").replace("%", " 퍼센트").replaceAll("[#*=^_~+@]", " ").replaceAll("(?<=\\S)[ \\t]*-[ \\t]*(?=\\S)", " ");
-        s = s.replaceAll("[ \\t]*,(?:[ \\t]*,)*[ \\t]*", ", ").replaceAll(",[ \\t]*([.?!])", "$1").replaceAll("[ \\t]{2,}", " ").replaceAll("(?m)^[ \\t,]+|[ \\t,]+$", "");
+        s = s.replaceAll("[ \\t]*,(?:[ \\t]*,)*[ \\t]*", ", ").replaceAll(",[ \\t]*([.?!])", "$1").replaceAll("([?!])[ \\t]*,", "$1").replaceAll("[ \\t]{2,}", " ").replaceAll("(?m)^[ \\t,]+|[ \\t,]+$", "");
         return s;
     }
 }

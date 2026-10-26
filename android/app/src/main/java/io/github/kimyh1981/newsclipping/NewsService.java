@@ -1038,6 +1038,8 @@ public class NewsService extends Service {
     /** '전체 듣기' 차례에서 문단이 시작하는 자리 (위·아래로 쓸어 문단 넘기기) */
     private List<Integer> paraStarts = new ArrayList<>();
     private List<Step> paraQueue;
+    /** 전체 듣기 문단 사이 쉼 (밀리초) */
+    private static final int PARA_GAP_MS = 400;
 
     /** 문단별 본문을 읽고, 이어서 다음 헤드라인부터 */
     private void playParas(int i, List<List<String>> paras) {
@@ -1045,9 +1047,10 @@ public class NewsService extends Service {
         List<Step> steps = new ArrayList<>();
         List<Integer> starts = new ArrayList<>();
         int k = 0;
-        for (List<String> p : paras) {
+        for (int pi = 0; pi < paras.size(); pi++) {
+            if (pi > 0) steps.add(new Step("S" + i + ".g" + k++, "", PARA_GAP_MS)); // 문단 사이 숨 한 번: 문단이 바뀌어도 이어 붙어 들렸다 (2026-10-27)
             starts.add(steps.size());
-            for (String sen : p) for (String part : Rules.chunks(sen, max)) steps.add(new Step("S" + i + "." + k++, part, 0));
+            for (String sen : paras.get(pi)) for (String part : Rules.chunks(sen, max)) steps.add(new Step("S" + i + "." + k++, part, 0));
         }
         steps.add(new Step("S" + i + ".p", "", 600));
         steps.addAll(stepsFrom(i + 1));
