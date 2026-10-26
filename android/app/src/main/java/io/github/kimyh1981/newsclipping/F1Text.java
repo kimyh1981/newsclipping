@@ -55,6 +55,9 @@ final class F1Text {
             || (cp >= 0x1F700 && cp <= 0x1FAFF) || (cp >= 0x2600 && cp <= 0x27BF) || (cp >= 0x1F1E6 && cp <= 0x1F1FF);
     }
 
+    /** 긴 문장을 자를 때 양쪽 조각이 이보다 짧지 않게 */
+    private static final int MIN_PART = 25;
+
     /** 긴 글을 max자 이하 덩이로: 문장 → 쉼표 → 띄어쓰기 순으로 자른다 */
     static List<String> chunks(String text, int max) {
         text = text.trim();
@@ -70,24 +73,7 @@ final class F1Text {
                 if (s.isEmpty()) continue;
                 if (s.length() > max) {
                     flush(out, cur);
-                    for (String part : s.split(",")) {
-                        part = part.trim();
-                        if (part.isEmpty()) continue;
-                        if (part.length() > max) {
-                            flush(out, cur);
-                            StringBuilder w = new StringBuilder();
-                            for (String word : part.split("\\s+")) {
-                                if (w.length() + word.length() + 1 > max && w.length() > 0) flush(out, w);
-                                if (w.length() > 0) w.append(' ');
-                                w.append(word);
-                            }
-                            flush(out, w);
-                        } else {
-                            if (cur.length() + part.length() + 1 > max && cur.length() > 0) flush(out, cur);
-                            if (cur.length() > 0) cur.append(", ");
-                            cur.append(part);
-                        }
-                    }
+                    cutLong(s, max, out);
                     continue;
                 }
                 if (cur.length() + s.length() + 1 > max && cur.length() > 0) flush(out, cur);
@@ -97,6 +83,32 @@ final class F1Text {
             flush(out, cur);
         }
         return out.isEmpty() ? Arrays.asList("") : out;
+    }
+
+    /**
+     * max자 넘는 한 문장을 고른 길이로 자른다: 조각 수 n = ceil(길이/max), 목표 길이 = 길이/n에 가장 가까운 쉼표 뒤(없으면 빈칸).
+     * 마지막이 아닌 조각은 쉼표로 끝낸다: 마침표 없이 잘린 덩이를 F1이 문장 끝처럼 내려 읽어 한 문장이 두 문장으로 들렸다 (2026-10-27)
+     */
+    static void cutLong(String s, int max, List<String> out) {
+        while (s.length() > max) {
+            int n = (s.length() + max - 1) / max;
+            double target = (double) s.length() / n;
+            int best = -1;
+            double bd = 1e9;
+            for (int i = s.indexOf(", "); i >= 0; i = s.indexOf(", ", i + 1)) {
+                int len = i + 1;
+                if (len <= max && len >= MIN_PART && s.length() - len - 1 >= MIN_PART && Math.abs(len - target) < bd) { bd = Math.abs(len - target); best = len; }
+            }
+            if (best < 0) for (int i = s.indexOf(' '); i >= 0; i = s.indexOf(' ', i + 1)) {
+                if (i <= max && i >= MIN_PART && s.length() - i - 1 >= MIN_PART && Math.abs(i - target) < bd) { bd = Math.abs(i - target); best = i; }
+            }
+            if (best < 0) { best = s.lastIndexOf(' ', max); if (best <= 0) best = max; }
+            String left = s.substring(0, best).trim();
+            if (!left.matches("(?s).*[,.!?]")) left += ",";
+            out.add(left);
+            s = s.substring(best).replaceAll("^[,\\s]+", "");
+        }
+        if (!s.isEmpty()) out.add(s);
     }
 
     private static void flush(List<String> out, StringBuilder b) {

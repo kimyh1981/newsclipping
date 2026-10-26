@@ -3,7 +3,7 @@ name: News check
 
 on:
   pull_request:
-    paths: ['tools/**', 'feeds.json', 'tests/**', '.github/workflows/news-check.yml', 'android/app/src/main/java/**/Extras.java', 'android/app/src/main/java/**/ArticleReader.java', 'android/app/src/test/java/**/ExtrasLive.java', 'android/app/src/test/java/**/ArticleLive.java']
+    paths: ['tools/**', 'feeds.json', 'tests/**', '.github/workflows/news-check.yml', 'android/app/src/main/java/**/Extras.java', 'android/app/src/main/java/**/ArticleReader.java', 'android/app/src/main/java/**/Pron.java', 'android/app/src/test/java/**/ExtrasLive.java', 'android/app/src/test/java/**/ArticleLive.java']
   workflow_dispatch:
 
 permissions:
@@ -52,5 +52,5 @@ jobs:
         timeout-minutes: 5
         run: |
           J=android/app/src/main/java/io/github/kimyh1981/newsclipping
-          javac -encoding UTF-8 -nowarn -d /tmp/ar -cp /tmp/json.jar $J/Brief.java $J/LessonLock.java $J/Extras.java $J/ArticleReader.java android/app/src/test/java/io/github/kimyh1981/newsclipping/ArticleLive.java
+          javac -encoding UTF-8 -nowarn -d /tmp/ar -cp /tmp/json.jar $J/Brief.java $J/LessonLock.java $J/Extras.java $J/Pron.java $J/ArticleReader.java android/app/src/test/java/io/github/kimyh1981/newsclipping/ArticleLive.java
           java -cp /tmp/ar:/tmp/json.jar io.github.kimyh1981.newsclipping.ArticleLive out/briefing.json 60

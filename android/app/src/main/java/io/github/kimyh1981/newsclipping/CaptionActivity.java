@@ -22,7 +22,8 @@ import android.widget.TextView;
  * 웹 기사 목록의 ▶(newsclipping://play?t=기사 제목)로 열리면 그 기사부터 읽는다.
  */
 public class CaptionActivity extends Activity {
-    private TextView head, body, hint, origin, time;
+    private TextView head, body, hint, origin, share, time;
+    private LinearLayout links;
     private ChapterBar bar;
     /** 읽는 동안 0.5초마다 진행바와 시간 */
     private final Runnable progress = new Runnable() {
@@ -130,12 +131,23 @@ public class CaptionActivity extends Activity {
         origin.setText("원문 보기 ↗");
         origin.setGravity(Gravity.CENTER);
         origin.setPadding(0, dp(10), 0, dp(4));
-        origin.setVisibility(View.GONE);
         origin.setOnClickListener(v -> {
             String link = NewsService.currentLink();
             if (!link.isEmpty()) startActivity(new Intent(Intent.ACTION_VIEW, android.net.Uri.parse(link)));
         });
-        col.addView(origin);
+        share = text(15, 0xFF0A84FF);
+        share.setText("카톡 공유");
+        share.setGravity(Gravity.CENTER);
+        share.setPadding(dp(20), dp(10), 0, dp(4));
+        share.setOnClickListener(v -> shareKakao());
+        origin.setPadding(0, dp(10), dp(20), dp(4));
+        links = new LinearLayout(this);
+        links.setOrientation(LinearLayout.HORIZONTAL);
+        links.setGravity(Gravity.CENTER);
+        links.addView(origin);
+        links.addView(share);
+        links.setVisibility(View.GONE);
+        col.addView(links);
 
         // 누르면 전체 듣기, 오른쪽에서 왼쪽으로 쓸면 다음 기사, 반대로 쓸면 이전 기사. 전체 듣기 중에는 어느 쪽이든 본문을 끝내고 헤드라인으로 돌아온다
         GestureDetector gestures = new GestureDetector(this, new GestureDetector.SimpleOnGestureListener() {
@@ -211,7 +223,7 @@ public class CaptionActivity extends Activity {
 
     private void show() {
         skip.setVisibility(View.GONE);
-        origin.setVisibility(NewsService.isRunning() && !NewsService.currentLink().isEmpty() ? View.VISIBLE : View.GONE);
+        links.setVisibility(NewsService.isRunning() && !NewsService.currentLink().isEmpty() ? View.VISIBLE : View.GONE);
         if (!NewsService.isRunning()) {
             if (seen) { finish(); return; }
             head.setText("뉴스클리핑");
@@ -285,5 +297,19 @@ public class CaptionActivity extends Activity {
         @Override public void setAlpha(int a) { paint.setAlpha(a); }
         @Override public void setColorFilter(android.graphics.ColorFilter f) { paint.setColorFilter(f); }
         @Override public int getOpacity() { return android.graphics.PixelFormat.TRANSLUCENT; }
+    }
+
+    /** 지금 기사의 제목과 원문 주소를 카카오톡으로: 카카오톡이 대화 상대 고르는 화면을 바로 띄운다. 카카오톡이 없으면 보통 공유 창 */
+    private void shareKakao() {
+        String link = NewsService.currentLink();
+        if (link.isEmpty()) return;
+        String title = NewsService.currentTitle();
+        Intent send = new Intent(Intent.ACTION_SEND).setType("text/plain")
+                .putExtra(Intent.EXTRA_TEXT, (title.isEmpty() ? "" : title + "\n") + link);
+        try {
+            startActivity(new Intent(send).setPackage("com.kakao.talk"));
+        } catch (android.content.ActivityNotFoundException e) {
+            startActivity(Intent.createChooser(send, "공유"));
+        }
     }
 }

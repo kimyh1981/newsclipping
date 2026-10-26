@@ -9,7 +9,7 @@
   else root.Pron = factory();
 })(typeof self !== 'undefined' ? self : this, function () {
   // 규칙을 바꾸면 올린다: 서버가 예전 규칙으로 녹음해 둔 파일을 다시 녹음한다
-  const VERSION = 7;
+  const VERSION = 8;
 
   // [쓴 글, 소리, 뒤에 오면 바꾸지 않는 말]. 낱말 첫머리에서만 찾는다 (재평가처럼 앞에 붙은 말은 그대로)
   // 제26·28항 경음화(한자어 ㄹ 뒤 ㄷㅅㅈ, 사이시옷 없는 사잇소리), 제29항 ㄴ첨가
@@ -385,9 +385,9 @@
     return s;
   }
 
-  // 관형형 -ㄹ 뒤 '수·것·줄·바'는 된소리 (제27항): 할 수 [할 쑤], 갈 것 [갈 껏]
+  // 관형형 -ㄹ 뒤 '수·것·줄·바'는 된소리 (제27항): 할 수 [할 쑤], 갈 것 [갈 껏]. '줄이다'는 아니다 (악취를 쭐이고, 2026-10-27)
   function adnominal(s) {
-    return s.replace(/([가-힣]) (수|것|줄|바)(?=[^가-힣]|$|[가도는밖조만을이은으에])/g, (m, a, b) => (jong(a.charCodeAt(0)) === 8 ? `${a} ${tense(b)}` : m));
+    return s.replace(/([가-힣]) (수|것|줄(?!이)|바)(?=[^가-힣]|$|[가도는밖조만을이은으에])/g, (m, a, b) => (jong(a.charCodeAt(0)) === 8 ? `${a} ${tense(b)}` : m));
   }
 
   function stations(s) {
@@ -400,15 +400,22 @@
   }
 
   // 띄어 읽기: 문장마다 이음말 뒤, '~에 따르면' 뒤, 긴 문장의 이음 끝 뒤에 쉼표
+  // 특히·또한 같은 말 바로 뒤가 꾸미는 말이면 쉬지 않는다: '특히, 중요한 것은'은 말이 끊겼다 (2026-10-27)
+  const ADN = /^[가-힣]*(?:한|은|는|인|된|던|운|른|린|진|난|할|될|울)$/;
   function pauses(s) {
     return s.replace(/[^.?!]+[.?!]*/g, (sent) => {
       const lead = sent.match(/^\s*/)[0];
-      let t = sent.slice(lead.length).replace(LEAD, '$1, ');
+      let t = sent.slice(lead.length).replace(LEAD, (m, w, at, all) => (/^(특히|또한|다만|결국|실제로|앞서)$/.test(w) && ADN.test(all.slice(m.length).split(/\s/)[0]) ? m : `${w}, `));
       t = t.replace(/(에 따르면)\s(?!,)/g, '$1, ');
       if (t.length >= 30) {
         t = t.replace(LINK, (m, end, at, all) => {
           const before = all.slice(0, at).split(',').pop();
           const after = all.slice(at + m.length).split(/[,.?!]/)[0];
+          // 이음 끝 바로 뒤가 같은 꾸밈 안이면 쉬지 않는다 (주인 '말이 엉뚱하게 떨어진다', 2026-10-27)
+          const next = all.slice(at + m.length).split(/\s+/);
+          if (end === '이고' && /적$/.test(before) && /^[가-힣]+(?:적인|한|운|은|른)$/.test(next[0])) return m; // 자율적이고 민주적인 조직
+          if (/(?:며|면서)$/.test(end) && !/[라다]며$/.test(end) && /^[가-힣]{2,}(?:하는|되는)$/.test(next[0])) return m; // 결합하며 급변하는 시대
+          if (/[라다]며$/.test(end) && /게$/.test(next[0]) && /^[가-힣]+(?:은|는|한|된|던|운)$/.test(next[1] || '')) return m; // 입법이라며 의기양양하게 내놓은
           return before.length >= 12 && after.length >= 10 ? `${end}, ` : m;
         });
       }
@@ -521,16 +528,34 @@
     return N10[Math.floor(n / 10)] + N1[n % 10];
   }
 
-  // 전각 숫자·기호와 한 글자 단위(㎞·㎏)를 보통 글자로
+  // 전각 숫자·기호와 한 글자 단위(㎞·㎏)를 보통 글자로. 가운뎃점 닮은 기호(ㆍ‧⋅･)도 ·로: '9‧11'을 '구 십일'로 읽었다 (2026-10-27)
   function plain(s) {
     return s.replace(/[０-９％～：＋－．]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0xfee0)).replace(/[∼〜]/g, '~')
-      .replace(/㎞/g, 'km').replace(/㎏/g, 'kg').replace(/㎜/g, 'mm').replace(/㎝/g, 'cm').replace(/㏊/g, 'ha').replace(/㎾/g, 'kW').replace(/㎿/g, 'MW').replace(/[ㆍ・•∙]/g, '·');
+      .replace(/㎞/g, 'km').replace(/㎏/g, 'kg').replace(/㎜/g, 'mm').replace(/㎝/g, 'cm').replace(/㏊/g, 'ha').replace(/㎾/g, 'kW').replace(/㎿/g, 'MW').replace(/[ㆍᆞ‧⋅・･∙•]/g, '·');
   }
 
+  // 날짜 이름(5·18, 9·11)과 숫자·숫자(20·30대, 24·25일)를 가려 읽는다. '20·30대'를 '이십삼영대'로 읽었다 (2026-10-27)
+  const EVENT_NOUN = '(?:부동산\\s?)?(?:테러|사태|사건|참사|운동|민주화운동|혁명|항쟁|민주항쟁|전쟁|선언|공동선언|합의|군사합의|대책|조치|총선|대선|지방선거|선거|정상회담|특별법|기념식|기념일|쿠데타|계엄|비상계엄)';
+  const EVENT_SEP = new RegExp(`(?<![\\d.,/])([1-9]|1[0-2])\\s?[./,]\\s?(?=(?:[1-9]|[12]\\d|3[01])(?![\\d%.,])\\s?${EVENT_NOUN})`, 'g');
+  const EVENT = /(?<![\d.])(\d{1,2})\s?·\s?(\d{1,2})(?!\d|\.\d)(?=(일(?!본|대|부|반|선|자)|월|년(?!대)|분기|학년|층|호선|대)?)/g;
+  const RANGE_UNIT = /(?<![\d.,])(\d{1,4})\s*(?:~|-|에서\s?)(\d{1,4})\s?(월|일|년|시|세|위|차|분기|학년)(?=[^가-힣]|$|에|의|은|는|이|가|을|를|도|만|까지|부터|께|쯤|경|간|씩|로)/g;
+  const digits1 = (b) => b.split('').map((c) => DIG[c]).join('');
   function numbers(s) {
     s = plain(s).replace(/코로나\s?-?19/g, '코로나 일구').replace(/영하\s?-(?=\d)/g, '영하 ').replace(/(\d)\s?a당/g, '$1아르당').replace(/시속\s?(\d[\d,.]*)\s?km\/h/g, '$1km/h');
     // 5·18, 6·25, 10·15 대책처럼 날짜로 이름 붙인 일은 오일팔, 육이오, 십일오로
-    s = s.replace(/(?<![\d.])(\d{1,2})\s?·\s?(\d{1,2})(?![\d.])/g, (m, a, b) => sino(a) + b.split('').map((c) => DIG[c]).join(''));
+    s = s.replace(EVENT_SEP, '$1·'); // 9.11 테러, 9/11 테러, 9,11 테러 → 9·11 (뒤에 사건 이름이 있을 때만)
+    s = s.replace(EVENT, (m, a, b, unit) => {
+      const A = +a, B = +b;
+      if (unit && (A >= 10 || B >= 10)) { // 둘 다 한 자리면 지금처럼 이어 읽는다 (1·2위 일이위, 3·4분기 삼사분기)
+        if (unit === '대') {
+          if (A % 10 || B % 10) return sino(a) + digits1(b); // 10·15대책 같은 이름은 사건 읽기
+          return B === A + 10 ? DIG[A / 10] + DIG[B / 10] + '십' : `${sino(a)} ${sino(b)}`; // 20·30대 이삼십대, 20·40대 이십 사십대
+        }
+        return `${sino(a)} ${sino(b)}`; // 24·25일 이십사 이십오일, 11·12월 십일 십이월
+      }
+      if (A === 0 || B === 0 || A > 12 || B > 31) return m; // 날짜가 아니면 그대로 (기호 규칙이 띄어 읽는다)
+      return sino(a) + (B % 10 === 0 || (A === 12 && B === 12) ? sino(b) : digits1(b)); // 5·18 오일팔, 4·10 사십, 12·12 십이십이
+    });
     s = s.replace(PRE_BIG, (m, n, u) => `${PRE[u]} ${n} ${UNITS[u]}`); // 하루 200만 배럴: 앞에 붙는 말은 숫자 전체 앞에
     // 480만 t, 132만ha처럼 만·억 뒤의 단위
     s = s.replace(new RegExp(`(\\d[만억조천])\\s?(${UNIT})(?![A-Za-z])`, 'g'), (m, n, u) => `${n} ${UNITS[u]}`);
@@ -543,6 +568,7 @@
     s = s.replace(/(?<![^\s(])\+(?=\d)/g, '플러스 ').replace(/±\s?(?=\d)/g, '플러스마이너스 ');
     s = s.replace(/([1-4])\/4\s?분기/g, '$1분기').replace(/(?<![\d/.])(\d{1,3})\/(\d{1,3})(?![\d/])/g, (m, a, b) => `${b}분의 ${a}`);
     s = s.replace(RANGE, (m, a, b, sp, c) => (+b === +a + 1 && ROUGH[a] ? `${ROUGH[a]}${sp}${c}` : `${a}${sp}${c}에서 ${b}${sp}${c}`));
+    s = s.replace(RANGE_UNIT, '$1$3에서 $2$3'); // 3~4월 삼월에서 사월: 앞 숫자의 단위가 빠져 '삼에서 사월'로 들렸다 (2026-10-27)
     s = s.replace(/(\d)\s*~\s*(?=\d)/g, '$1에서 ').replace(/(\d)-(?=\d)/g, '$1에서 ').replace(/(\d)\s?:\s?(?=\d)/g, '$1 대 ');
     return s.replace(NUM, (m, minus, int, frac, unit, at, all) => {
       const digits = int.replace(/,/g, '');
@@ -572,10 +598,23 @@
 
   // 읽지 않을 기호: 따옴표·꺾쇠는 지우고, 괄호·말줄임·빗금·가운뎃점·글머리표(▲■●)는 잠깐 쉬고, &는 '앤', ↑↓는 상승·하락
   function symbols(s) {
+    // 괄호 뒤에 조사가 붙으면 괄호째 지운다(조사만 떨어져 들렸다), 큰따옴표 인용 앞은 쉰다, 짧은 가운뎃점 나열은 붙이거나 띄운다 (2026-10-27)
+    s = s.replace(/[ \t]*\([^()]{1,30}\)(?=(?:은|는|이|가|을|를|의|에서|에|으로|로|과|와|도|만)(?![가-힣]))/g, ''); // 쌀값(80kg 기준)은 → 쌀값은
+    s = s.replace(/([^\s"“(,])(?<!이른바|소위|일명|이름하여)[ \t]+["“](?=[^"“”]{12,}["”](?!는|란|라는|이라는|이란|던))/g, '$1, '); // 이 회장은 "…" → 이 회장은, …
+    s = s.replace(/["”](이?라며|며|면서|라면서|고)[ \t]+["“]/g, '$1, '); // …있다"며 "냄새… → 있다며, 냄새
+    s = s.replace(/([가-힣]+)((?:[ \t]*·[ \t]*[가-힣]+)+)(?=([ \t]+[가-힣]+)?)/g, (m, first, rest, next) => {
+      const items = [first, ...rest.split('·').slice(1).map((x) => x.trim())];
+      if (items.slice(0, -1).every((x) => x.length === 1)) return items.join(''); // 한·미·일 한미일, 농·축협 농축협
+      const last = items[items.length - 1].replace(/의$/, '');
+      if (items.length <= 3 && items.every((x) => x.length <= 4) && next && !/^[ \t]+(?:등|및|또는|가운데|중)$/.test(next)
+        && !/(?:은|는|이|가|을|를|에|와|과|도|만|로|서|지|터)$/.test(last)) return items.join(' '); // 법적·제도적 걸림돌, 기후·에너지·환경 부처
+      return m; // 나열(조사가 붙거나 '등'이 뒤따름)·긴 나열은 지금처럼 쉼표
+    });
+    s = s.replace(/(?<=\S)[ \t]*~[ \t]*(?=\S)/g, '에서 '); // 서울~부산 서울에서 부산
     s = s.replace(/[“”"‘’'`「」『』《》〈〉<>\[\]【】※\u1100-\u11ff]/g, '').replace(/[()]/g, ', ').replace(/…|\.{2,}/g, ', ');
     s = s.replace(/[ \t]*↑/g, ' 상승').replace(/[ \t]*↓/g, ' 하락').replace(/[▲▼△▽▶▷►◀◁◆◇■□●○◎★☆→←↔⇒⇨▸▪]/g, ', ').replace(/\b[vV][sS]\b\.?/g, ' 대 ');
     s = s.replace(/[ \t]*[|/·][ \t]*/g, ', ').replace(/&/g, ' 앤 ').replace(/%/g, ' 퍼센트').replace(/[#*=^_~+@]/g, ' ').replace(/(?<=\S)[ \t]*-[ \t]*(?=\S)/g, ' ');
-    s = s.replace(/[ \t]*,(?:[ \t]*,)*[ \t]*/g, ', ').replace(/,[ \t]*([.?!])/g, '$1').replace(/[ \t]{2,}/g, ' ').replace(/^[ \t,]+|[ \t,]+$/gm, '');
+    s = s.replace(/[ \t]*,(?:[ \t]*,)*[ \t]*/g, ', ').replace(/,[ \t]*([.?!])/g, '$1').replace(/([?!])[ \t]*,/g, '$1').replace(/[ \t]{2,}/g, ' ').replace(/^[ \t,]+|[ \t,]+$/gm, '');
     return s;
   }
 
