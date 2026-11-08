@@ -114,11 +114,65 @@ function limiter(n) {
   };
 }
 
+// 번역한 제목에 영문 그대로 남은 이름(Notre Dame, Miami): 읽기 사전에도 없으면 이름만 모아 번역기에 한 번 더 보내 한글 소리로 바꾼다.
+// 음성이 영문을 엉터리로 읽거나 건너뛰었다 (2026-11-09 주인: 'No. 4 Notre Dame이 … No. 1 Miami를')
+const NAME = /(?<![A-Za-zÀ-ɏ])[A-Z][a-zà-ɏ'’.-]*[a-zà-ɏ](?:[ ](?:[A-Z][a-zà-ɏ'’.-]*[a-zà-ɏ]|de|da|do|dos|van|von|der|den|la|le|del|di|bin|al))*(?![A-Za-zÀ-ɏ])/g;
+
+const SKIP_NAME = /^(?:No|The|A|An|Mr|Mrs|Ms|Dr|St|Jr|Sr|Inc|Ltd|Co|Vs)\.?$/; // 순위(No. 4)·관사·호칭
+
+/** 제목들에서 한글로 바꿀 영문 이름 (사전이 이미 읽는 것은 뺀다), 긴 것부터 */
+function leftoverNames(titles) {
+  const names = new Set();
+  for (const t of titles) {
+    if (!/[가-힣]/.test(t)) continue; // 번역이 안 된 제목은 손대지 않는다
+    for (const m of String(t).matchAll(NAME)) if (!SKIP_NAME.test(m[0]) && /[A-Za-z]/.test(pron.latin(m[0]))) names.add(m[0]);
+  }
+  return [...names].sort((a, b) => b.length - a.length);
+}
+
+/** 이름 → 한글 소리 표대로 바꾼다 (긴 이름부터, 낱말 경계에서만) */
+function applyNames(text, sounds) {
+  let out = String(text);
+  for (const [name, sound] of [...sounds].sort((a, b) => b[0].length - a[0].length)) {
+    out = out.replace(new RegExp(`(?<![A-Za-zÀ-ɏ])${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?![A-Za-zÀ-ɏ])`, 'g'), sound);
+  }
+  return out;
+}
+
+const HANGUL_NAME = /^[가-힣·]+(?: [가-힣·]+)*$/;
+
+/**
+ * 이름만 번역기에 보내 한글 소리를 받는다 (못 바꾼 이름은 제목 그대로).
+ * 1) 'My name is …' 틀에 넣어 보낸다: 이름 그대로 소리로 옮긴다 (그냥 보내면 'Jalen Hurts'를 '잘렌 아파요'처럼 뜻으로 옮겼다)
+ * 2) 틀에서도 영문으로 남은 것만 이름째 다시: 낱말 수가 늘지 않고(Quang Duc → 꽝득) '…요/다'처럼 문장이 아닌 한글만 쓴다
+ */
+async function nameSounds(titles, lang, tr = translate) {
+  const names = leftoverNames(titles);
+  if (!names.length) return titles;
+  const sounds = new Map();
+  try {
+    const framed = (await tr(names.map((n) => `My name is ${n}.`).join('\n'), lang)).split('\n');
+    if (framed.length === names.length) names.forEach((n, i) => {
+      const m = framed[i].trim().match(/이름은\s*(.+?)\s*(?:\([^)]*\))?\s*(?:입니다|이에요|예요|이야|야)\.?$/);
+      if (m && HANGUL_NAME.test(m[1])) sounds.set(n, m[1]);
+    });
+    const rest = names.filter((n) => !sounds.has(n));
+    if (rest.length) {
+      const bare = (await tr(rest.join('\n'), lang)).split('\n').map((x) => x.trim());
+      if (bare.length === rest.length) rest.forEach((n, i) => {
+        const x = bare[i];
+        if (HANGUL_NAME.test(x) && x.split(' ').length <= n.split(' ').length && !/(?:요|다|니다|해|함|음)$/.test(x)) sounds.set(n, x);
+      });
+    }
+  } catch { /* 번역기가 막히면 이름은 영문 그대로 둔다 */ }
+  return sounds.size ? titles.map((t) => applyNames(t, sounds)) : titles;
+}
+
 // 외국 언론: 고른 기사 제목을 우리말로 바꾸고 원문은 original에 남긴다. 번역에 실패하면 읽을 수 없으니 빼고 기록만 남긴다
 async function translateItems(name, lang, items, log) {
   if (!items.length) return items;
   try {
-    const titles = await translateAll(items.map((it) => it.title), lang);
+    const titles = await nameSounds(await translateAll(items.map((it) => it.title), lang), lang);
     return items.map((it, i) => ({ ...it, title: titles[i], original: it.title, spoken: rss.spoken(titles[i]), lang })).filter((it) => it.spoken);
   } catch (err) {
     log.push(`${name}: 번역 실패 (${err.cause?.code || err.message}) ${items.length}건`);
@@ -471,4 +525,4 @@ if (require.main === module) {
   })();
 }
 
-module.exports = { EDITIONS, editionOf, collect, archive, slim, lessons, boosted, earlierKeys, itemKeys, titleKey, decode, googleUrl, translate, speechText, iosPieces, iosHours, RETRY };
+module.exports = { leftoverNames, applyNames, nameSounds, EDITIONS, editionOf, collect, archive, slim, lessons, boosted, earlierKeys, itemKeys, titleKey, decode, googleUrl, translate, speechText, iosPieces, iosHours, RETRY };

@@ -445,7 +445,8 @@ final class Pron {
     }
 
     static String numbers(String s) {
-        s = plain(s).replaceAll("코로나\\s?-?19", "코로나 일구").replaceAll("영하\\s?-(?=\\d)", "영하 ").replaceAll("(\\d)\\s?a당", "$1아르당").replaceAll("시속\\s?(\\d[\\d,.]*)\\s?km/h", "$1km/h");
+        s = plain(s).replaceAll("(?<![A-Za-z])No\\.\\s?(\\d{1,3})(?![\\d.])", "$1위") // 순위: No. 4 → 사위 (2026-11-09)
+                .replaceAll("코로나\\s?-?19", "코로나 일구").replaceAll("영하\\s?-(?=\\d)", "영하 ").replaceAll("(\\d)\\s?a당", "$1아르당").replaceAll("시속\\s?(\\d[\\d,.]*)\\s?km/h", "$1km/h");
         // 5·18, 6·25, 10·15 대책처럼 날짜로 이름 붙인 일은 오일팔, 육이오, 십일오로
         s = EVENT_SEP.matcher(s).replaceAll("$1·");
         Matcher e = EVENT.matcher(s);
@@ -494,6 +495,8 @@ final class Pron {
         m.appendTail(sb);
         s = sb.toString();
         s = RANGE_UNIT.matcher(s).replaceAll("$1$3에서 $2$3"); // 3~4월 삼월에서 사월
+        // 경기 점수: 31-24로 꺾었다 → 삼십일 대 이십사로 (js/pron.js와 같게, 2026-11-09)
+        s = s.replaceAll("(?<![\\d.-])(\\d{1,3})-(\\d{1,3})(?=\\s?(?:으로|로)?\\s?(?:꺾|이기|이겨|이겼|승리|패배|패했|졌|제압|눌|격파|대파|완파|역전|따돌|비기|비겼|앞서|뒤졌|리드))", "$1 대 $2");
         s = s.replaceAll("(\\d)\\s*~\\s*(?=\\d)", "$1에서 ").replaceAll("(\\d)-(?=\\d)", "$1에서 ").replaceAll("(\\d)\\s?:\\s?(?=\\d)", "$1 대 ");
         m = NUM.matcher(s);
         sb = new StringBuffer();
