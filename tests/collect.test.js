@@ -115,14 +115,14 @@ test('구글 번역이 429면 쉬었다가 다시 보내고, 기본 언론사부
     const q = new URL(url).searchParams.get('q');
     if (busy-- > 0) return new Response('', { status: 429 });
     order.push(q);
-    return Response.json([[[`번역 ${q}`, q]]]);
+    return Response.json([[[`번역 ${q.toLowerCase()}`, q]]]); // 소문자: 번역 뒤 남은 영문 이름 고치기(한 번 더 번역)가 끼지 않게
   });
   const b = await collect({ sections: [{ id: 'w', title: '국제', lang: 'en', limit: 5, sources: [
     { id: 'x', name: '추가', url: 'https://extra', default: false },
     { id: 'm', name: '기본', url: 'https://main' },
   ] }] }, NOW);
   assert.deepEqual(order, ['Main news', 'Extra news']);
-  assert.deepEqual(b.sections[0].sources.map((s) => s.items.map((i) => i.title)), [['번역 Extra news'], ['번역 Main news']]);
+  assert.deepEqual(b.sections[0].sources.map((s) => s.items.map((i) => i.title)), [['번역 extra news'], ['번역 main news']]);
 });
 
 test('번역이 막히면 그 기사는 읽지 않고 기록만 남긴다', async (t) => {
@@ -142,7 +142,7 @@ test('구글 번역이 계속 429면 그날은 건너뛰고 다른 번역기로 
     if (url.startsWith('https://translate.googleapis.com/')) { hits.google++; return new Response('', { status: 429 }); }
     if (url.startsWith('https://clients5.google.com/')) {
       hits.dict++;
-      return Response.json([[`번역 ${new URL(url).searchParams.get('q')}`, 'en']]);
+      return Response.json([[`번역 ${new URL(url).searchParams.get('q').toLowerCase()}`, 'en']]);
     }
     return new Response(feed(url.includes('a') ? 'Alpha news' : 'Beta news'));
   });
@@ -150,7 +150,7 @@ test('구글 번역이 계속 429면 그날은 건너뛰고 다른 번역기로 
     { id: 'a', name: '가', url: 'https://a' },
     { id: 'b', name: '나', url: 'https://b', default: false },
   ] }] }, NOW);
-  assert.deepEqual(b.sections[0].sources.map((s) => s.items.map((i) => i.title)), [['번역 Alpha news'], ['번역 Beta news']]);
+  assert.deepEqual(b.sections[0].sources.map((s) => s.items.map((i) => i.title)), [['번역 alpha news'], ['번역 beta news']]);
   assert.equal(hits.google, 2, '429가 두 번 오면 그 뒤로는 구글 번역에 보내지 않는다');
   assert.equal(hits.dict, 2);
   assert.ok(b.log.includes('번역기: google-dict 2번 (429로 막힘: google)'), b.log.join('\n'));
@@ -366,4 +366,25 @@ test('오후 원고(서울 낮 12시 이후): 네이버 언론사는 많이 본 
   assert.deepEqual(b.sections[0].sources[0].items.map((i) => i.title), ['오후에 가장 많이 본 기사입니다']);
   assert.match(b.script, /^안녕하세요\. 10월 6일 화요일 저녁, 퇴근길 뉴스 브리핑입니다\.\n/);
   assert.match(b.script, /지금까지 10월 6일 화요일 저녁 뉴스였습니다\./);
+});
+
+// 번역한 제목에 남은 영문 이름은 이름만 한 번 더 번역기로 (2026-11-09: 'No. 4 Notre Dame이 … Miami를')
+test('번역 뒤 남은 영문 이름은 한글 소리로, 사전이 읽는 말·한글이 아닌 답은 그대로', async () => {
+  const { leftoverNames, applyNames, nameSounds } = require('../tools/collect.js');
+  const titles = ['미국, No. 4 Notre Dame이 No. 1 Miami를 31-24로 꺾었습니다.', 'Google과 OpenAI, 그리고 Barry Fisher'];
+  assert.deepEqual(leftoverNames(titles), ['Barry Fisher', 'Notre Dame', 'Miami']); // No·Google·OpenAI는 사전이 읽는다
+  // 'My name is …' 틀: 배리 피셔·노터데임은 소리로, Miami는 영문으로 돌아온다 → 이름째 다시 보내면 '마이애미'
+  const fake = async (text) => text.split('\n').map((line) => {
+    const m = line.match(/^My name is (.+)\.$/);
+    if (m) return `내 이름은 ${{ 'Barry Fisher': '배리 피셔', 'Notre Dame': '노터데임', Miami: 'Miami' }[m[1]]}입니다.`;
+    return { Miami: '마이애미' }[line] || line;
+  }).join('\n');
+  const out = await nameSounds(titles, 'en', fake);
+  assert.equal(out[0], '미국, No. 4 노터데임이 No. 1 마이애미를 31-24로 꺾었습니다.');
+  assert.equal(out[1], 'Google과 OpenAI, 그리고 배리 피셔');
+  // 이름째 보냈더니 뜻으로 옮긴 답('아파요')은 쓰지 않는다
+  const meaning = async (text) => text.split('\n').map((line) => (line.startsWith('My name is') ? '내 이름은 Jalen Hurts입니다.' : '잘렌 아파요')).join('\n');
+  assert.deepEqual(await nameSounds(['Jalen Hurts와 재계약'], 'en', meaning), ['Jalen Hurts와 재계약']);
+  assert.equal(applyNames('Mia와 Miami', new Map([['Mia', '미아']])), '미아와 Miami'); // 낱말 경계에서만
+  assert.deepEqual(await nameSounds(['이름 없음'], 'en', async () => { throw new Error('x'); }), ['이름 없음']);
 });
