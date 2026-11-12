@@ -141,7 +141,7 @@ final class Abroad {
             if (!pick.link.isEmpty()) seen.add(pick.link);
         }
         String key = spoken.replaceAll("\\s+", "");
-        return Collections.singletonList(new Brief.Item(spoken, spoken, pick.source.isEmpty() ? c.ko + " 뉴스" : pick.source, "x-" + key, "", "", Collections.<String>emptyList(), true));
+        return Collections.singletonList(new Brief.Item(spoken, spoken, pick.source.isEmpty() ? c.ko + " 뉴스" : pick.source, "x-" + key, "", "", Collections.<String>emptyList(), true).link(pick.link)); // 원문 보기·카톡 공유가 뜨게 (주소가 빠져 있었다, 2026-11-12)
     }
 
     /**
