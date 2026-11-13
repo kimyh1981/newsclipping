@@ -236,7 +236,7 @@ final class Extras {
             String summary = e.summary.replaceAll("^\\s*\\[[^\\]]*기자\\]\\s*", ""); // [농민신문 홍길동 기자]
             if (summary.replaceAll("\\s+", "").contains(key)) summary = ""; // 구글 뉴스 설명은 제목 되풀이
             if (summary.length() > 300) summary = summary.substring(0, 300).replaceAll("\\s\\S*$", "") + "…";
-            out.add(new Brief.Item(spoken, spoken, source, "x-" + key, summary, "", Collections.<String>emptyList(), true));
+            out.add(new Brief.Item(spoken, spoken, source, "x-" + key, summary, "", Collections.<String>emptyList(), true).link(e.link)); // 폰이 찾은 기사도 원문 주소를 담는다: 원문 보기·카톡 공유·전체 듣기 (2026-11-12)
         }
         return out;
     }
@@ -417,7 +417,7 @@ final class Extras {
             try {
                 List<Brief.Item> got = keywordItems(k, now, 1, seen);
                 for (Brief.Item it : got) {
-                    farm.items.add(new Brief.Item(it.title, it.spoken, k + " 관련", it.group, it.summary, "", Collections.<String>emptyList(), true));
+                    farm.items.add(new Brief.Item(it.title, it.spoken, k + " 관련", it.group, it.summary, "", Collections.<String>emptyList(), true).link(it.link));
                 }
             } catch (Exception ignored) { } // 못 찾으면 오늘은 그냥 넘어간다
         }
