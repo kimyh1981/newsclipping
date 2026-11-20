@@ -24,13 +24,28 @@ permissions:
   id-token: write
 
 jobs:
+  # 예약 실행은 몇 시간씩 늦게 온다(2026-11 실측 5~9시간): 그날 그 판이 이미 있으면 다시 만들지 않는다 (tools/fresh-check.js)
+  gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      skip: ${{ steps.fresh.outputs.skip }}
+    steps:
+      - uses: actions/checkout@v5
+        if: github.event_name == 'schedule'
+      - id: fresh
+        if: github.event_name == 'schedule'
+        run: node tools/fresh-check.js
+
   # 원고 만들기(수집·녹음)는 서로 끊지 않는다: 첫 녹음이 십여 분 걸려 다음 예약이 오면 끊기고, 녹음 캐시도 남지 않았다
   build:
+    needs: gate
+    if: needs.gate.outputs.skip != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 40
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
       - run: npm ci
@@ -47,7 +62,7 @@ jobs:
       # 녹음 다듬기(고음 낮추기, 스테레오)에 쓰는 ffmpeg: 러너에 없으면 설치
       - run: command -v ffmpeg || (sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg)
       # 음성 녹음 캐시: 같은 날 다시 배포해도 이미 녹음한 줄은 다시 녹음하지 않는다
-      - uses: actions/cache@v4
+      - uses: actions/cache@v5
         with:
           path: tts-cache
           key: tts-${{ github.run_id }}
@@ -67,7 +82,7 @@ jobs:
           LESSON_CODE: ${{ secrets.LESSON_CODE }}
         run: node tools/collect.js _site
       # 언론사 로고를 선명한 것으로 모아 logos/에 올린다 (홈 화면에서 커진 로고가 깨지지 않게, 2026-10-17). 실패해도 배포는 계속
-      - uses: actions/cache@v4
+      - uses: actions/cache@v5
         with:
           path: logo-cache
           key: logos-${{ github.run_id }}
@@ -78,8 +93,8 @@ jobs:
         run: |
           python3 -m pip install --user -q pillow
           [ -f _site/briefing.json ] && python3 tools/logos.py _site logo-cache
-      - uses: actions/configure-pages@v5
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/configure-pages@v6
+      - uses: actions/upload-pages-artifact@v5
         with:
           path: _site
 
@@ -97,4 +112,4 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5
