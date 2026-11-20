@@ -45,6 +45,7 @@
         <activity
             android:name=".CaptionActivity"
             android:exported="true"
+            android:autoRemoveFromRecents="true"
             android:launchMode="singleTask"
             android:taskAffinity="io.github.kimyh1981.newsclipping.captions"
             android:theme="@android:style/Theme.Material.NoActionBar">

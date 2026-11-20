@@ -114,7 +114,8 @@ public class NewsService extends Service {
     private boolean navPaused;
     private AudioManager.AudioPlaybackCallback playbackWatch;
     private final Runnable navResume = () -> {
-        if (!this.paused || !this.navPaused || this.navActive || !this.focusBack) return; // 내비가 아직 말하거나 소리 차례를 쥐고 있으면 기다린다
+        if (!this.paused || !this.navPaused || this.navActive || !this.focusBack && !this.mixedPaused) return; // 내비가 아직 말하거나 소리 차례를 쥐고 있으면 기다린다 (섞인 소리로 멈춘 것은 resume이 차례를 받아 판단)
+        this.mixedPaused = false;
         if (voiceMode()) { if (!this.assistWatch) watchAssistant(); this.sawMic = true; return; } // 음성 비서·통화가 소리 길을 쥐고 있다: 놓으면 이어 읽는다
         this.navPaused = false;
         resume();
@@ -692,7 +693,8 @@ public class NewsService extends Service {
         // 소리 차례(포커스)를 못 쥔 채 읽으면 내비·비서가 끼어들어도 '잃음' 알림이 오지 않아 멈추지 못한다: 차례마다 다시 받는다 (벤치마킹 2026-11-21)
         if (!focusBack && audio != null && focus != null) {
             focusBack = audio.requestAudioFocus(focus) == AudioManager.AUDIOFOCUS_REQUEST_GRANTED;
-            new Prefs(this).noteAudio(focusBack ? "소리 차례 다시 받음" : "소리 차례를 못 받은 채 읽는 중");
+            if (focusBack || !noFocusNoted) new Prefs(this).noteAudio(focusBack ? "소리 차례 다시 받음" : "소리 차례를 못 받은 채 읽는 중"); // 못 받은 동안 줄마다 적지 않는다
+            noFocusNoted = !focusBack;
         }
         if (s.id.startsWith("L")) {
             int i = Integer.parseInt(s.id.substring(1, s.id.indexOf('.')));
@@ -1210,7 +1212,7 @@ public class NewsService extends Service {
             Log.i(TAG, "다른 앱이 소리를 가져가서 되찾음 " + retakes);
             main.postDelayed(() -> {
                 if (stopped || audio == null) return;
-                audio.requestAudioFocus(focus);
+                focusBack = audio.requestAudioFocus(focus) == AudioManager.AUDIOFOCUS_REQUEST_GRANTED; // 받았는지 기억한다 (안 그러면 '못 쥠'으로 남아 이어 읽기가 막혔다)
                 if (session != null) session.setActive(true);
                 openCaptions();
             }, 700);
@@ -1276,7 +1278,8 @@ public class NewsService extends Service {
     // 기준보다 많은 상태가 0.7초 이어지면 안내로 보고 멈춘다. 8초 넘게 이어지면 안내가 아니라 늘 있는 소리다: 기준을 올리고 이어 읽는다(세 번 틀리면 끈다)
     private static final long MIXED_MS = 700, MIXED_MAX_MS = 8000;
     private int extraBase = Integer.MAX_VALUE, extraSamples, extraFalse;
-    private boolean mixedActive;
+    private boolean noFocusNoted;
+    private boolean mixedActive, mixedPaused;
     private long phoneSpokeAt;
     private String lastOther = "";
 
@@ -1327,6 +1330,7 @@ public class NewsService extends Service {
         this.main.removeCallbacks(this.settleResume);
         pause(true);
         this.navPaused = true;
+        this.mixedPaused = true;
         new Prefs(this).noteAudio("섞인 안내 소리 → 멈춤 · 남의 미디어 " + extra + " (기준 " + this.extraBase + ")");
         this.main.postDelayed(this.mixedCap, MIXED_MAX_MS);
     };
@@ -1676,6 +1680,9 @@ public class NewsService extends Service {
         main.removeCallbacks(afterSilence);
         releasePlayer();
         releaseNotice();
+        main.removeCallbacks(mixedCap);
+        main.removeCallbacks(mixedCheck);
+        main.removeCallbacks(sampleExtra);
         if (pool != null) pool.shutdownNow();
         if (f1Pool != null) f1Pool.shutdownNow();
         if (hold != null) { hold.release(); hold = null; }
