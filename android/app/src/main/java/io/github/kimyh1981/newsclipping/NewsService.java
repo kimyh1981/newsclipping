@@ -496,6 +496,11 @@ public class NewsService extends Service {
             Extras.addKeywords(brief, picked, prefs.keywords(), now);
             Abroad.addCountryNews(brief, picked, countries, abroad, now);
             boolean evening = Brief.evening(now);
+            // 세계 비료시장 주간 브리핑: 정식판 아침판에서 그 주에 처음 들을 때 한 번, 해외 뉴스 앞에 (주인 요청 2026-11-20)
+            if (BuildConfig.LESSONS && !evening && brief.report != null && !prefs.reportHeard(brief.report.date)) {
+                Brief.addReport(picked, brief.report);
+                reportDate = brief.report.date;
+            }
             script = brief.linesOf(picked, Brief.koreanDate(now), evening);
             // 평일 아침이면 뉴스 뒤에 제품 공부 한 회 (주말·공휴일은 진도를 넘기지 않는다. 오후 원고에는 붙이지 않는다, 주인 요청 2026-10-14)
             if (BuildConfig.LESSONS && brief.playToday && !evening && (prefs.lessonOn() || prefs.englishOn()) && !brief.lessons.isEmpty()) {
@@ -692,6 +697,7 @@ public class NewsService extends Service {
             progressChanged();
         }
         if (!s.id.startsWith("L") && !s.text.isEmpty()) extra = true; // 헤드라인 줄 말고 다른 걸 읽는 중
+        if (!reportDate.isEmpty() && reportStep(s)) { new Prefs(this).setReportHeard(reportDate); new Prefs(this).noteAudio("비료시장 브리핑 " + reportDate); reportDate = ""; }
         if (s.id.startsWith("Q")) new Prefs(this).markLessonDone(Integer.parseInt(s.id.substring(1, s.id.indexOf('.'))));
         if (s.silence > 0) { main.postDelayed(afterSilence, s.silence); return; }
         showCaption(s);
@@ -712,6 +718,7 @@ public class NewsService extends Service {
             if (en) tts.setLanguage(Locale.US);
             else { tts.setLanguage(Locale.KOREAN); Voices.apply(tts, new Prefs(this)); }
         }
+        tts.setSpeechRate(new Prefs(this).rate() / 100f * boost * (reportStep(s) ? REPORT_SPEED : 1f)); // 비료시장 브리핑은 1.2배
         tts.playSilentUtterance((long) (F1Engine.LEAD_SEC * 1000), TextToSpeech.QUEUE_FLUSH, "lead"); // 첫소리가 먹히지 않게 앞을 비운다
         tts.speak(en ? s.text : Pron.say(s.text), TextToSpeech.QUEUE_ADD, speakParams, gen + ":" + s.id); // 자막은 쓴 글, 소리는 들리는 대로
     }
@@ -752,7 +759,8 @@ public class NewsService extends Service {
     private Future<File> f1Job(Step s) {
         if (s.silence > 0 || s.text.isEmpty() || f1Pool == null || f1Pool.isShutdown()) return null;
         boolean en = isEnglish(s);
-        int rate = new Prefs(this).rate(); // 듣는 중에 빠르기를 바꾸면 미리 만든 소리 대신 새 빠르기로 다시 만든다
+        int base = new Prefs(this).rate(); // 듣는 중에 빠르기를 바꾸면 미리 만든 소리 대신 새 빠르기로 다시 만든다
+        int rate = reportStep(s) ? Math.round(base * REPORT_SPEED) : base; // 비료시장 브리핑은 1.2배
         String key = rate + "|" + (en ? "en|" : "ko|") + s.text;
         boolean keep = lessonStep(s); // 제품 공부·농업영어는 내용이 그대로라 한 번 만든 소리를 폰에 남겨 둔다: 다음엔 기다림 없이 (주인 요청 2026-10-21)
         if (keep) { File kept = new File(keepDir(), Brief.audioId(BuildConfig.VERSION_NAME + "|" + key) + ".wav"); if (kept.length() > 44) return f1Jobs.computeIfAbsent(key, k -> java.util.concurrent.CompletableFuture.completedFuture(kept)); }
@@ -911,6 +919,19 @@ public class NewsService extends Service {
         if (inLesson()) return Rules.prevParagraph(lessonOf(), current);
         return Rules.prevItem(itemFlags(), current);
     }
+
+    /** 이번 원고에 넣은 비료시장 브리핑의 날짜 (없으면 "") */
+    private String reportDate = "";
+
+    /** 이 차례가 비료시장 브리핑 줄인가 (1.2배 빠르게 읽는다, 주인 요청 2026-11-20) */
+    private boolean reportStep(Step s) {
+        if (!s.id.startsWith("L")) return false;
+        int i = Integer.parseInt(s.id.substring(1, s.id.indexOf('.')));
+        Brief.Item it = i < lines.size() ? lines.get(i).item : null;
+        return it != null && it.group.startsWith("rep-");
+    }
+
+    private static final float REPORT_SPEED = 1.2f;
 
     private boolean inLesson() { return current < lines.size() && lines.get(current).lesson > 0; }
 

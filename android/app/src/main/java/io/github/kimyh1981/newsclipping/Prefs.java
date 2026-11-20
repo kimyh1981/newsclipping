@@ -188,6 +188,10 @@ final class Prefs {
     /** 마지막으로 받은 차·이어폰 버튼과 시각 (앱 화면 맨 아래에 보인다) */
     String lastButton() { return p.getString("lastButton", ""); }
     /** 차에서 소리 차례·내비·음성 비서가 어떻게 오갔는지 최근 8줄 (2026-10-21 교차 검토: 기기에서만 알 수 있는 것을 기록으로 확인) */
+    /** 이번 주 비료시장 브리핑(월요일 날짜)을 이미 들었나: 한 주에 한 번만 읽는다 */
+    boolean reportHeard(String date) { return !date.isEmpty() && date.equals(p.getString("reportHeard", "")); }
+    void setReportHeard(String date) { p.edit().putString("reportHeard", date).apply(); }
+
     void noteAudio(String event) { EventLog.note(c, event); }
 
     String audioLog() { return String.join("\n", EventLog.recent(c, 8)); }
