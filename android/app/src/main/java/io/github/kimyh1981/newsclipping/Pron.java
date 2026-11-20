@@ -447,6 +447,23 @@ final class Pron {
     static String numbers(String s) {
         s = plain(s).replaceAll("(?<![A-Za-z])No\\.\\s?(\\d{1,3})(?![\\d.])", "$1위") // 순위: No. 4 → 사위 (2026-11-09)
                 .replaceAll("코로나\\s?-?19", "코로나 일구").replaceAll("영하\\s?-(?=\\d)", "영하 ").replaceAll("(\\d)\\s?a당", "$1아르당").replaceAll("시속\\s?(\\d[\\d,.]*)\\s?km/h", "$1km/h");
+        // 긴급 전화번호는 한 자리씩: 119 → 일일구 (js/pron.js와 같게, 2026-11-21). 119명처럼 세는 말이 붙으면 수
+        Matcher em = Pattern.compile("(?<![\\d,.])(11[2-49]|911)(?![\\d,.])(?!\\s?(?:명|개|원|건|가구|곳|톤|년|월|일|번째|위|%|퍼센트|억|만|천|kg|km))").matcher(s);
+        StringBuffer ebuf = new StringBuffer();
+        while (em.find()) {
+            StringBuilder d = new StringBuilder();
+            for (char c : em.group().toCharArray()) d.append(DIG[c - '0']);
+            if (em.end() < s.length() && s.charAt(em.end()) >= '가' && s.charAt(em.end()) <= '힣' && !s.substring(em.end()).matches("(?:에서|에게|으로|부터|까지|에|을|를|이|가|은|는|와|과|로|도|만|의)[\\s\\S]*")) d.append(' '); // 119구조대 → 일일구 구조대, 조사는 붙인다
+            em.appendReplacement(ebuf, d.toString());
+        }
+        em.appendTail(ebuf);
+        s = ebuf.toString();
+        // 세대 묶음: 2030세대 → 이공삼공 세대
+        Matcher gm = Pattern.compile("(?<![\\d,.])([1-9])0([1-9])0(?=\\s?(?:세대|청년|남녀|층|표심|직장인|여성|남성))").matcher(s);
+        StringBuffer gbuf = new StringBuffer();
+        while (gm.find()) gm.appendReplacement(gbuf, DIG[gm.group(1).charAt(0) - '0'] + "공" + DIG[gm.group(2).charAt(0) - '0'] + "공 ");
+        gm.appendTail(gbuf);
+        s = gbuf.toString();
         // 5·18, 6·25, 10·15 대책처럼 날짜로 이름 붙인 일은 오일팔, 육이오, 십일오로
         s = EVENT_SEP.matcher(s).replaceAll("$1·");
         Matcher e = EVENT.matcher(s);

@@ -821,7 +821,10 @@ public class NewsService extends Service {
             File out = keep ? new File(keepDir(), Brief.audioId(BuildConfig.VERSION_NAME + "|" + k) + ".wav") : new File(f1Dir, Brief.audioId(k) + ".wav");
             if (out.exists() && out.length() > 44) return out;
             long t = System.currentTimeMillis();
-            float[] pcm = F1Voice.synth(this, e, en ? s.text : Pron.say(s.text), en ? "en" : "ko", F1Voice.speed(rate));
+            String said = en ? s.text : Pron.say(s.text);
+            // 짧은 줄(언론사 이름·연결 말)은 빠르기를 누른다: 가장 빠르게에서 '연합뉴스 소식입니다'를 건너뛰듯 읽었다 (2026-11-21)
+            float speed = said.replaceAll("\\s", "").length() <= 14 ? Math.min(F1Voice.speed(rate), SHORT_MAX_SPEED) : F1Voice.speed(rate);
+            float[] pcm = F1Voice.synth(this, e, said, en ? "en" : "ko", speed);
             F1Engine.writeWav(pcm, e.sampleRate, out);
             if (keep) pruneKeep();
             float x = pcm.length / (float) e.sampleRate / Math.max(0.001f, (System.currentTimeMillis() - t) / 1000f);
@@ -983,6 +986,8 @@ public class NewsService extends Service {
     }
 
     private static final float REPORT_SPEED = 1.2f;
+    /** 짧은 줄을 F1으로 만들 때 넘지 않을 빠르기 (보통 1.05) */
+    private static final float SHORT_MAX_SPEED = 1.15f;
 
     private boolean inLesson() { return current < lines.size() && lines.get(current).lesson > 0; }
 
@@ -1506,6 +1511,7 @@ public class NewsService extends Service {
     /** 차의 미디어 버튼(핸들 리모컨): 다음·이전 = 다음·이전 기사, 일시정지·재생 = 멈춤·이어 듣기, 빨리 감기 = 전체 듣기. 차 화면에는 지금 기사 제목이 뜬다 */
     private void startSession() {
         session = CarMedia.session(this);
+        session.setSessionActivity(PendingIntent.getActivity(this, 8, new Intent(this, CaptionActivity.class), PendingIntent.FLAG_IMMUTABLE)); // 오토·잠금 화면에서 누르면 자막 화면
         session.setCallback(new MediaSession.Callback() {
             // 차 버튼이 앱까지 오는지 앱 화면 맨 아래에 남긴다 (다음 버튼이 안 먹힐 때 원인 찾기)
             @Override public boolean onMediaButtonEvent(Intent i) {
