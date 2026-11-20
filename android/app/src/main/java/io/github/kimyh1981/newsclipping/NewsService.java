@@ -675,6 +675,7 @@ public class NewsService extends Service {
         gen++;
         main.removeCallbacks(afterSilence);
         releasePlayer();
+        releaseNotice();
         if (tts != null) tts.stop();
     }
 
@@ -753,6 +754,56 @@ public class NewsService extends Service {
         deleteTree(f1Dir); // 지난번에 만든 소리는 지운다
         f1Dir.mkdirs();
         f1Pool = Executors.newSingleThreadExecutor(); // 엔진이 안에서 여러 코어를 쓴다: 한 번에 하나씩
+        // 기다림 안내도 F1 목소리로: 폰 음성으로 하면 목소리와 크기가 갑자기 바뀌어 거슬렸다 (주인 요청 2026-11-20).
+        // 뉴스 줄보다 먼저 만들어 두고(한 번 만들면 폰에 남는다), 기다릴 때 바로 튼다
+        for (String t : new String[] {WAIT_LONG, WAIT_SHORT}) {
+            File out = noticeFile(t);
+            noticeJobs.put(t, out.length() > 44 ? java.util.concurrent.CompletableFuture.completedFuture(out) : f1Pool.submit(() -> {
+                F1Engine e = F1Voice.engine(this);
+                if (e == null || stopped) return null;
+                float[] pcm = F1Voice.synth(this, e, Pron.say(t), "ko", F1Voice.speed(new Prefs(this).rate()));
+                F1Engine.writeWav(pcm, e.sampleRate, out);
+                return out;
+            }));
+        }
+    }
+
+    private static final String WAIT_LONG = "기사를 불러오고 있습니다. 잠시만 기다려 주세요.", WAIT_SHORT = "기사를 불러오고 있습니다.";
+    private final Map<String, Future<File>> noticeJobs = new ConcurrentHashMap<>();
+    private MediaPlayer noticePlayer;
+
+    /** 기다림 안내 F1 소리 파일 (빠르기·앱 판이 바뀌면 새로 만든다) */
+    private File noticeFile(String text) {
+        return new File(keepDir(), Brief.audioId(BuildConfig.VERSION_NAME + "|notice|" + new Prefs(this).rate() + "|" + text) + ".wav");
+    }
+
+    /** 기다림 안내: F1으로 만들어 둔 소리가 있으면 그것을, 없으면 폰 음성으로. 읽는 차례(gen)와 상관없이 따로 튼다 */
+    private void sayNotice(String text) {
+        releaseNotice();
+        Future<File> job = noticeJobs.get(text);
+        File clip = null;
+        try { if (job != null && job.isDone()) clip = job.get(); } catch (Exception ignored) { }
+        if (clip != null && clip.length() > 44) {
+            MediaPlayer mp = new MediaPlayer();
+            try {
+                mp.setAudioAttributes(attrs);
+                mp.setDataSource(clip.getPath());
+                mp.setOnCompletionListener(p -> { if (noticePlayer == p) releaseNotice(); });
+                mp.prepare();
+                mp.start();
+                noticePlayer = mp;
+                return;
+            } catch (Exception e) {
+                mp.release();
+            }
+        }
+        if (tts == null) return;
+        if (phoneEnglish) { tts.setLanguage(Locale.KOREAN); phoneEnglish = false; }
+        tts.speak(text, TextToSpeech.QUEUE_FLUSH, speakParams, "wait");
+    }
+
+    private void releaseNotice() {
+        if (noticePlayer != null) { noticePlayer.release(); noticePlayer = null; }
     }
 
     /** 이 차례의 F1 소리 만들기 (이미 맡겼으면 그것). 쉼 차례는 null */
@@ -804,8 +855,7 @@ public class NewsService extends Service {
             if (waited > 2500 && noticedFor != since) {
                 noticedFor = since;
                 setBuffering(true);
-                if (phoneEnglish) { tts.setLanguage(Locale.KOREAN); phoneEnglish = false; }
-                tts.speak("기사를 불러오고 있습니다. 잠시만 기다려 주세요.", TextToSpeech.QUEUE_FLUSH, speakParams, "wait");
+                sayNotice(WAIT_LONG);
             }
             main.postDelayed(() -> { if (g == gen && !stopped && !paused && !playF1(s, g, since)) speakPhone(s); }, 80);
             return true;
@@ -824,6 +874,7 @@ public class NewsService extends Service {
     private void endWait() {
         if (!buffering) return;
         if (tts != null) tts.stop();
+        releaseNotice();
         setBuffering(false);
     }
 
@@ -1024,8 +1075,7 @@ public class NewsService extends Service {
         setBuffering(true);
         main.postDelayed(() -> {
             if (g != fullGen || stopped || !buffering) return;
-            if (phoneEnglish) { tts.setLanguage(Locale.KOREAN); phoneEnglish = false; }
-            tts.speak("기사를 불러오고 있습니다.", TextToSpeech.QUEUE_FLUSH, speakParams, "wait"); // 차례 번호가 없는 말이라 순서는 그대로
+            sayNotice(WAIT_SHORT); // 차례 번호가 없는 말이라 순서는 그대로
         }, 1500);
         new Thread(() -> {
             List<List<String>> got;
@@ -1529,6 +1579,7 @@ public class NewsService extends Service {
         main.removeCallbacks(pauseLimit);
         main.removeCallbacks(afterSilence);
         releasePlayer();
+        releaseNotice();
         if (pool != null) pool.shutdownNow();
         if (f1Pool != null) f1Pool.shutdownNow();
         if (hold != null) { hold.release(); hold = null; }
