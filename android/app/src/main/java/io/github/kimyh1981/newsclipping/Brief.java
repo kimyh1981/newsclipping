@@ -187,7 +187,7 @@ final class Brief {
 
     static final String REPORT_SECTION = "fert-report";
     /** 이 섹션들 가운데 처음 나오는 것 앞에 비료시장 브리핑을 넣는다 (해외 뉴스 묶음의 맨 앞) */
-    private static final List<String> FOREIGN = java.util.Arrays.asList("world", "global-agri", "fert-world", "agri-keywords", Abroad.SECTION);
+    private static final List<String> FOREIGN = java.util.Arrays.asList("world", "global-agri", "fert-world", "agri-keywords", "abroad-kw"); // abroad-kw = Abroad.SECTION (서버 점검이 Brief만 따로 컴파일한다)
 
     /** 고른 섹션 목록에 비료시장 브리핑을 해외 뉴스 앞에 넣는다. 토막마다 한 줄(폰이 읽는 줄, 원문 링크 없음) */
     static void addReport(List<Picked> picked, Report r) {

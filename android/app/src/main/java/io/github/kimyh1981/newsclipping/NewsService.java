@@ -759,8 +759,8 @@ public class NewsService extends Service {
     private Future<File> f1Job(Step s) {
         if (s.silence > 0 || s.text.isEmpty() || f1Pool == null || f1Pool.isShutdown()) return null;
         boolean en = isEnglish(s);
-        int rate = new Prefs(this).rate(); // 듣는 중에 빠르기를 바꾸면 미리 만든 소리 대신 새 빠르기로 다시 만든다
-        if (reportStep(s)) rate = Math.round(rate * REPORT_SPEED); // 비료시장 브리핑은 1.2배
+        int base = new Prefs(this).rate(); // 듣는 중에 빠르기를 바꾸면 미리 만든 소리 대신 새 빠르기로 다시 만든다
+        int rate = reportStep(s) ? Math.round(base * REPORT_SPEED) : base; // 비료시장 브리핑은 1.2배
         String key = rate + "|" + (en ? "en|" : "ko|") + s.text;
         boolean keep = lessonStep(s); // 제품 공부·농업영어는 내용이 그대로라 한 번 만든 소리를 폰에 남겨 둔다: 다음엔 기다림 없이 (주인 요청 2026-10-21)
         if (keep) { File kept = new File(keepDir(), Brief.audioId(BuildConfig.VERSION_NAME + "|" + key) + ".wav"); if (kept.length() > 44) return f1Jobs.computeIfAbsent(key, k -> java.util.concurrent.CompletableFuture.completedFuture(kept)); }
