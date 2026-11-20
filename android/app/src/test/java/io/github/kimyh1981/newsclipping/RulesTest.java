@@ -141,6 +141,18 @@ public class RulesTest {
         assertArrayEquals(new int[] {0, 0}, Rules.logoGrid(0, 300, 300, 10, 90, 30));
     }
 
+    // 내비 안내·음성 비서·차 안내 소리가 나면 멈춘다. 미디어로 세는 용도는 따로 (벤치마킹 2026-11-21)
+    @Test public void whichSoundsInterruptReading() {
+        assertTrue(Rules.interrupts(12)); // 내비 안내
+        assertFalse(Rules.interrupts(16)); // 음성 비서: 소리 차례 쪽이 맡는다(기록만)
+        assertFalse(Rules.interrupts(1)); // 미디어(이 앱 자신도 이 용도)
+        assertFalse(Rules.interrupts(13)); // 화면 누르는 소리
+        assertFalse(Rules.interrupts(5)); // 알림 소리
+        assertTrue(Rules.mediaUsage(1));
+        assertTrue(Rules.mediaUsage(0));
+        assertFalse(Rules.mediaUsage(12));
+    }
+
     // 안드로이드 오토(USB·무선)는 블루투스 출력이 아니어도 차다: 내비 안내 뒤 멈춘 채 남았다 (2026-10-20 퇴근길)
     @Test public void resumesAfterFocusReturnsInCar() {
         long lim = 10 * 60_000L;

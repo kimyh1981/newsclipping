@@ -97,6 +97,10 @@ public class MainActivity extends Activity {
         Crash.install(this);
         prefs = new Prefs(this);
         NewsService.ensureChannel(this);
+        // 앱 아이콘으로 새로 들어왔는데 읽는 중이면 자막 화면을 위에 올린다: 다른 앱을 보다 돌아오면 읽는 화면을 찾을 수 없었다 (주인 2026-11-21)
+        Intent in = getIntent();
+        if (b == null && in != null && Intent.ACTION_MAIN.equals(in.getAction()) && in.hasCategory(Intent.CATEGORY_LAUNCHER)
+                && NewsService.isRunning() && prefs.captions()) startActivity(new Intent(this, CaptionActivity.class));
         dark = (getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES;
         bg = dark ? 0xFF000000 : 0xFFF2F2F7;
         card = dark ? 0xFF1C1C1E : 0xFFFFFFFF;

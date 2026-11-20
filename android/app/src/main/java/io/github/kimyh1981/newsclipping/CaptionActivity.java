@@ -184,7 +184,8 @@ public class CaptionActivity extends Activity {
             return r;
         });
         setContentView(col);
-        if (b == null) playLink(getIntent());
+        // 최근 앱 목록의 카드로 다시 열린 것이면 옛 '여기부터 듣기' 링크를 또 실행하지 않는다 (그 기사로 튀거나 새로 읽기 시작했다, 검토 2026-11-21)
+        if (b == null && (getIntent().getFlags() & Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY) == 0) playLink(getIntent());
     }
 
     @Override

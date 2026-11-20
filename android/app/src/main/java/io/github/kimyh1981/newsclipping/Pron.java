@@ -260,6 +260,12 @@ final class Pron {
 
     // 숫자·기호 읽기: js/pron.js의 numbers·symbols와 같은 규칙
     private static final String[] DIG = {"영", "일", "이", "삼", "사", "오", "육", "칠", "팔", "구"};
+    private static final Pattern EMERGENCY = Pattern.compile("(?<![\\d,.-])(11[2-49]|911)(?![\\d-]|[.,]\\d)");
+    private static final Pattern EMERGENCY_WORD = Pattern.compile("\\s?(?:신고|구조|구급|소방|안전센터|상황실|종합상황|순찰|출동|대원)");
+    private static final Pattern EMERGENCY_BARE = Pattern.compile("(?:에서|에|으로|로)?(?:[\\s,.)]|$)");
+    private static final Pattern EMERGENCY_JOSA = Pattern.compile("(?:에서|에|으로|로)");
+    private static final Pattern EMERGENCY_TOPIC = Pattern.compile("신고|구조|구급|소방|경찰|긴급|출동|화재|응급|전화");
+    private static final Pattern GENERATION = Pattern.compile("(?<![\\d,.])([1-9])0([1-9])0(?=\\s?(?:세대(?!\\s?(?:규모|입주|단지|아파트|주택|분양))|청년|남녀|직장인|표심))");
     private static final String[] N1 = {"", "한", "두", "세", "네", "다섯", "여섯", "일곱", "여덟", "아홉"};
     private static final String[] N10 = {"", "열", "스물", "서른", "마흔", "쉰", "예순", "일흔", "여든", "아흔"};
     private static final java.util.Map<String, String> UNITS = new java.util.HashMap<>();
@@ -447,6 +453,32 @@ final class Pron {
     static String numbers(String s) {
         s = plain(s).replaceAll("(?<![A-Za-z])No\\.\\s?(\\d{1,3})(?![\\d.])", "$1위") // 순위: No. 4 → 사위 (2026-11-09)
                 .replaceAll("코로나\\s?-?19", "코로나 일구").replaceAll("영하\\s?-(?=\\d)", "영하 ").replaceAll("(\\d)\\s?a당", "$1아르당").replaceAll("시속\\s?(\\d[\\d,.]*)\\s?km/h", "$1km/h");
+        // 긴급 전화번호는 한 자리씩: 119 → 일일구 (js/pron.js와 같게, 2026-11-21).
+        // 뒤에 신고·구조대 같은 말이 오거나, 신고 이야기인 문장에서 조사(에·로)·쉼표·끝이 올 때만 (114석·119조 원·112달러는 수)
+        Matcher em = EMERGENCY.matcher(s);
+        StringBuffer ebuf = new StringBuffer();
+        boolean topic = EMERGENCY_TOPIC.matcher(s).find();
+        while (em.find()) {
+            String rest = s.substring(em.end());
+            boolean word = EMERGENCY_WORD.matcher(rest).lookingAt();
+            boolean bare = EMERGENCY_BARE.matcher(rest).lookingAt() && topic;
+            if (!word && !bare) { em.appendReplacement(ebuf, em.group()); continue; }
+            StringBuilder d = new StringBuilder();
+            for (char c : em.group().toCharArray()) d.append(DIG[c - '0']);
+            if (!rest.isEmpty() && rest.charAt(0) >= '가' && rest.charAt(0) <= '힣' && !EMERGENCY_JOSA.matcher(rest).lookingAt()) d.append(' ');
+            em.appendReplacement(ebuf, d.toString());
+        }
+        em.appendTail(ebuf);
+        s = ebuf.toString();
+        // 세대 묶음: 2030세대 → 이공삼공 세대. 뒤 숫자가 더 클 때만, 아파트 '1050세대 규모'는 수
+        Matcher gm = GENERATION.matcher(s);
+        StringBuffer gbuf = new StringBuffer();
+        while (gm.find()) {
+            int a = gm.group(1).charAt(0) - '0', b = gm.group(2).charAt(0) - '0';
+            gm.appendReplacement(gbuf, b > a ? DIG[a] + "공" + DIG[b] + "공 " : gm.group());
+        }
+        gm.appendTail(gbuf);
+        s = gbuf.toString();
         // 5·18, 6·25, 10·15 대책처럼 날짜로 이름 붙인 일은 오일팔, 육이오, 십일오로
         s = EVENT_SEP.matcher(s).replaceAll("$1·");
         Matcher e = EVENT.matcher(s);
