@@ -149,6 +149,16 @@ public final class Rules {
     /** 마이크를 쓰는 앱이 이 안에 안 보이면 음성 비서가 아니라 음악 앱 같은 것: 이어 듣기를 누를 때까지 기다린다 */
     static final long ASSIST_MIC_MS = 15000;
 
+    /** 이 용도의 소리가 나면 읽기를 멈춘다: 내비 안내(12), 음성 비서(16), 차 안내·경고·긴급(1000~1003). 벤치마킹 2026-11-21 */
+    static boolean interrupts(int usage) {
+        return usage == 12 || usage == 16 || usage >= 1000 && usage <= 1003;
+    }
+
+    /** 미디어로 세는 소리 용도: 모름(0)·미디어(1)·게임(14). 내비 앱 가운데에는 안내를 이 용도로 섞어 내는 것이 있다 */
+    static boolean mediaUsage(int usage) {
+        return usage == 0 || usage == 1 || usage == 14;
+    }
+
     /**
      * 소리 차례를 돌려받았을 때(포커스 GAIN) 저절로 이어 읽을지.
      * 차에서(블루투스·안드로이드 오토) 듣던 중이거나, 음성 비서가 잠깐 가져갔거나, 내비 안내로 멈췄으면 이어 읽는다.

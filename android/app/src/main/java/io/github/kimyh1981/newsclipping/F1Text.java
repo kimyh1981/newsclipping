@@ -11,6 +11,37 @@ import java.util.regex.Pattern;
 final class F1Text {
     private F1Text() {}
 
+    /**
+     * F1이 만든 소리 다듬기 (벤치마킹 2026-11-21: 줄마다 앞뒤 무음 길이와 크기가 달라 속도·쉼이 들쭉날쭉하게 들렸다).
+     * 앞뒤 무음을 잘라 앞은 leadSec, 뒤는 0.12초로 고정하고, 말소리 크기(RMS)를 0.1에 맞춘다(0.5~2배, 찌그러지지 않게).
+     * 말소리가 없으면 그대로 돌려준다
+     */
+    static float[] tidyAudio(float[] pcm, int sampleRate, float leadSec) {
+        final float quiet = 0.005f;
+        int first = -1, last = -1;
+        for (int i = 0; i < pcm.length; i++) if (Math.abs(pcm[i]) > quiet) { if (first < 0) first = i; last = i; }
+        if (first < 0) return pcm;
+        int start = Math.max(0, first - (int) (0.03f * sampleRate)), end = Math.min(pcm.length, last + 1 + (int) (0.12f * sampleRate));
+        double sum = 0;
+        int n = 0;
+        float peak = 0;
+        for (int i = start; i < end; i++) {
+            float a = Math.abs(pcm[i]);
+            if (a > 0.02f) { sum += (double) a * a; n++; }
+            if (a > peak) peak = a;
+        }
+        float gain = 1f;
+        if (n > 0) {
+            float rms = (float) Math.sqrt(sum / n);
+            gain = Math.max(0.5f, Math.min(2f, 0.1f / rms));
+            if (peak * gain > 0.97f) gain = 0.97f / peak;
+        }
+        int lead = (int) (leadSec * sampleRate);
+        float[] out = new float[lead + end - start];
+        for (int i = start; i < end; i++) out[lead + i - start] = pcm[i] * gain;
+        return out;
+    }
+
     private static final String[][] SYMBOLS = {
         {"–", "-"}, {"‑", "-"}, {"—", "-"}, {"_", " "}, {"“", "\""}, {"”", "\""}, {"‘", "'"}, {"’", "'"},
         {"´", "'"}, {"`", "'"}, {"[", " "}, {"]", " "}, {"|", " "}, {"/", " "}, {"#", " "}, {"→", " "}, {"←", " "},

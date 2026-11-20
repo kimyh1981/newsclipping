@@ -16,6 +16,23 @@ public class F1TextTest {
         assertEquals("<en>A - B, c.</en>", F1Text.prepare("A — B ,  c", "en"));
     }
 
+    // F1 소리 다듬기: 앞뒤 무음 길이를 고정하고 크기를 맞춘다 (줄마다 쉼·크기가 달랐다, 2026-11-21)
+    @Test public void audioIsTrimmedAndLevelled() {
+        int rate = 1000;
+        float[] pcm = new float[3000]; // 0.9초 무음 + 1초 말소리(크기 0.02~0.04) + 1.1초 무음
+        for (int i = 900; i < 1900; i++) pcm[i] = (i % 2 == 0 ? 0.04f : -0.04f);
+        float[] out = F1Text.tidyAudio(pcm, rate, 0.2f);
+        assertEquals(200 + 30 + 1000 + 120, out.length); // 앞 0.2초 + 여유 0.03초 + 말소리 + 뒤 0.12초
+        assertEquals(0f, out[0], 0f);
+        assertEquals(0.08f, Math.abs(out[200 + 30 + 500]), 0.001f); // 0.04 → 두 배(위 끝)로 키움
+        float[] loud = new float[1000];
+        for (int i = 0; i < 1000; i++) loud[i] = (i % 2 == 0 ? 0.9f : -0.9f);
+        float[] quieter = F1Text.tidyAudio(loud, rate, 0f);
+        assertEquals(0.45f, Math.abs(quieter[500]), 0.001f); // 너무 크면 절반(아래 끝)까지 줄임
+        float[] silent = new float[500];
+        assertTrue(F1Text.tidyAudio(silent, rate, 0.2f) == silent); // 말소리가 없으면 그대로
+    }
+
     @Test public void longTextIsChunkedBySentenceThenComma() {
         String s = "가".repeat(80) + ". " + "나".repeat(80) + ". " + "다".repeat(30);
         List<String> c = F1Text.chunks(s, 120);

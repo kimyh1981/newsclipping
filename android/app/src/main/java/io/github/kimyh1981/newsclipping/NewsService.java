@@ -635,7 +635,7 @@ public class NewsService extends Service {
             watchCalls();
             tts.setOnUtteranceProgressListener(new UtteranceProgressListener() {
                 @Override public void onStart(String id) { }
-                @Override public void onDone(String id) { main.post(() -> done(id)); }
+                @Override public void onDone(String id) { phoneSpokeAt = System.currentTimeMillis(); main.post(() -> done(id)); }
                 @Override public void onError(String id) { new Prefs(NewsService.this).noteAudio("폰 음성 오류 " + id); main.post(() -> done(id)); }
             });
             startSession();
@@ -689,6 +689,11 @@ public class NewsService extends Service {
         if (pos >= queue.size()) { completed = true; finish(); return; }
         Step s = queue.get(pos++);
         holdButtons(true); // 멈췄다 다시 읽을 때 다시 튼다. 트는 중이면 그대로 (끊었다 틀면 차가 소리 길을 닫아 첫마디를 먹었다, 2026-10-20)
+        // 소리 차례(포커스)를 못 쥔 채 읽으면 내비·비서가 끼어들어도 '잃음' 알림이 오지 않아 멈추지 못한다: 차례마다 다시 받는다 (벤치마킹 2026-11-21)
+        if (!focusBack && audio != null && focus != null) {
+            focusBack = audio.requestAudioFocus(focus) == AudioManager.AUDIOFOCUS_REQUEST_GRANTED;
+            new Prefs(this).noteAudio(focusBack ? "소리 차례 다시 받음" : "소리 차례를 못 받은 채 읽는 중");
+        }
         if (s.id.startsWith("L")) {
             int i = Integer.parseInt(s.id.substring(1, s.id.indexOf('.')));
             current = i;
@@ -720,6 +725,7 @@ public class NewsService extends Service {
             else { tts.setLanguage(Locale.KOREAN); Voices.apply(tts, new Prefs(this)); }
         }
         tts.setSpeechRate(new Prefs(this).rate() / 100f * boost * (reportStep(s) ? REPORT_SPEED : 1f)); // 비료시장 브리핑은 1.2배
+        phoneSpokeAt = System.currentTimeMillis();
         tts.playSilentUtterance((long) (F1Engine.LEAD_SEC * 1000), TextToSpeech.QUEUE_FLUSH, "lead"); // 첫소리가 먹히지 않게 앞을 비운다
         tts.speak(en ? s.text : Pron.say(s.text), TextToSpeech.QUEUE_ADD, speakParams, gen + ":" + s.id); // 자막은 쓴 글, 소리는 들리는 대로
     }
@@ -761,7 +767,7 @@ public class NewsService extends Service {
             noticeJobs.put(t, out.length() > 44 ? java.util.concurrent.CompletableFuture.completedFuture(out) : f1Pool.submit(() -> {
                 F1Engine e = F1Voice.engine(this);
                 if (e == null || stopped) return null;
-                float[] pcm = F1Voice.synth(this, e, Pron.say(t), "ko", F1Voice.speed(new Prefs(this).rate()));
+                float[] pcm = F1Text.tidyAudio(F1Voice.synth(this, e, Pron.say(t), "ko", Math.min(F1_MAX_SPEED, F1Voice.speed(new Prefs(this).rate()))), e.sampleRate, F1Engine.LEAD_SEC);
                 F1Engine.writeWav(pcm, e.sampleRate, out);
                 return out;
             }));
@@ -824,7 +830,7 @@ public class NewsService extends Service {
             String said = en ? s.text : Pron.say(s.text);
             // 짧은 줄(언론사 이름·연결 말)은 빠르기를 누른다: 가장 빠르게에서 '연합뉴스 소식입니다'를 건너뛰듯 읽었다 (2026-11-21)
             float speed = said.replaceAll("\\s", "").length() <= 14 ? Math.min(F1Voice.speed(rate), SHORT_MAX_SPEED) : F1Voice.speed(rate);
-            float[] pcm = F1Voice.synth(this, e, said, en ? "en" : "ko", speed);
+            float[] pcm = F1Text.tidyAudio(F1Voice.synth(this, e, said, en ? "en" : "ko", Math.min(F1_MAX_SPEED, speed)), e.sampleRate, F1Engine.LEAD_SEC);
             F1Engine.writeWav(pcm, e.sampleRate, out);
             if (keep) pruneKeep();
             float x = pcm.length / (float) e.sampleRate / Math.max(0.001f, (System.currentTimeMillis() - t) / 1000f);
@@ -925,6 +931,8 @@ public class NewsService extends Service {
             if (boost != 1f) mp.setPlaybackParams(mp.getPlaybackParams().setSpeed(boost));
             mp.start();
             player = mp;
+            main.removeCallbacks(sampleExtra);
+            main.postDelayed(sampleExtra, 300);
             return true;
         } catch (Exception e) {
             Log.w(TAG, "녹음 재생 실패, 폰 음성으로: " + e);
@@ -988,6 +996,8 @@ public class NewsService extends Service {
     private static final float REPORT_SPEED = 1.2f;
     /** 짧은 줄을 F1으로 만들 때 넘지 않을 빠르기 (보통 1.05) */
     private static final float SHORT_MAX_SPEED = 1.15f;
+    /** F1 빠르기 값의 위 끝 (제조사 권장 0.9~1.5: 넘기면 소리가 뭉개진다) */
+    private static final float F1_MAX_SPEED = 1.5f;
 
     private boolean inLesson() { return current < lines.size() && lines.get(current).lesson > 0; }
 
@@ -1223,17 +1233,35 @@ public class NewsService extends Service {
         playbackWatch = new AudioManager.AudioPlaybackCallback() {
             @Override public void onPlaybackConfigChanged(List<AudioPlaybackConfiguration> configs) {
                 boolean nav = false;
+                int media = 0;
+                StringBuilder other = new StringBuilder();
                 for (AudioPlaybackConfiguration c : configs) {
                     AudioAttributes a = c.getAudioAttributes();
-                    if (a != null && a.getUsage() == AudioAttributes.USAGE_ASSISTANCE_NAVIGATION_GUIDANCE) nav = true;
+                    if (a == null) continue;
+                    int u = a.getUsage();
+                    if (Rules.interrupts(u)) nav = true; // 내비 안내·음성 비서·차 안내
+                    if (Rules.mediaUsage(u)) media++;
+                    else other.append(other.length() == 0 ? "" : ",").append(u);
                 }
+                // 기록: 미디어 말고 어떤 용도의 소리가 났는지 (내비 앱마다 다르다. 다음 개선의 근거)
+                String sig = other.toString();
+                if (!sig.equals(lastOther)) { lastOther = sig; if (!sig.isEmpty()) new Prefs(NewsService.this).noteAudio("다른 소리 용도 " + sig + (paused ? "" : " · 읽는 중")); }
+                // 용도 표시 없이 미디어로 섞어 내는 안내: 이 앱 것이 아닌 미디어 소리가 평소(기준)보다 많으면 0.7초 뒤 다시 보고 멈춘다
+                int extra = Math.max(0, media - ownPlayers());
+                boolean mixed = mixedActive && extra > extraBase;
+                if (mixedActive && !mixed) { mixedActive = false; main.removeCallbacks(mixedCap); }
+                if (!mixedActive && !paused && extraSamples >= 5 && extraFalse < 3 && extra > extraBase) {
+                    main.removeCallbacks(mixedCheck);
+                    main.postDelayed(mixedCheck, MIXED_MS);
+                }
+                boolean active = nav || mixed;
                 boolean was = navActive;
-                navActive = nav;
-                if (nav) {
+                navActive = active;
+                if (active) {
                     main.removeCallbacks(navResume);
                     main.removeCallbacks(settleResume);
-                    if (!paused) { pause(true); navPaused = true; new Prefs(NewsService.this).noteAudio("내비 안내 → 멈춤"); }
-                } else if (navPaused && was) { // 내비 소리가 막 끝났을 때만 (다른 앱 소리 변화마다 미루지 않는다)
+                    if (!paused) { pause(true); navPaused = true; new Prefs(NewsService.this).noteAudio("내비·안내 소리 → 멈춤"); }
+                } else if (navPaused && was) { // 그 소리가 막 끝났을 때만 (다른 앱 소리 변화마다 미루지 않는다)
                     new Prefs(NewsService.this).noteAudio("내비 소리 끝 → " + settle(NAV_SETTLE_MS) / 1000f + "초 조용하면 이어 읽기");
                     main.removeCallbacks(navResume);
                     main.postDelayed(navResume, settle(NAV_SETTLE_MS));
@@ -1242,6 +1270,66 @@ public class NewsService extends Service {
         };
         audio.registerAudioPlaybackCallback(playbackWatch, main);
     }
+
+    // ── 섞인 소리 감지: 내비 앱이 '내비 안내' 용도도 소리 차례도 없이 미디어로 섞어 낼 때 (벤치마킹 2026-11-21) ──
+    // 이 앱 것이 아닌 미디어 소리 수를 센다. 평소 값(기준)은 문장을 틀 때마다 재서 가장 작은 값으로 잡고(차·오토가 늘 켜 둔 소리는 기준에 든다),
+    // 기준보다 많은 상태가 0.7초 이어지면 안내로 보고 멈춘다. 8초 넘게 이어지면 안내가 아니라 늘 있는 소리다: 기준을 올리고 이어 읽는다(세 번 틀리면 끈다)
+    private static final long MIXED_MS = 700, MIXED_MAX_MS = 8000;
+    private int extraBase = Integer.MAX_VALUE, extraSamples, extraFalse;
+    private boolean mixedActive;
+    private long phoneSpokeAt;
+    private String lastOther = "";
+
+    /** 지금 소리를 내는 이 앱의 플레이어 수 (소리 길 유지용 + 문장 + 기다림 안내) */
+    private int ownPlayers() {
+        return (hold != null && hold.getPlayState() == AudioTrack.PLAYSTATE_PLAYING ? 1 : 0) + (player != null ? 1 : 0) + (noticePlayer != null ? 1 : 0);
+    }
+
+    /** 이 앱 것이 아닌 미디어 소리 수 */
+    private int extraNow() {
+        int media = 0;
+        for (AudioPlaybackConfiguration c : audio.getActivePlaybackConfigurations()) {
+            AudioAttributes a = c.getAudioAttributes();
+            if (a != null && Rules.mediaUsage(a.getUsage())) media++;
+        }
+        return Math.max(0, media - ownPlayers());
+    }
+
+    /** 폰 음성 엔진이 말하는 중이거나 막 끝났다: 그 소리는 다른 앱(음성 엔진)이 내므로 세지 않는다 */
+    private boolean phoneRecently() {
+        return tts != null && tts.isSpeaking() || System.currentTimeMillis() - phoneSpokeAt < 3000;
+    }
+
+    private final Runnable sampleExtra = () -> {
+        if (this.stopped || this.paused || this.audio == null || this.player == null || phoneRecently()) return;
+        this.extraBase = Math.min(this.extraBase, extraNow());
+        this.extraSamples++;
+    };
+
+    private final Runnable mixedCap = () -> {
+        if (!this.mixedActive || this.audio == null) return;
+        this.mixedActive = false;
+        this.navActive = false;
+        this.extraBase = extraNow();
+        this.extraFalse++;
+        new Prefs(this).noteAudio("섞인 소리가 8초 넘게 이어짐: 늘 있는 소리로 보고 기준 " + this.extraBase + "로 올림 (" + this.extraFalse + "번째)");
+        this.main.removeCallbacks(this.navResume);
+        this.main.post(this.navResume);
+    };
+
+    private final Runnable mixedCheck = () -> {
+        if (this.stopped || this.paused || this.audio == null || this.extraSamples < 5 || this.extraFalse >= 3 || !inCar() || phoneRecently()) return;
+        int extra = extraNow();
+        if (extra <= this.extraBase) return;
+        this.mixedActive = true;
+        this.navActive = true;
+        this.main.removeCallbacks(this.navResume);
+        this.main.removeCallbacks(this.settleResume);
+        pause(true);
+        this.navPaused = true;
+        new Prefs(this).noteAudio("섞인 안내 소리 → 멈춤 · 남의 미디어 " + extra + " (기준 " + this.extraBase + ")");
+        this.main.postDelayed(this.mixedCap, MIXED_MAX_MS);
+    };
 
     private void pause(boolean autoResume) {
         if (tts == null || stopped) return;
@@ -1252,6 +1340,8 @@ public class NewsService extends Service {
         }
         new Prefs(this).noteAudio("멈춤 (" + (autoResume ? "저절로 이어 읽기" : "손으로·오래") + ") · 줄 " + current + (inFull() ? " · 전체 듣기" : ""));
         main.removeCallbacks(settleResume);
+        main.removeCallbacks(mixedCheck);
+        main.removeCallbacks(sampleExtra);
         if (autoResume) churn = System.currentTimeMillis() - autoResumedAt < 10_000 ? Math.min(churn + 1, 2) : 0;
         resumeOnGain = autoResume;
         pausedAt = System.currentTimeMillis();
