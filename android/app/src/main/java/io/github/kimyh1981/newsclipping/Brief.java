@@ -175,6 +175,33 @@ final class Brief {
     boolean lessonsLocked;
     /** 잠금의 표시(salt): 다시 잠그면(사내 코드를 바꾸면) 달라진다. 앱은 이것이 바뀔 때만 다시 묻는다 */
     String lessonsSeal = "";
+    /** 세계 비료시장 주간 브리핑 (잠긴 reportEnc를 사내 코드로 푼 것, 없거나 못 풀면 null) */
+    Report report;
+
+    /** 세계 비료시장 주간 브리핑: 주인 예약 작업이 월요일마다 쓴 원고 (2026-11-20). 토막 이름과 낭독 글 */
+    static final class Report {
+        final String date, title;
+        final List<String[]> segments = new ArrayList<>();
+        Report(String date, String title) { this.date = date; this.title = title; }
+    }
+
+    static final String REPORT_SECTION = "fert-report";
+    /** 이 섹션들 가운데 처음 나오는 것 앞에 비료시장 브리핑을 넣는다 (해외 뉴스 묶음의 맨 앞) */
+    private static final List<String> FOREIGN = java.util.Arrays.asList("world", "global-agri", "fert-world", "agri-keywords", Abroad.SECTION);
+
+    /** 고른 섹션 목록에 비료시장 브리핑을 해외 뉴스 앞에 넣는다. 토막마다 한 줄(폰이 읽는 줄, 원문 링크 없음) */
+    static void addReport(List<Picked> picked, Report r) {
+        if (r == null || r.segments.isEmpty()) return;
+        Picked p = new Picked(REPORT_SECTION, r.title, false);
+        for (int k = 0; k < r.segments.size(); k++) {
+            String[] s = r.segments.get(k);
+            p.items.add(new Item(s[0], s[1], s[0], "rep-" + k, "", "", Collections.<String>emptyList(), true));
+        }
+        int at = picked.size();
+        for (int i = 0; i < picked.size(); i++) if (FOREIGN.contains(picked.get(i).id)) { at = i; break; }
+        picked.add(at, p);
+    }
+
     /** 잠긴 제품 공부(lessonsEnc)를 풀 사내 코드. Prefs가 읽어 넣는다 (라이트판은 코드를 넣는 곳이 없어 늘 잠김) */
     static volatile String lessonCode = "";
 
@@ -233,6 +260,21 @@ final class Brief {
             }
             locked = ls == null;
         }
+        Report report = null;
+        JSONObject rep = b.optJSONObject("reportEnc");
+        if (rep != null && rep.optJSONObject("box") != null && !lessonCode.trim().isEmpty()) {
+            try {
+                JSONObject plain = LessonLock.open(rep.getJSONObject("box"), lessonCode);
+                report = new Report(plain.optString("date", rep.optString("date", "")), plain.optString("title", "세계 비료시장 주간 브리핑"));
+                JSONArray segs = plain.optJSONArray("segments");
+                if (segs != null) for (int i = 0; i < segs.length(); i++) {
+                    JSONObject s = segs.getJSONObject(i);
+                    if (!s.optString("text").trim().isEmpty()) report.segments.add(new String[] {s.optString("name", ""), s.optString("text")});
+                }
+            } catch (Exception e) {
+                report = null; // 코드가 틀리거나 다른 꼴: 브리핑만 빼고 나머지는 그대로
+            }
+        }
         JSONObject product = ls == null ? null : ls.optJSONObject("product");
         JSONArray eps = product == null ? null : product.optJSONArray("episodes");
         if (eps != null) for (int i = 0; i < eps.length(); i++) {
@@ -257,6 +299,7 @@ final class Brief {
         }
         Brief out = new Brief(b.getString("dateLabel"), auto == null || auto.optBoolean("play", true), sections, audioIds, audio == null ? "audio/" : audio.optString("base", "audio/"), lessons);
         out.lessonsLocked = locked;
+        out.report = report;
         out.lessonsSeal = enc == null ? "" : enc.optString("salt", "");
         return out;
     }

@@ -15,6 +15,7 @@ const lock = require('./lessons-crypt.js');
 const tts = require('./tts.js');
 const naver = require('./naver.js');
 const region = require('./region.js');
+const report = require('./report.js');
 
 const SPARE = 2; // 언론사마다 take보다 2건 더 모은다: 다른 언론사와 겹치는 기사를 빼고도 take건을 채우도록
 const UA = 'Mozilla/5.0 (compatible; news-briefing/1.0; +https://github.com/kimyh1981/Personal-Project)';
@@ -328,7 +329,7 @@ const noBody = (b) => ({
   ...b,
   sections: (b.sections || []).map((sec) => ({ ...sec, sources: (sec.sources || []).map((src) => ({ ...src, items: (src.items || []).map((it) => Object.fromEntries(Object.entries(it).filter(([k]) => !BODY_FIELDS.includes(k)))) })) })),
 });
-const slim = (b) => { const { audio, earlier, lessons: _, lessonsEnc: __, ...rest } = b; return noBody(rest); }; // 녹음은 그날 것만 남으니 빼고, 겹침 열쇠와 제품 공부 원고(날마다 같음)도 뺀다
+const slim = (b) => { const { audio, earlier, lessons: _, lessonsEnc: __, reportEnc: ___, ...rest } = b; return noBody(rest); }; // 녹음은 그날 것만 남으니 빼고, 겹침 열쇠와 제품 공부 원고(날마다 같음)도 뺀다
 
 // 제품 공부(product)와 같은 회의 농업영어(english) 원고. 저장소에는 잠긴 것(lessons/lessons.enc.json)만 있다 (퇴사자가 못 보게, 2026-10-17).
 // box: 공개 원고에 그대로 넣는 잠긴 꼴(앱이 사내 코드로 푼다). plain: 녹음하려고 저장소 비밀값 LESSON_CODE로 푼 원문 (코드가 없으면 없음)
@@ -505,6 +506,9 @@ if (require.main === module) {
     });
     delete b.lessons; // 원문은 절대 올리지 않는다
     if (box) b.lessonsEnc = box;
+    // 세계 비료시장 주간 브리핑: 주인 예약 작업이 잠가 올린 이번 주 원고를 잠긴 채 싣는다 (정식판 앱만 사내 코드로 푼다)
+    const rep = await report.fetchReport(get, Date.now(), b.log);
+    if (rep) b.reportEnc = rep;
     fs.writeFileSync(path.join(out, 'briefing.json'), JSON.stringify(b, null, 1));
     fs.writeFileSync(path.join(out, 'briefing.txt'), speechText(b));
     // 앱의 '당겨서 새로 받기'가 먼저 확인하는 작은 파일: 원고 시각만 (1.3MB 원고를 받기 전에 새 원고가 있는지 안다)

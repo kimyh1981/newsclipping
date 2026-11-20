@@ -2,6 +2,7 @@ package io.github.kimyh1981.newsclipping;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import java.nio.charset.StandardCharsets;
@@ -84,6 +85,34 @@ public class LessonsTest {
         assertEquals(news, Brief.withLesson(news, four, false, false));
         // 원고 없는 브리핑(예전 서버)은 그대로
         assertTrue(Brief.parse(read("tests/fixtures/briefing.json")).lessons.isEmpty());
+    }
+
+    // 세계 비료시장 주간 브리핑: 서버(tools/report.js)가 잠근 시험 원고를 사내 코드로 풀고, 해외 뉴스 섹션 앞에 넣는다 (2026-11-20)
+    @Test public void weeklyFertilizerReportOpensWithCodeAndGoesBeforeForeignNews() throws Exception {
+        JSONObject j = new JSONObject(read("tests/fixtures/briefing.json"));
+        j.put("reportEnc", new JSONObject(read("tests/fixtures/report-enc.json")));
+        try {
+            Brief.lessonCode = "";
+            assertNull(Brief.parse(j.toString()).report);
+            Brief.lessonCode = "wrong-code";
+            assertNull(Brief.parse(j.toString()).report);
+            Brief.lessonCode = "test-code";
+            Brief.Report r = Brief.parse(j.toString()).report;
+            assertEquals("2026-11-23", r.date);
+            assertEquals(2, r.segments.size());
+            assertEquals("가격판", r.segments.get(1)[0]);
+            List<Brief.Picked> picked = new java.util.ArrayList<>();
+            picked.add(new Brief.Picked("papers", "국내 주요 언론 헤드라인", true));
+            picked.add(new Brief.Picked("farm", "국내 농업 관련 뉴스", true));
+            picked.add(new Brief.Picked("world", "해외 주요 언론 뉴스", false));
+            Brief.addReport(picked, r);
+            assertEquals(Brief.REPORT_SECTION, picked.get(2).id);
+            assertEquals("요소는 톤당 420달러입니다.", picked.get(2).items.get(1).spoken);
+            assertTrue(picked.get(2).items.get(0).group.startsWith("rep-"));
+            assertEquals("", picked.get(2).items.get(0).link); // 원문 보기·카톡 공유는 뜨지 않는다
+        } finally {
+            Brief.lessonCode = "";
+        }
     }
 
     // 잠긴 제품 공부: 서버(tools/lessons-crypt.js)가 잠근 시험 원고를 같은 방식으로 푼다
