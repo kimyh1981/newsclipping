@@ -5,7 +5,7 @@
       "id": "papers",
       "title": "국내 주요 언론 헤드라인",
       "perSourceLabel": true,
-      "limit": 14,
+      "limit": 16,
       "sources": [
         {
           "name": "연합뉴스",
@@ -179,6 +179,14 @@
           "default": false,
           "naver": "016",
           "front": true
+        },
+        {
+          "name": "경제 주요 뉴스",
+          "url": "https://news.google.com/rss/headlines/section/topic/BUSINESS?hl=ko&gl=KR&ceid=KR:ko",
+          "google": "경제 증시 환율",
+          "take": 4,
+          "id": "gnews-biz",
+          "_설명": "구글 뉴스 경제 묶음. 여러 언론사가 섞여 나오므로 한 이름으로 묶어 읽는다 (주인 2026-11-23: 섹션 안에서 언론사가 뒤섞이지 않게)"
         }
       ]
     },
@@ -364,7 +372,9 @@
           "mix": true,
           "must": "비료|요소|퇴비|농자재|농기자재|칼륨|인산|미생물|토양|바이오스티뮬런트|생물자극제|바이오비료"
         }
-      ]
+      ],
+      "domestic": true,
+      "notSource": "Facebook|Instagram|YouTube|LinkedIn|Reddit|IndexBox|openPR|PressReader|Kalkine|MSN|Yahoo|Wikipedia|TikTok|Pinterest"
     },
     {
       "id": "global-agri",
@@ -397,7 +407,6 @@
           "name": "DTN 프로그레시브 파머",
           "google": "site:dtnpf.com",
           "take": 2,
-          "default": false,
           "when": "3d",
           "country": "미국"
         },
@@ -406,7 +415,6 @@
           "name": "석세스풀 파밍",
           "google": "site:agriculture.com",
           "take": 2,
-          "default": false,
           "when": "3d",
           "country": "미국"
         },
@@ -416,7 +424,6 @@
           "name": "월드 그레인",
           "google": "site:world-grain.com",
           "take": 2,
-          "default": false,
           "when": "3d"
         }
       ],
@@ -466,103 +473,6 @@
           "must": "肥|农|土壤|作物|粮|种植"
         },
         {
-          "id": "fw-vn",
-          "name": "베트남",
-          "google": "\"phân bón\" OR \"phân bón vi sinh\" OR \"phân bón hữu cơ\" OR \"nông nghiệp\" OR \"nông sản\"",
-          "lang": "vi",
-          "country": "베트남",
-          "when": "2d",
-          "take": 3,
-          "mix": true,
-          "must": "phân bón|vi sinh|hữu cơ|nông nghiệp|nông sản|cây trồng|lúa|cà phê|sầu riêng"
-        },
-        {
-          "id": "fw-br",
-          "name": "브라질",
-          "google": "fertilizante OR bioinsumos OR biológicos OR agronegócio OR safra",
-          "lang": "pt",
-          "edition": "BR",
-          "country": "브라질",
-          "when": "2d",
-          "take": 3,
-          "mix": true,
-          "must": "fertiliz|bioinsum|biológic|agro|safra|soja|milho|lavoura"
-        },
-        {
-          "id": "fw-jp",
-          "name": "일본",
-          "google": "肥料 OR 微生物資材 OR バイオスティミュラント OR 土壌改良 OR 農業",
-          "lang": "ja",
-          "country": "일본",
-          "when": "2d",
-          "take": 3,
-          "mix": true,
-          "must": "肥料|微生物|バイオスティミュラント|土壌|農",
-          "default": false
-        },
-        {
-          "id": "fw-gb",
-          "name": "영국",
-          "google": "fertiliser OR biostimulant OR biofertiliser OR \"soil health\" OR \"regenerative agriculture\" OR agriculture",
-          "lang": "en",
-          "edition": "GB",
-          "country": "영국",
-          "when": "2d",
-          "take": 3,
-          "mix": true,
-          "must": "fertili[sz]er|urea|potash|phosphate|biostimulant|bio-?fertili|microb|soil|crop|farm|agri|harvest|grain|regenerative",
-          "default": false
-        },
-        {
-          "id": "fw-ru",
-          "name": "러시아",
-          "google": "удобрения OR биоудобрения OR агрохимия OR урожай OR АПК",
-          "lang": "ru",
-          "country": "러시아",
-          "when": "2d",
-          "take": 3,
-          "mix": true,
-          "must": "удобр|агро|урожа|сельск|АПК",
-          "default": false
-        },
-        {
-          "id": "fw-id",
-          "name": "인도네시아",
-          "google": "pupuk OR \"pupuk hayati\" OR biostimulan OR pertanian OR \"harga komoditas\"",
-          "lang": "id",
-          "country": "인도네시아",
-          "when": "2d",
-          "take": 3,
-          "mix": true,
-          "must": "pupuk|hayati|biostimulan|pertanian|petani|panen|sawit",
-          "default": false
-        },
-        {
-          "id": "fw-th",
-          "name": "태국",
-          "google": "ปุ๋ย OR \"ปุ๋ยชีวภาพ\" OR เกษตร",
-          "lang": "th",
-          "country": "태국",
-          "when": "2d",
-          "take": 3,
-          "mix": true,
-          "must": "ปุ๋ย|ชีวภาพ|เกษตร|ข้าว",
-          "default": false
-        },
-        {
-          "id": "fw-my",
-          "name": "말레이시아",
-          "google": "(fertiliser OR fertilizer OR biostimulant OR \"oil palm\" OR \"palm oil\" OR padi OR agriculture OR \"baja subsidi\") Malaysia",
-          "lang": "en",
-          "edition": "MY",
-          "country": "말레이시아",
-          "when": "2d",
-          "take": 3,
-          "mix": true,
-          "must": "fertili[sz]er|urea|potash|palm|biostimulant|bio-?fertili|soil|crop|farm|agri|harvest|padi|plantation|baja",
-          "default": false
-        },
-        {
           "id": "farmer-cn",
           "name": "농민일보",
           "google": "\"农民日报\"",
@@ -574,15 +484,15 @@
           "country": "중국"
         },
         {
-          "id": "agrinews-jp",
-          "name": "일본농업신문",
-          "google": "site:agrinews.co.jp",
-          "take": 2,
-          "default": false,
-          "when": "3d",
-          "hours": 72,
-          "lang": "ja",
-          "country": "일본"
+          "id": "fw-vn",
+          "name": "베트남",
+          "google": "\"phân bón\" OR \"phân bón vi sinh\" OR \"phân bón hữu cơ\" OR \"nông nghiệp\" OR \"nông sản\"",
+          "lang": "vi",
+          "country": "베트남",
+          "when": "2d",
+          "take": 3,
+          "mix": true,
+          "must": "phân bón|vi sinh|hữu cơ|nông nghiệp|nông sản|cây trồng|lúa|cà phê|sầu riêng"
         },
         {
           "name": "단찌",
@@ -665,8 +575,106 @@
           "country": "베트남",
           "must": "phân bón|nông nghiệp|nông sản|nông dân|cây trồng|vi sinh|hữu cơ|urê|NPK|DAP|kali|lúa|gạo|cà phê|sầu riêng|hồ tiêu",
           "hours": 72
+        },
+        {
+          "id": "fw-br",
+          "name": "브라질",
+          "google": "fertilizante OR bioinsumos OR biológicos OR agronegócio OR safra",
+          "lang": "pt",
+          "edition": "BR",
+          "country": "브라질",
+          "when": "2d",
+          "take": 3,
+          "mix": true,
+          "must": "fertiliz|bioinsum|biológic|agro|safra|soja|milho|lavoura"
+        },
+        {
+          "id": "fw-jp",
+          "name": "일본",
+          "google": "肥料 OR 微生物資材 OR バイオスティミュラント OR 土壌改良 OR 農業",
+          "lang": "ja",
+          "country": "일본",
+          "when": "2d",
+          "take": 3,
+          "mix": true,
+          "must": "肥料|微生物|バイオスティミュラント|土壌|農",
+          "default": false
+        },
+        {
+          "id": "agrinews-jp",
+          "name": "일본농업신문",
+          "google": "site:agrinews.co.jp",
+          "take": 2,
+          "default": false,
+          "when": "3d",
+          "hours": 72,
+          "lang": "ja",
+          "country": "일본"
+        },
+        {
+          "id": "fw-gb",
+          "name": "영국",
+          "google": "fertiliser OR biostimulant OR biofertiliser OR \"soil health\" OR \"regenerative agriculture\" OR agriculture",
+          "lang": "en",
+          "edition": "GB",
+          "country": "영국",
+          "when": "2d",
+          "take": 3,
+          "mix": true,
+          "must": "fertili[sz]er|urea|potash|phosphate|biostimulant|bio-?fertili|microb|soil|crop|farm|agri|harvest|grain|regenerative",
+          "default": false
+        },
+        {
+          "id": "fw-ru",
+          "name": "러시아",
+          "google": "удобрения OR биоудобрения OR агрохимия OR урожай OR АПК",
+          "lang": "ru",
+          "country": "러시아",
+          "when": "2d",
+          "take": 3,
+          "mix": true,
+          "must": "удобр|агро|урожа|сельск|АПК",
+          "default": false
+        },
+        {
+          "id": "fw-id",
+          "name": "인도네시아",
+          "google": "pupuk OR \"pupuk hayati\" OR biostimulan OR pertanian OR \"harga komoditas\"",
+          "lang": "id",
+          "country": "인도네시아",
+          "when": "2d",
+          "take": 3,
+          "mix": true,
+          "must": "pupuk|hayati|biostimulan|pertanian|petani|panen|sawit",
+          "default": false
+        },
+        {
+          "id": "fw-th",
+          "name": "태국",
+          "google": "ปุ๋ย OR \"ปุ๋ยชีวภาพ\" OR เกษตร",
+          "lang": "th",
+          "country": "태국",
+          "when": "2d",
+          "take": 3,
+          "mix": true,
+          "must": "ปุ๋ย|ชีวภาพ|เกษตร|ข้าว",
+          "default": false
+        },
+        {
+          "id": "fw-my",
+          "name": "말레이시아",
+          "google": "(fertiliser OR fertilizer OR biostimulant OR \"oil palm\" OR \"palm oil\" OR padi OR agriculture OR \"baja subsidi\") Malaysia",
+          "lang": "en",
+          "edition": "MY",
+          "country": "말레이시아",
+          "when": "2d",
+          "take": 3,
+          "mix": true,
+          "must": "fertili[sz]er|urea|potash|palm|biostimulant|bio-?fertili|soil|crop|farm|agri|harvest|padi|plantation|baja",
+          "default": false
         }
-      ]
+      ],
+      "notSource": "Facebook|Instagram|YouTube|LinkedIn|Reddit|IndexBox|openPR|PressReader|Kalkine|MSN|Yahoo|Wikipedia|TikTok|Pinterest|Nigeria|Punch|Vanguard|Ghana|Kenya|Uganda|Tanzania|Zimbabwe|Zambia|Pakistan|Bangladesh|Philippine|Manila|Jamaica|Africa"
     },
     {
       "id": "agri-keywords",
@@ -704,7 +712,8 @@
           "mix": true,
           "default": false
         }
-      ]
+      ],
+      "notSource": "Facebook|Instagram|YouTube|LinkedIn|Reddit|IndexBox|openPR|PressReader|Kalkine|MSN|Yahoo|Wikipedia|TikTok|Pinterest"
     },
     {
       "id": "world",
@@ -717,14 +726,6 @@
           "google": "국제 정세",
           "take": 4,
           "id": "gnews-world",
-          "mix": true
-        },
-        {
-          "name": "구글 뉴스 경제",
-          "url": "https://news.google.com/rss/headlines/section/topic/BUSINESS?hl=ko&gl=KR&ceid=KR:ko",
-          "google": "경제 증시 환율",
-          "take": 4,
-          "id": "gnews-biz",
           "mix": true
         },
         {
@@ -850,7 +851,6 @@
           "name": "AI타임스",
           "google": "site:aitimes.com",
           "take": 2,
-          "default": false,
           "when": "2d"
         },
         {
@@ -867,7 +867,6 @@
           "name": "지디넷코리아 AI",
           "google": "site:zdnet.co.kr AI",
           "take": 2,
-          "default": false,
           "when": "2d"
         },
         {
@@ -915,7 +914,6 @@
           "name": "테크크런치",
           "google": "site:techcrunch.com AI",
           "take": 2,
-          "default": false,
           "when": "2d",
           "lang": "en"
         },

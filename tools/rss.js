@@ -178,6 +178,7 @@ function pick(section, fetched, now, seen = []) {
   const items = [];
   const hours = section.hours || 36;
   const must = section.must ? new RegExp(section.must, 'i') : null; // 검색 결과에 섞여 든 엉뚱한 기사를 거른다
+  const notSource = section.notSource ? new RegExp(section.notSource, 'i') : null;
   for (const { source, items: list } of fetched) {
     let taken = 0;
     const lang = source.lang || section.lang || 'ko';
@@ -186,6 +187,11 @@ function pick(section, fetched, now, seen = []) {
       if (taken >= (source.take || 3) || items.length >= section.limit) break;
       const title = (it.viaGoogle ? splitGoogleSource(it.title, it.source) : it.title).normalize('NFC');
       if (skip(title, lang) || !fresh(it, now, source.hours || hours) || !spoken(title) || (need && !need.test(title))) continue;
+      // 여러 언론사 모음(구글 검색)에 섞여 든 곳 거르기 (주인 2026-11-23: 섹션에 맞는 언론사만).
+      // domestic: 국내 섹션에는 이름에 한글이 없는 해외 매체를 넣지 않는다 (Vietnam.vn, IndexBox). notSource: 언론사가 아닌 곳(SNS·보도자료 사이트)
+      const outlet = source.mix ? it.source || '' : '';
+      if (outlet && section.domestic && !/[가-힣]/.test(outlet)) continue;
+      if (outlet && notSource && notSource.test(outlet)) continue;
       if (seen.some((t) => similar(t, title))) continue;
       seen.push(title);
       items.push({ title, spoken: spoken(title), source: source.mix || source.name.startsWith('구글 뉴스') ? it.source || source.name : source.name, link: it.link, publishedAt: it.publishedAt });

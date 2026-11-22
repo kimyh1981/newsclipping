@@ -176,3 +176,21 @@ test('시간대 없는 날짜는 한국 시간으로 읽는다', () => {
   const [gmt] = rss.parseFeed('<rss><channel><item><title>가</title><link>https://x/2</link><pubDate>Thu, 15 Oct 2026 10:14:55 GMT</pubDate></item></channel></rss>');
   assert.equal(gmt.publishedAt, '2026-10-15T10:14:55.000Z');
 });
+
+// 섹션에 맞는 언론사만 (주인 2026-11-23): 국내 섹션의 해외 매체, 언론사가 아닌 곳(SNS·보도자료)을 뺀다
+test('모음 검색에 섞여 든 해외 매체·언론사 아닌 곳은 고르지 않는다', () => {
+  const { pick } = require('../tools/rss.js');
+  const now = Date.parse('2026-11-23T00:00:00Z');
+  const at = new Date(now - 3600e3).toISOString();
+  const list = [
+    { title: '비료값 안정 대책 발표', source: '농민신문', link: 'https://a/1', publishedAt: at },
+    { title: '베트남 인산비료 회사 회장 사임', source: 'Vietnam.vn', link: 'https://b/2', publishedAt: at },
+    { title: '생물자극제 시장 전망 2035', source: 'IndexBox', link: 'https://c/3', publishedAt: at },
+    { title: '요소비료 수급 점검 회의', source: '데일리안', link: 'https://d/4', publishedAt: at },
+  ];
+  const src = { id: 's', name: '비료 검색', mix: true, take: 5 };
+  const domestic = pick({ limit: 5, domestic: true, notSource: 'IndexBox|Facebook' }, [{ source: src, items: list }], now);
+  assert.deepEqual(domestic.map((x) => x.source), ['농민신문', '데일리안']);
+  const foreign = pick({ limit: 5, notSource: 'IndexBox|Facebook' }, [{ source: src, items: list }], now);
+  assert.deepEqual(foreign.map((x) => x.source), ['농민신문', 'Vietnam.vn', '데일리안']);
+});
