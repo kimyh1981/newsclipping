@@ -104,8 +104,8 @@ test('다국어 음성: 영문은 그대로 두어 미국식으로 읽게 하고
   const log = [];
   const cache = tmp();
   const a = await record(b, { out: tmp(), engine: 'edge', cache, log, run, batch });
-  assert.ok(calls[0].jobs.some((j) => j.text.includes('NATO와 AI에 오억달러 투자')));
-  assert.ok(calls[1].jobs.some((j) => j.text.includes('나토와 에이아이에 오억달러 투자')));
+  assert.ok(calls[0].jobs.some((j) => j.text.includes('NATO와 AI에 오억 달러 투자')));
+  assert.ok(calls[1].jobs.some((j) => j.text.includes('나토와 에이아이에 오억 달러 투자')));
   assert.ok(a.ids.includes(audioId(brief.sentence('NATO와 AI에 $5억 투자'))));
   assert.match(log.join('\n'), /인준 음성으로 녹음/);
   assert.ok(!fs.readdirSync(cache).some((f) => f.includes(audioId(brief.sentence('NATO와 AI에 $5억 투자')))));

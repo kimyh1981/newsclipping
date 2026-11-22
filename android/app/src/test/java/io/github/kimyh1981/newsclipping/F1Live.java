@@ -27,8 +27,9 @@ public final class F1Live {
             // 말 빠르기: 앱의 '조금 느리게'(85)·'빠르게'(130)를 F1Voice.speed와 같은 식(1.05 × 빠르기 ÷ 100)으로 넣어 길이를 잰다
             double slow = e.synth(said, "ko", 1.05f * 85 / 100).length / (double) e.sampleRate;
             double fast = e.synth(said, "ko", 1.05f * 130 / 100).length / (double) e.sampleRate;
-            System.out.printf("말 빠르기: 조금 느리게 %.1f초 · 보통 %.1f초 · 빠르게 %.1f초 (보통 대비 빠르게 %.0f%%)%n", slow, sec, fast, fast / sec * 100);
-            if (fast > sec * 0.9 || slow < sec * 1.05) throw new IllegalStateException("말 빠르기가 F1 길이에 거의 반영되지 않는다");
+            double normal = e.synth(said, "ko", 1.05f).length / (double) e.sampleRate; // 받아쓰기용 소리(sec)는 숫자 줄이라 12% 천천히 만든 것일 수 있다
+            System.out.printf("말 빠르기: 조금 느리게 %.1f초 · 보통 %.1f초 · 빠르게 %.1f초 (보통 대비 빠르게 %.0f%%) · 받아쓰기용 %.1f초%n", slow, normal, fast, fast / normal * 100, sec);
+            if (fast > normal * 0.9 || slow < normal * 1.05) throw new IllegalStateException("말 빠르기가 F1 길이에 거의 반영되지 않는다");
         }
     }
 }
