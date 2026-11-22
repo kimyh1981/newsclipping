@@ -497,7 +497,7 @@ public class NewsService extends Service {
             Extras.addKeywords(brief, picked, prefs.keywords(), now);
             Abroad.addCountryNews(brief, picked, countries, abroad, now);
             boolean evening = Brief.evening(now);
-            // 세계 비료시장 주간 브리핑: 정식판 아침판에서 그 주에 처음 들을 때 한 번, 해외 뉴스 앞에 (주인 요청 2026-11-20)
+            // 세계 비료시장 주간 브리핑: 정식판 아침판에서 그 주에 처음 들을 때 한 번, 맨 끝에 (주인 요청 2026-11-20, 순서 11-23)
             if (BuildConfig.LESSONS && !evening && brief.report != null && !prefs.reportHeard(brief.report.date)) {
                 Brief.addReport(picked, brief.report);
                 reportDate = brief.report.date;
@@ -831,7 +831,7 @@ public class NewsService extends Service {
             long t = System.currentTimeMillis();
             String said = en ? s.text : Pron.say(s.text);
             // 짧은 줄(언론사 이름·연결 말)은 빠르기를 누른다: 가장 빠르게에서 '연합뉴스 소식입니다'를 건너뛰듯 읽었다 (2026-11-21)
-            float speed = said.replaceAll("\\s", "").length() <= 14 ? Math.min(F1Voice.speed(rate), SHORT_MAX_SPEED) : F1Voice.speed(rate);
+            float speed = F1Text.clearSpeed(said, said.replaceAll("\\s", "").length() <= 14 ? Math.min(F1Voice.speed(rate), SHORT_MAX_SPEED) : F1Voice.speed(rate));
             float[] pcm = F1Text.tidyAudio(F1Voice.synth(this, e, said, en ? "en" : "ko", Math.min(F1_MAX_SPEED, speed)), e.sampleRate, F1Engine.LEAD_SEC);
             F1Engine.writeWav(pcm, e.sampleRate, out);
             if (keep) pruneKeep();

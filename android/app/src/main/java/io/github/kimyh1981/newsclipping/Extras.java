@@ -32,6 +32,8 @@ final class Extras {
     static final int TAKE = 2;
     static final long MAX_AGE = 36L * 3600 * 1000;
     static final String FARM = "farm";
+    /** 국내 농업 키워드 뉴스 섹션 (feeds.json) */
+    static final String FARM_KEYWORDS = "farm-keywords";
     /** 해외 농업·비료 시장 뉴스 섹션 (feeds.json) */
     static final String FERT_WORLD = "fert-world";
 
@@ -409,6 +411,7 @@ final class Extras {
         if (keywords.isEmpty()) return;
         Brief.Picked farm = null;
         for (Brief.Picked p : picked) if (FARM.equals(p.id)) farm = p;
+        for (Brief.Picked p : picked) if (FARM_KEYWORDS.equals(p.id)) farm = p; // 키워드 섹션이 있으면 거기에 (주인 2026-11-23: 언론사와 키워드를 따로)
         if (farm == null) return; // 농업 섹션을 듣지 않는다
         Set<String> seen = titles(b);
         for (Brief.Picked p : picked) for (Brief.Item it : p.items) seen.add(it.spoken.replaceAll("\\s+", ""));

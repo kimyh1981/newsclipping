@@ -566,7 +566,9 @@ final class Pron {
             m.appendReplacement(sb, Matcher.quoteReplacement(out));
         }
         m.appendTail(sb);
-        return sb.toString();
+        // 숫자 말과 돈 단위 사이를 띄운다: 육십육억달러 → 육십육억 달러, 이천억원 → 이천억 원 (js/pron.js의 moneyGap과 같게, 2026-11-23)
+        return sb.toString().replaceAll("([일이삼사오육칠팔구십백천만억조])(달러|유로|위안|파운드|루피아|루피|바트|헤알|링깃|페소)", "$1 $2")
+                .replaceAll("([십백천만억조])(원|엔)(?=[을를이가은는도만에의과와로,.\\s]|으로|$)", "$1 $2");
     }
 
     // 괄호 뒤에 조사가 붙으면 괄호째 지운다(조사만 떨어져 들렸다), 큰따옴표 인용 앞은 쉰다, 짧은 가운뎃점 나열은 붙이거나 띄운다 (2026-10-27)

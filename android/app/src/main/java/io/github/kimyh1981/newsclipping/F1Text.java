@@ -67,6 +67,20 @@ final class F1Text {
     }
 
     private static final Pattern NUMBER_UNIT = Pattern.compile("(?<=[일이삼사오육칠팔구])([천백])(?=[일이삼사오육칠팔구십백])|(?<=천)(백)(?=[일이삼사오육칠팔구십])");
+    /** 육십육억 → 육십 육억: '66억 달러'를 '유억 달러'처럼 얼버무렸다 (주인 2026-11-23). 앞에 숫자가 있는 십 뒤, 숫자+억·만·조 앞만 */
+    private static final Pattern TEN_UNIT = Pattern.compile("(?<=[이삼사오육칠팔구])십(?=[일이삼사오육칠팔구][억만조])");
+    /** 또박또박 읽을 줄: 억·조 단위 수, 퍼센트, 소수(쩜), 세 글자 넘는 숫자 말 */
+    private static final Pattern NUMBER_HEAVY = Pattern.compile("[일이삼사오육칠팔구십백천만]\\s?[억조]|퍼센트|쩜[영일이삼사오육칠팔구]|[일이삼사오육칠팔구십백천]{4,}");
+
+    /** 숫자가 중요한 줄인가 */
+    static boolean numberHeavy(String said) {
+        return NUMBER_HEAVY.matcher(said).find();
+    }
+
+    /** 숫자가 중요한 줄은 12% 천천히 만든다: 빠르게 읽을 때 숫자가 뭉개졌다 (주인 2026-11-23) */
+    static float clearSpeed(String said, float speed) {
+        return numberHeavy(said) ? speed * 0.88f : speed;
+    }
 
     /**
      * 우리말 숫자를 천·백 단위마다 띄운다: '삼천사백오십육억' → '삼천 사백 오십육억'.
@@ -78,7 +92,7 @@ final class F1Text {
         StringBuffer b = new StringBuffer();
         while (m.find()) m.appendReplacement(b, (m.group(1) != null ? m.group(1) : m.group(2)) + " ");
         m.appendTail(b);
-        return b.toString();
+        return TEN_UNIT.matcher(b.toString()).replaceAll("십 ");
     }
 
     private static boolean emoji(int cp) {

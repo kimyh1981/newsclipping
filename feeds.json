@@ -184,7 +184,7 @@
     },
     {
       "id": "farm",
-      "title": "국내 농업 관련 뉴스",
+      "title": "국내 농업 언론 뉴스",
       "promo": [
         "축제|대회|기부|기탁|성금|후원|봉사|나눔|시상|수상자|표창|협약식|업무협약|MOU|간담회|발대식|선포식|전달식|기념식|위촉|취임|선출|캠페인|골프|체육|장학금|동정|개막"
       ],
@@ -193,7 +193,7 @@
         "벼|쌀|과수|과원|사과 ?(농|재배|값|가격)|유기농|친환경"
       ],
       "perSourceLabel": true,
-      "limit": 10,
+      "limit": 8,
       "sources": [
         {
           "id": "newsfm",
@@ -210,33 +210,6 @@
           "when": "2d",
           "take": 1,
           "must": "비료|요소|퇴비|농자재|농기자재|칼륨|인산|미생물|토양"
-        },
-        {
-          "name": "비료 검색",
-          "google": "비료",
-          "when": "2d",
-          "take": 4,
-          "id": "fert-search",
-          "mix": true,
-          "must": "비료|요소|퇴비|농자재|농기자재|칼륨|인산|미생물|토양"
-        },
-        {
-          "name": "비료값·요소비료 검색",
-          "google": "비료값 OR 요소비료 OR 무기질비료 OR 유기질비료 OR 농자재",
-          "when": "2d",
-          "take": 2,
-          "id": "fert-price",
-          "mix": true,
-          "must": "비료|요소|퇴비|농자재|농기자재|칼륨|인산|미생물|토양"
-        },
-        {
-          "id": "fert-bio",
-          "name": "바이오스티뮬런트·미생물 비료 검색",
-          "google": "바이오스티뮬런트 OR 생물자극제 OR 미생물비료 OR 바이오비료 OR 미생물제제 OR 토양개량제",
-          "when": "3d",
-          "take": 2,
-          "mix": true,
-          "must": "비료|요소|퇴비|농자재|농기자재|칼륨|인산|미생물|토양|바이오스티뮬런트|생물자극제|바이오비료"
         },
         {
           "name": "농민신문",
@@ -351,140 +324,51 @@
       ]
     },
     {
-      "id": "world",
-      "title": "해외 주요 언론 뉴스",
-      "limit": 10,
+      "id": "farm-keywords",
+      "title": "국내 농업 키워드 뉴스",
+      "_설명": "비료·비료값·바이오스티뮬런트 같은 낱말을 구글 뉴스에서 찾는다 (언론사 묶음과 따로, 주인 요청 2026-11-23)",
+      "promo": [
+        "축제|대회|기부|기탁|성금|후원|봉사|나눔|시상|수상자|표창|협약식|업무협약|MOU|간담회|발대식|선포식|전달식|기념식|위촉|취임|선출|캠페인|골프|체육|장학금|동정|개막"
+      ],
+      "boost": [
+        "비료|퇴비|탄소중립|저탄소|온실가스|미생물|토양|바이오차|농자재|biochar",
+        "벼|쌀|과수|과원|사과 ?(농|재배|값|가격)|유기농|친환경"
+      ],
+      "limit": 5,
+      "hours": 60,
       "sources": [
         {
-          "name": "구글 뉴스 국제",
-          "url": "https://news.google.com/rss/headlines/section/topic/WORLD?hl=ko&gl=KR&ceid=KR:ko",
-          "google": "국제 정세",
+          "name": "비료 검색",
+          "google": "비료",
+          "when": "2d",
           "take": 4,
-          "id": "gnews-world",
-          "mix": true
+          "id": "fert-search",
+          "mix": true,
+          "must": "비료|요소|퇴비|농자재|농기자재|칼륨|인산|미생물|토양"
         },
         {
-          "name": "구글 뉴스 경제",
-          "url": "https://news.google.com/rss/headlines/section/topic/BUSINESS?hl=ko&gl=KR&ceid=KR:ko",
-          "google": "경제 증시 환율",
-          "take": 4,
-          "id": "gnews-biz",
-          "mix": true
-        },
-        {
-          "id": "reuters",
-          "country": "영국",
-          "name": "로이터",
-          "google": "site:reuters.com",
+          "name": "비료값·요소비료 검색",
+          "google": "비료값 OR 요소비료 OR 무기질비료 OR 유기질비료 OR 농자재",
+          "when": "2d",
           "take": 2,
-          "default": false,
-          "lang": "en"
+          "id": "fert-price",
+          "mix": true,
+          "must": "비료|요소|퇴비|농자재|농기자재|칼륨|인산|미생물|토양"
         },
         {
-          "id": "ap",
-          "country": "미국",
-          "name": "AP",
-          "google": "site:apnews.com",
+          "id": "fert-bio",
+          "name": "바이오스티뮬런트·미생물 비료 검색",
+          "google": "바이오스티뮬런트 OR 생물자극제 OR 미생물비료 OR 바이오비료 OR 미생물제제 OR 토양개량제",
+          "when": "3d",
           "take": 2,
-          "default": false,
-          "lang": "en"
-        },
-        {
-          "id": "bbc",
-          "country": "영국",
-          "name": "BBC",
-          "google": "site:bbc.com",
-          "take": 2,
-          "default": false,
-          "lang": "en"
-        },
-        {
-          "id": "bloomberg",
-          "country": "미국",
-          "name": "블룸버그",
-          "google": "site:bloomberg.com",
-          "take": 2,
-          "default": false,
-          "lang": "en"
-        },
-        {
-          "id": "cnbc",
-          "name": "CNBC",
-          "google": "site:cnbc.com",
-          "take": 2,
-          "default": false,
-          "lang": "en",
-          "country": "미국"
-        },
-        {
-          "id": "nikkei-asia",
-          "country": "일본",
-          "name": "닛케이 아시아",
-          "google": "site:asia.nikkei.com",
-          "take": 2,
-          "default": false,
-          "lang": "en"
-        },
-        {
-          "id": "xinhua",
-          "name": "신화망",
-          "google": "site:xinhuanet.com",
-          "take": 2,
-          "default": false,
-          "lang": "zh",
-          "country": "중국"
-        },
-        {
-          "id": "caixin",
-          "name": "차이신",
-          "google": "site:caixin.com",
-          "take": 2,
-          "default": false,
-          "lang": "zh",
-          "country": "중국"
-        },
-        {
-          "id": "nhk",
-          "name": "NHK",
-          "google": "site:nhk.or.jp",
-          "take": 2,
-          "default": false,
-          "lang": "ja",
-          "country": "일본"
-        },
-        {
-          "id": "nikkei",
-          "name": "니혼게이자이",
-          "google": "site:nikkei.com",
-          "take": 2,
-          "default": false,
-          "lang": "ja",
-          "country": "일본"
-        },
-        {
-          "id": "vnexpress",
-          "name": "브이엔익스프레스",
-          "google": "site:vnexpress.net",
-          "take": 2,
-          "default": false,
-          "lang": "vi",
-          "country": "베트남"
-        },
-        {
-          "id": "tuoitre",
-          "name": "뚜오이째",
-          "google": "site:tuoitre.vn",
-          "take": 2,
-          "default": false,
-          "lang": "vi",
-          "country": "베트남"
+          "mix": true,
+          "must": "비료|요소|퇴비|농자재|농기자재|칼륨|인산|미생물|토양|바이오스티뮬런트|생물자극제|바이오비료"
         }
-      ],
-      "region": true
+      ]
     },
     {
       "id": "global-agri",
-      "title": "해외 농업 관련 뉴스",
+      "title": "해외 농업 언론 뉴스",
       "lang": "en",
       "limit": 5,
       "hours": 72,
@@ -821,6 +705,138 @@
           "default": false
         }
       ]
+    },
+    {
+      "id": "world",
+      "title": "해외 주요 언론 뉴스",
+      "limit": 10,
+      "sources": [
+        {
+          "name": "구글 뉴스 국제",
+          "url": "https://news.google.com/rss/headlines/section/topic/WORLD?hl=ko&gl=KR&ceid=KR:ko",
+          "google": "국제 정세",
+          "take": 4,
+          "id": "gnews-world",
+          "mix": true
+        },
+        {
+          "name": "구글 뉴스 경제",
+          "url": "https://news.google.com/rss/headlines/section/topic/BUSINESS?hl=ko&gl=KR&ceid=KR:ko",
+          "google": "경제 증시 환율",
+          "take": 4,
+          "id": "gnews-biz",
+          "mix": true
+        },
+        {
+          "id": "reuters",
+          "country": "영국",
+          "name": "로이터",
+          "google": "site:reuters.com",
+          "take": 2,
+          "default": false,
+          "lang": "en"
+        },
+        {
+          "id": "ap",
+          "country": "미국",
+          "name": "AP",
+          "google": "site:apnews.com",
+          "take": 2,
+          "default": false,
+          "lang": "en"
+        },
+        {
+          "id": "bbc",
+          "country": "영국",
+          "name": "BBC",
+          "google": "site:bbc.com",
+          "take": 2,
+          "default": false,
+          "lang": "en"
+        },
+        {
+          "id": "bloomberg",
+          "country": "미국",
+          "name": "블룸버그",
+          "google": "site:bloomberg.com",
+          "take": 2,
+          "default": false,
+          "lang": "en"
+        },
+        {
+          "id": "cnbc",
+          "name": "CNBC",
+          "google": "site:cnbc.com",
+          "take": 2,
+          "default": false,
+          "lang": "en",
+          "country": "미국"
+        },
+        {
+          "id": "nikkei-asia",
+          "country": "일본",
+          "name": "닛케이 아시아",
+          "google": "site:asia.nikkei.com",
+          "take": 2,
+          "default": false,
+          "lang": "en"
+        },
+        {
+          "id": "xinhua",
+          "name": "신화망",
+          "google": "site:xinhuanet.com",
+          "take": 2,
+          "default": false,
+          "lang": "zh",
+          "country": "중국"
+        },
+        {
+          "id": "caixin",
+          "name": "차이신",
+          "google": "site:caixin.com",
+          "take": 2,
+          "default": false,
+          "lang": "zh",
+          "country": "중국"
+        },
+        {
+          "id": "nhk",
+          "name": "NHK",
+          "google": "site:nhk.or.jp",
+          "take": 2,
+          "default": false,
+          "lang": "ja",
+          "country": "일본"
+        },
+        {
+          "id": "nikkei",
+          "name": "니혼게이자이",
+          "google": "site:nikkei.com",
+          "take": 2,
+          "default": false,
+          "lang": "ja",
+          "country": "일본"
+        },
+        {
+          "id": "vnexpress",
+          "name": "브이엔익스프레스",
+          "google": "site:vnexpress.net",
+          "take": 2,
+          "default": false,
+          "lang": "vi",
+          "country": "베트남"
+        },
+        {
+          "id": "tuoitre",
+          "name": "뚜오이째",
+          "google": "site:tuoitre.vn",
+          "take": 2,
+          "default": false,
+          "lang": "vi",
+          "country": "베트남"
+        }
+      ],
+      "region": true
     },
     {
       "id": "ai",

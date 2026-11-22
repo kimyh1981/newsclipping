@@ -87,7 +87,7 @@ public class LessonsTest {
         assertTrue(Brief.parse(read("tests/fixtures/briefing.json")).lessons.isEmpty());
     }
 
-    // 세계 비료시장 주간 브리핑: 서버(tools/report.js)가 잠근 시험 원고를 사내 코드로 풀고, 해외 뉴스 섹션 앞에 넣는다 (2026-11-20)
+    // 세계 비료시장 주간 브리핑: 서버(tools/report.js)가 잠근 시험 원고를 사내 코드로 풀고, 맨 끝에 넣는다 (2026-11-20, 순서 11-23)
     @Test public void weeklyFertilizerReportOpensWithCodeAndGoesBeforeForeignNews() throws Exception {
         JSONObject j = new JSONObject(read("tests/fixtures/briefing.json"));
         j.put("reportEnc", new JSONObject(read("tests/fixtures/report-enc.json")));
@@ -106,10 +106,10 @@ public class LessonsTest {
             picked.add(new Brief.Picked("farm", "국내 농업 관련 뉴스", true));
             picked.add(new Brief.Picked("world", "해외 주요 언론 뉴스", false));
             Brief.addReport(picked, r);
-            assertEquals(Brief.REPORT_SECTION, picked.get(2).id);
-            assertEquals("요소는 톤당 420달러입니다.", picked.get(2).items.get(1).spoken);
-            assertTrue(picked.get(2).items.get(0).group.startsWith("rep-"));
-            assertEquals("", picked.get(2).items.get(0).link); // 원문 보기·카톡 공유는 뜨지 않는다
+            assertEquals(Brief.REPORT_SECTION, picked.get(3).id); // 맨 끝 (주인 2026-11-23)
+            assertEquals("요소는 톤당 420달러입니다.", picked.get(3).items.get(1).spoken);
+            assertTrue(picked.get(3).items.get(0).group.startsWith("rep-"));
+            assertEquals("", picked.get(3).items.get(0).link); // 원문 보기·카톡 공유는 뜨지 않는다
         } finally {
             Brief.lessonCode = "";
         }

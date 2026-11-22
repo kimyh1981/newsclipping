@@ -186,10 +186,7 @@ final class Brief {
     }
 
     static final String REPORT_SECTION = "fert-report";
-    /** 이 섹션들 가운데 처음 나오는 것 앞에 비료시장 브리핑을 넣는다 (해외 뉴스 묶음의 맨 앞) */
-    private static final List<String> FOREIGN = java.util.Arrays.asList("world", "global-agri", "fert-world", "agri-keywords", "abroad-kw"); // abroad-kw = Abroad.SECTION (서버 점검이 Brief만 따로 컴파일한다)
-
-    /** 고른 섹션 목록에 비료시장 브리핑을 해외 뉴스 앞에 넣는다. 토막마다 한 줄(폰이 읽는 줄, 원문 링크 없음) */
+    /** 고른 섹션 목록의 맨 끝에 비료시장 브리핑을 넣는다 (주인 2026-11-23: AI 뉴스 다음, 맨 마지막). 토막마다 한 줄(폰이 읽는 줄, 원문 링크 없음) */
     static void addReport(List<Picked> picked, Report r) {
         if (r == null || r.segments.isEmpty()) return;
         Picked p = new Picked(REPORT_SECTION, r.title, false);
@@ -197,9 +194,7 @@ final class Brief {
             String[] s = r.segments.get(k);
             p.items.add(new Item(s[0], s[1], s[0], "rep-" + k, "", "", Collections.<String>emptyList(), true));
         }
-        int at = picked.size();
-        for (int i = 0; i < picked.size(); i++) if (FOREIGN.contains(picked.get(i).id)) { at = i; break; }
-        picked.add(at, p);
+        picked.add(p);
     }
 
     /** 잠긴 제품 공부(lessonsEnc)를 풀 사내 코드. Prefs가 읽어 넣는다 (라이트판은 코드를 넣는 곳이 없어 늘 잠김) */
