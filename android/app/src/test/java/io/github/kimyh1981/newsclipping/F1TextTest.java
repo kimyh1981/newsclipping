@@ -73,7 +73,13 @@ public class F1TextTest {
 
     // F1이 '삼천사백오십육억'을 '삼천 사 오십육'처럼 한 글자 건너뛰어 읽었다 (주인 폰, 2026-10-17): 단위마다 띄워 넘긴다
     @Test public void longKoreanNumbersAreSpacedByUnit() {
-        assertEquals("삼천 사백 오십육억 원", F1Text.spaceNumbers("삼천사백오십육억 원"));
+        assertEquals("삼천 사백 오십 육억 원", F1Text.spaceNumbers("삼천사백오십육억 원"));
+        assertEquals("육십 육억 달러", F1Text.spaceNumbers("육십육억 달러")); // '유억 달러'로 얼버무렸다 (2026-11-23)
+        assertEquals("이십삼명, 오십 대", F1Text.spaceNumbers("이십삼명, 오십 대")); // 억·만·조 앞이 아니면 그대로
+        assertTrue(F1Text.numberHeavy("보조금으로 육십육억 달러를 승인했다"));
+        assertTrue(F1Text.numberHeavy("한 달 새 삼 퍼센트 올랐다"));
+        assertTrue(!F1Text.numberHeavy("연합뉴스 소식입니다"));
+        assertEquals(0.88f, F1Text.clearSpeed("삼 퍼센트", 1f), 0.001f);
         assertEquals("이천 이십육년", F1Text.spaceNumbers("이천이십육년"));
         assertEquals("만 이천 삼백 사십오", F1Text.spaceNumbers("만 이천삼백사십오"));
         assertEquals("천이백 삼십사명", F1Text.spaceNumbers("천이백삼십사명"));
@@ -81,6 +87,6 @@ public class F1TextTest {
         assertEquals("천백 원", F1Text.spaceNumbers("천백 원")); // 맨 앞 천은 그대로
         // 숫자가 아닌 낱말과 단위가 붙은 말은 그대로
         assertEquals("천사가 백화점에서 삼천만 원과 오백억", F1Text.spaceNumbers("천사가 백화점에서 삼천만 원과 오백억"));
-        assertEquals("<ko>삼천 사백 오십육억.</ko>", Normalizer.normalize(F1Text.prepare("삼천사백오십육억", "ko"), Normalizer.Form.NFC));
+        assertEquals("<ko>삼천 사백 오십 육억.</ko>", Normalizer.normalize(F1Text.prepare("삼천사백오십육억", "ko"), Normalizer.Form.NFC));
     }
 }

@@ -16,7 +16,7 @@ public final class F1Live {
             String said = Pron.say(all.toString());
             System.out.println("읽을 글: " + said);
             long t = System.currentTimeMillis();
-            float[] pcm = e.synth(said, "ko", 1.05f);
+            float[] pcm = e.synth(said, "ko", F1Text.clearSpeed(said, 1.05f));
             double sec = pcm.length / (double) e.sampleRate, took = (System.currentTimeMillis() - t) / 1000.0;
             double rms = 0;
             for (float x : pcm) rms += x * x;
