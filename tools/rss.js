@@ -60,7 +60,7 @@ function parseFeed(xml) {
 const SKIP = /\[(포토|사진|영상|그래픽|카드뉴스|부고|인사|게시판|운세|오늘의 운세|만평|TV|동영상)\]|^(부고|인사|게시판|오늘의 운세)\b|포토뉴스|\[포토\]/;
 
 // 일본어판·영문판 기사(한글이 거의 없는 제목)도 뺀다. 번역할 외국어 섹션(lang)은 한글 검사 대신 영상·사진 기사만 거른다
-const SKIP_FOREIGN = /^\s*(video|clip|ảnh|infographic|emagazine|podcast)\b|\[(video|clip|ảnh|infographic)\]/i;
+const SKIP_FOREIGN = /^\s*(video|clip|ảnh|infographic|emagazine|podcast)\b|\[(video|clip|ảnh|infographic)\]|рубрика\s*«/i; // рубрика «…»: 러시아 언론사의 분류 목록 화면
 
 // 검색 결과에 섞여 드는 광고·도박 글 (2026-10-12 '…핑카지노'가 농업 섹션에 들어옴)
 const SPAM = /카지노|바카라|토토사이트|슬롯사이트|먹튀|홀덤|casino|baccarat/i;
@@ -187,6 +187,9 @@ function pick(section, fetched, now, seen = []) {
       if (taken >= (source.take || 3) || items.length >= section.limit) break;
       const title = (it.viaGoogle ? splitGoogleSource(it.title, it.source) : it.title).normalize('NFC');
       if (skip(title, lang) || !fresh(it, now, source.hours || hours) || !spoken(title) || (need && !need.test(title))) continue;
+      // 지정 언론사(site:) 검색에 섞여 드는 사이트 화면: 언론사 이름뿐이거나 빈 제목 ('Farm Progress - Farm Progress')
+      const bare = title.replace(/^[\s\-–—|:]+/, '');
+      if (!bare || (it.source && bare.toLowerCase() === it.source.toLowerCase())) continue;
       // 여러 언론사 모음(구글 검색)에 섞여 든 곳 거르기 (주인 2026-11-23: 섹션에 맞는 언론사만).
       // domestic: 국내 섹션에는 이름에 한글이 없는 해외 매체를 넣지 않는다 (Vietnam.vn, IndexBox). notSource: 언론사가 아닌 곳(SNS·보도자료 사이트)
       const outlet = source.mix ? it.source || '' : '';
