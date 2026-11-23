@@ -194,3 +194,21 @@ test('모음 검색에 섞여 든 해외 매체·언론사 아닌 곳은 고르�
   const foreign = pick({ limit: 5, notSource: 'IndexBox|Facebook' }, [{ source: src, items: list }], now);
   assert.deepEqual(foreign.map((x) => x.source), ['농민신문', 'Vietnam.vn', '데일리안']);
 });
+
+// 지정 언론사(site:) 검색에 섞여 드는 사이트 화면 (주인 2026-11-23 국가 섹션): 언론사 이름뿐인 제목, 분류 목록 화면
+test('언론사 이름뿐인 제목·분류 목록 화면은 고르지 않는다', () => {
+  const { pick } = require('../tools/rss.js');
+  const now = Date.parse('2026-11-23T00:00:00Z');
+  const at = new Date(now - 3600e3).toISOString();
+  const g = (title, source) => ({ title: `${title} - ${source}`, source, link: `https://x/${title.length}`, publishedAt: at, viaGoogle: true });
+  const list = [
+    g('Why farm loans just got pricier', 'Farm Progress'),
+    g('Farm Progress', 'Farm Progress'),
+    { title: ' - Farm Progress', source: 'Farm Progress', link: 'https://x/e', publishedAt: at, viaGoogle: true },
+    g('АгроНовости: рубрика «субсидии апк» — АгроXXI', 'AgroXXI'),
+    g('Урожай зерновых превысил 141 млн тонн', 'AgroXXI'),
+  ];
+  const src = { id: 's', name: '지정 언론사', take: 9, lang: 'en' };
+  const got = pick({ limit: 9 }, [{ source: src, items: list }], now).map((x) => x.title);
+  assert.deepEqual(got, ['Why farm loans just got pricier', 'Урожай зерновых превысил 141 млн тонн']);
+});
