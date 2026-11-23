@@ -102,8 +102,8 @@ final class Pron {
         "Airbus\t에어버스\nAltman\t올트먼\nAmazon\t아마존\nAmodei\t아모데이\nAnutin\t아누틴\nApollo\t아폴로\nAramco\t아람코\nBRANDT\t브랜트\nBayern\t바이에른\nBerlin\t베를린\nBoeing\t보잉\nBostic\t보스틱\nBowman\t보먼\nBrazil\t브라질\nBrexit\t브렉시트\nC.Vale\t세발레\nCIMMYT\t심밋\nCRISPR\t크리스퍼\nCaixin\t차이신\nCanada\t캐나다\nCannes\t칸\nCarney\t카니\nCathie\t캐시\nChanel\t샤넬\nCircle\t서클\nClaude\t클로드\nCostco\t코스트코\nCramer\t크레이머\nCrimea\t크림반도\nCursor\t커서\nD-Wave\t디웨이브\nDALL-E\t달리\nDEFCON\t데프콘\nDanone\t다논\nDarfur\t다르푸르\nDisney\t디즈니\nDonald\t도널드\nDonbas\t돈바스\nDoosan\t두산\nDorsey\t도시\nDuPont\t듀폰\nEBITDA\t에비타\nECOWAS\t에코와스\nEXAONE\t엑사원\nEagles\t이글스\nEurope\t유럽\nEvonik\t에보닉\nExaone\t엑사원\nExynos\t엑시노스\nFalcon\t팰컨\nFannie\t패니\nFarage\t패라지\nForbes\t포브스\nFrance\t프랑스\nFulvic\t풀빅\nGPT-4o\t지피티포오\nGSOMIA\t지소미아\nGalaxy\t갤럭시\nGallup\t갤럽\nGemini\t제미나이\nGeneva\t제네바\nGiants\t자이언츠\nGilead\t길리어드\nGitHub\t깃허브\nGoogle\t구글\nGrammy\t그래미\nGrossi\t그로시\nHANARO\t하나로\nHIMARS\t하이마스\nHanwha\t한화\nHanwoo\t한우\nHarris\t해리스\nHermes\t에르메스\nHermès\t에르메스\nHinton\t힌턴\nHopper\t호퍼\nHouthi\t후티\nHuawei\t화웨이\nHubble\t허블\nIshiba\t이시바\nIsrael\t이스라엘\nJaguar\t재규어\nJensen\t젠슨\nJerome\t제롬\nK-FOOD\t케이푸드\nK-Food\t케이푸드\nK-food\t케이푸드\nKRX300\t케이알엑스삼백\nKUBOTA\t구보타\nKanana\t카나나\nKelpak\t켈팍\nKharif\t카리프\nKioxia\t키옥시아\nKlarna\t클라르나\nKorbit\t코빗\nKraken\t크라켄\nKrishi\t크리시\nKubota\t구보타\nKugler\t쿠글러\nKuiper\t카이퍼\nKuroda\t구로다\nLGBTQ+\t엘지비티큐플러스\nLPDDR5\t엘피디디알파이브\nLPDDR6\t엘피디디알식스\nLaLiga\t라리가\nLabubu\t라부부\nLavrov\t라브로프\nLe Pen\t르펜\nLeBron\t르브론\nLenovo\t레노버\nLondon\t런던\nLuckin\t루이싱\nMaaden\t마덴\nMacron\t마크롱\nMaduro\t마두로\nManila\t마닐라\nMarcos\t마르코스\nMartin\t마틴\nMekong\t메콩\nMeloni\t멜로니\nMexico\t멕시코\nMiG-29\t미그이십구\nMicron\t마이크론\nMizuho\t미즈호\nMorgan\t모건\nMosaic\t모자이크\nMoscow\t모스크바\nMotoGP\t모토지피\nMotors\t모터스\nMoutai\t마오타이\nMumbai\t뭄바이\nMurati\t무라티\nNASCAR\t나스카\nNIKKEI\t닛케이\nNapoli\t나폴리\nNestle\t네슬레\nNestlé\t네슬레\nNewsom\t뉴섬\nNikkei\t닛케이\nNippon\t닛폰\nNissan\t닛산\nNomura\t노무라\nNscale\t엔스케일\nNufarm\t누팜\nNvidia\t엔비디아\nOdisha\t오디샤\nOhtani\t오타니\nOneWeb\t원웹\nOracle\t오라클\nOscars\t오스카",
         "Oxford\t옥스퍼드\nPadres\t파드리스\nPayPal\t페이팔\nPayPay\t페이페이\nPelosi\t펠로시\nPeskov\t페스코프\nPfizer\t화이자\nPichai\t피차이\nPowell\t파월\nPunjab\t펀자브\nRIMPAC\t림팩\nReddit\t레딧\nRipple\t리플\nRivian\t리비안\nRussia\t러시아\nS&P500\t에스앤피오백\nSENSEX\t센섹스\nSKUAST\t스쿠아스트\nSaigon\t사이공\nSakata\t사카타\nSanofi\t사노피\nSarmat\t사르마트\nSaylor\t세일러\nScholz\t숄츠\nSchwab\t슈왑\nSensex\t센섹스\nShahed\t샤헤드\nSinwar\t신와르\nSolana\t솔라나\nSonnet\t소네트\nSpaceX\t스페이스엑스\nStripe\t스트라이프\nSubaru\t스바루\nSundar\t순다르\nSuzuki\t스즈키\nTaipei\t타이베이\nTaiwan\t대만\nTarget\t타깃\nTaurus\t타우러스\nTedros\t테드로스\nTehran\t테헤란\nTether\t테더\nTikTok\t틱톡\nTiktok\t틱톡\nTinubu\t티누부\nTo Lam\t또 럼\nToyota\t도요타\nTurkey\t튀르키예\nTô Lâm\t또 럼\nUNAIDS\t유엔에이즈\nUNFCCC\t유엔에프씨씨씨\nUNIFIL\t유니필\nUniqlo\t유니클로\nUnited\t유나이티드\nV-NAND\t브이낸드\nViksit\t빅싯\nWagner\t바그너\nWaller\t월러\nWarner\t워너\nWarren\t워런\nWegovy\t위고비\nWilmar\t윌마\nXiaomi\t샤오미\nXinhua\t신화\nYANMAR\t얀마\nYanmar\t얀마\nYellen\t옐런\nYonhap\t연합\nYouGov\t유고브\nfulvic\t풀빅\niPhone\t아이폰\nADAMA\t아다마\nAIPAC\t에이팩\nANZUS\t앤저스\nATEEZ\t에이티즈\nAWACS\t에이왁스\nAbbas\t아바스\nAcron\t아크론\nAdobe\t어도비\nAlexa\t알렉사\nAngus\t앵거스\nAnwar\t안와르\nApple\t애플\nAsahi\t아사히\nAxios\t악시오스\nBAYER\t바이엘\nBaidu\t바이두\nBanga\t방가\nBarra\t바라\nBayer\t바이엘\nBezos\t베이조스\nBiden\t바이든\nBixby\t빅스비\nBondi\t본디\nBosch\t보쉬\nBunge\t번기\nBurry\t버리\nBusan\t부산\nBybit\t바이비트\nCADIZ\t차디즈\nCAR-T\t카티\nCELAC\t셀락\nCF100\t씨에프백\nCHIPS\t칩스\nCLAAS\t클라스\nCODEX\t코덱스\nCOFCO\t코프코\nCOFIX\t코픽스\nCOMEX\t코멕스\nCONAB\t코나브\nCOP16\t콥십육\nCOP26\t콥이십육\nCOP27\t콥이십칠\nCOP28\t콥이십팔\nCOP29\t콥이십구\nCOP30\t콥삼십\nCOP31\t콥삼십일\nCOP32\t콥삼십이\nCOVAX\t코백스\nCanva\t캔바\nChase\t체이스\nChery\t체리\nChina\t중국\nCisco\t시스코\nClaas\t클라스\nCodex\t코덱스\nConab\t코나브\nCovid\t코비드\nDARPA\t다르파\nDINKs\t딩크\nDaiso\t다이소\nDalio\t달리오\nDario\t다리오\nDavos\t다보스\nDeepX\t딥엑스\nDeere\t디어\nDelhi\t델리\nDemis\t데미스\nDepot\t디포\nDimon\t다이먼\nDutch\t네덜란드\nEbola\t에볼라\nEgypt\t이집트\nEmart\t이마트\nEmmys\t에미\nExxon\t엑손\nF-15K\t에프십오케이\nF-35A\t에프삼십오에이\nFA-50\t에프에이오십\nFAANG\t팡",
         "Fargo\t파고\nFendt\t펜트\nFigma\t피그마\nFitch\t피치\nGB200\t지비이백\nGB300\t지비삼백\nGDDR6\t지디디알식스\nGDDR7\t지디디알세븐\nGLP-1\t지엘피원\nGPT-4\t지피티포\nGPT-5\t지피티파이브\nGPT-6\t지피티식스\nGates\t게이츠\nGeely\t지리\nGemma\t젬마\nGen Z\t젠지\nGenAI\t젠에이아이\nGmail\t지메일\nGopax\t고팍스\nGreer\t그리어\nGroup\t그룹\nGucci\t구찌\nHACCP\t해썹\nHAMAS\t하마스\nHBM3E\t에이치비엠쓰리이\nHBM4E\t에이치비엠포이\nHaier\t하이얼\nHaifa\t하이파\nHaiku\t하이쿠\nHamas\t하마스\nHanoi\t하노이\nHonda\t혼다\nHuang\t황\nHumic\t휴믹\nHynix\t하이닉스\nICEYE\t아이스아이\nIELTS\t아이엘츠\nIFFCO\t이프코\nILLIT\t아일릿\nIRENA\t이레나\nIndia\t인도\nIntel\t인텔\nIpsos\t입소스\nIsaan\t이산\nItaly\t이탈리아\nJADIZ\t자디즈\nJamie\t제이미\nJapan\t일본\nJassy\t재시\nJones\t존스\nK-ETS\t케이 이티에스\nK-GAP\t케이갭\nK-Pop\t케이팝\nKADIZ\t카디즈\nKAMAZ\t카마즈\nKF-16\t케이에프십육\nKF-21\t케이에프이십일\nKODEX\t코덱스\nKOSEF\t코세프\nKSTAR\t케이스타\nKakao\t카카오\nKenya\t케냐\nKisan\t키산\nKling\t클링\nKorea\t코리아\nKurly\t컬리\nKursk\t쿠르스크\nKyodo\t교도\nL-SAM\t엘샘\nLASER\t레이저\nLIBOR\t리보\nLIDAR\t라이다\nLarry\t래리\nLeCun\t르쿤\nLexus\t렉서스\nLibor\t리보\nLidar\t라이다\nLilly\t릴리\nLlama\t라마\nLotte\t롯데\nLouis\t루이\nLucid\t루시드\nM-SAM\t엠샘\nMATIF\t마티프\nManus\t마누스\nMazda\t마쓰다\nMerck\t머크\nMessi\t메시\nMicro\t마이크로\nMidea\t메이디\nMilei\t밀레이\nMiran\t마이런\nMixue\t미쉐\nNIFTY\t니프티\nNK603\t엔케이육공삼\nNORAD\t노라드\nNYMEX\t나이멕스\nNaver\t네이버\nNifty\t니프티\nNokia\t노키아\nOatly\t오틀리\nObama\t오바마\nOrban\t오르반\nOrbán\t오르반\nOscar\t오스카\nPAC-2\t팩투\nPAC-3\t팩쓰리\nPM2.5\t피엠이쩜오\nParis\t파리\nPatel\t파텔\nPepsi\t펩시\nPosco\t포스코\nPrada\t프라다\nPupuk\t푸푹\nPutin\t푸틴\nQAFCO\t카프코\nQatar\t카타르\nRADAR\t레이더\nRE100\t알이백\nREDD+\t레드플러스\nRadar\t레이더\nRoche\t로슈\nRolex\t롤렉스\nRubin\t루빈\nRubio\t루비오\nRutte\t뤼터\nS-400\t에스사백\nSAARC\t사크\nSABIC\t사빅\nSIPRI\t시프리\nSONAR\t소나\nSTART\t스타트\nSTOXX\t스톡스\nSachs\t삭스\nSatya\t사티아\nSaudi\t사우디\nSeoul\t서울\nShein\t쉬인\nShell\t셸\nSlack\t슬랙\nSoros\t소로스\nSpain\t스페인\nSteel\t스틸\nSteve\t스티브\nStoxx\t스톡스\nSudan\t수단\nSuper\t슈퍼\nTIGER\t타이거\nTIMAC\t티막\nTOEFL\t토플",
-        "TOEIC\t토익\nTOPIX\t토픽스\nTWICE\t트와이스\nTakii\t다키이\nTerra\t테라\nTesla\t테슬라\nTexas\t텍사스\nThiel\t틸\nTinto\t틴토\nTokio\t도쿄\nTokyo\t도쿄\nTopix\t토픽스\nTrump\t트럼프\nTyson\t타이슨\nUAN28\t유에이엔 이십팔\nUAN30\t유에이엔 삼십\nUAN32\t유에이엔 삼십이\nUNIDO\t유니도\nUSB-C\t유에스비씨\nUpbit\t업비트\nVance\t밴스\nVolvo\t볼보\nWASDE\t와스디\nWagyu\t와규\nWarsh\t워시\nWaymo\t웨이모\nWells\t웰스\nXPeng\t샤오펑\nXi'an\t시안\nXpeng\t샤오펑\nYIMBY\t임비\nYahoo\t야후\nZeekr\t지커\naespa\t에스파\neVTOL\t이브이톨\nhumic\t휴믹\nhynix\t하이닉스\ni-SMR\t아이에스엠알\nmacOS\t맥오에스\nA100\t에이백\nADIZ\t아디즈\nAESA\t에이사\nAGCO\t아그코\nAGRA\t아그라\nAGRI\t아그리\nAGRO\t아그로\nAIoT\t에이아이오티\nAMEX\t아멕스\nASEM\t아셈\nASIC\t에이식\nAgro\t아그로\nAmEx\t아멕스\nAmex\t아멕스\nArla\t알라\nAsia\t아시아\nB-1B\t비원비\nB-52\t비오십이\nB200\t비이백\nB300\t비삼백\nBASF\t바스프\nBali\t발리\nBank\t뱅크\nBenz\t벤츠\nBild\t빌트\nBill\t빌\nBose\t보스\nBrin\t브린\nCBAM\t씨밤\nCBOT\t시봇\nCOAT\t코트\nCUDA\t쿠다\nCiti\t씨티\nCook\t쿡\nCorp\t코프\nD.C.\t디씨\nDART\t다트\nDDR4\t디디알포\nDDR5\t디디알파이브\nDINK\t딩크\nDOGE\t도지\nDeFi\t디파이\nDefi\t디파이\nDell\t델\nDoge\t도지\nEBay\t이베이\nEFTA\t에프타\nENSO\t엔소\nElon\t일론\nEmmy\t에미\nEric\t에릭\nF-16\t에프십육\nF-22\t에프이십이\nF-35\t에프삼십오\nFANG\t팡\nFEMA\t피마\nFIBA\t피바\nFIRE\t파이어\nFLUX\t플럭스\nFTSE\t풋시\nFace\t페이스\nFink\t핑크\nFord\t포드\nFund\t펀드\nGMAT\t지맷\nGOAT\t고트\nGaza\t가자\nGenZ\t젠지\nGrab\t그랩\nGrok\t그록\nH100\t에이치백\nH1N1\t에이치일엔일\nH200\t에이치이백\nH3N2\t에이치삼엔이\nH5N1\t에이치오엔일\nH5N6\t에이치오엔육\nH5N8\t에이치오엔팔\nH7N9\t에이치칠엔구\nH9N2\t에이치구엔이\nHBM3\t에이치비엠쓰리\nHBM4\t에이치비엠포\nHang\t항\nHome\t홈\nHuma\t휴마\nICAO\t이카오\nISIS\t아이시스\nITER\t이터\nIger\t아이거\nIkea\t이케아\nIonQ\t아이온큐\nIran\t이란\nJAXA\t작사\nJDAM\t제이댐\nJGAP\t제이갭\nJack\t잭\nJeff\t제프\nJobs\t잡스\nKASA\t카사\nKIKO\t키코\nKOSA\t코사\nKOVO\t코보\nKiev\t키이우\nKimi\t키미\nKoch\t코크\nKyiv\t키이우\nLIFE\t라이프\nLUNA\t루나\nLaos\t라오스\nLego\t레고\nLula\t룰라\nLuna\t루나",
-        "Lyft\t리프트\nMAGA\t마가\nMOOC\t무크\nMQ-9\t엠큐나인\nMark\t마크\nMerz\t메르츠\nMeta\t메타\nMets\t메츠\nModi\t모디\nMpox\t엠폭스\nMuse\t뮤즈\nMusk\t머스크\nNAMA\t나마\nNEIS\t나이스\nNICE\t나이스\nNOAA\t노아\nNike\t나이키\nNoem\t놈\nNovo\t노보\nOlam\t올람\nOpus\t오퍼스\nP2O5\t인산\nPISA\t피사\nPM10\t피엠십\nPadi\t파디\nQwen\t큐원\nRAND\t랜드\nRISE\t라이즈\nRQ-4\t알큐포\nRabi\t라비\nSAGA\t사가\nSBTi\t에스비티아이\nSM-3\t에스엠쓰리\nSM-6\t에스엠식스\nSOFA\t소파\nSOFR\t소파\nSPAM\t스팸\nSTEM\t스템\nSaaS\t사스\nSeng\t셍\nSiri\t시리\nSony\t소니\nSora\t소라\nSpam\t스팸\nT-50\t티오십\nTASS\t타스\nTEPS\t텝스\nTIME\t타임\nTemu\t테무\nToss\t토스\nTron\t트론\nUNEP\t유넵\nUSDA\t유에스디에이\nUSIM\t유심\nUber\t우버\nUeda\t우에다\nVale\t발레\nVera\t베라\nVisa\t비자\nWADA\t와다\nWeb3\t웹쓰리\nXBOX\t엑스박스\nXbox\t엑스박스\nYARA\t야라\nYale\t예일\nYara\t야라\nYelp\t옐프\nZara\t자라\nZika\t지카\nZoom\t줌\na16z\t에이식스틴지\naT센터\t에이티센터\ndLLM\t디엘엘엠\neBay\t이베이\neSIM\t이심\niMac\t아이맥\niPad\t아이패드\nmRNA\t엠알엔에이\nmpox\t엠폭스\nsLLM\t에스엘엘엠\nA.X\t에이닷엑스\nACE\t에이스\nArm\t암\nB-2\t비투\nBYD\t비야디\nCH4\t씨에이치포\nCO2\t씨오투\nCO₂\t씨오투\nD.C\t디씨\nDAX\t닥스\nDow\t다우\nEXO\t엑소\nFED\t연준\nFed\t연준\nH20\t에이치이십\nICE\t아이스\nIVE\t아이브\nInc\t인크\nIoT\t아이오티\nJio\t지오\nK+S\t케이플러스에스\nK2O\t케이투오\nKCl\t케이씨엘\nKia\t기아\nLIV\t리브\nLtd\t리미티드\nN2O\t아산화질소\nNH3\t암모니아\nNIO\t니오\nNO2\t이산화질소\nNOx\t녹스\nNio\t니오\nPIM\t핌\nPS5\t피에스파이브\nPS6\t피에스식스\nPSY\t싸이\nPhD\t피에이치디\nPwC\t피더블유씨\nSKY\t스카이\nSO2\t이산화황\nSOx\t속스\nSam\t샘\nSoC\t에스오씨\nTim\t팀\nVIX\t빅스\nVeo\t비오\nWSJ\t월스트리트저널\nWiz\t위즈\niOS\t아이오에스\niPS\t아이피에스\nsLM\t에스엘엠\nxAI\t엑스에이아이\nF1\t에프원\nK2\t케이투\nK9\t케이나인\nXi\t시진핑\naT\t에이티\npH\t피에이치",
+        "TOEIC\t토익\nTOPIX\t토픽스\nTWICE\t트와이스\nTakii\t다키이\nTerra\t테라\nTesla\t테슬라\nTexas\t텍사스\nThiel\t틸\nTinto\t틴토\nTokio\t도쿄\nTokyo\t도쿄\nTopix\t토픽스\nTrump\t트럼프\nTyson\t타이슨\nUAN28\t유에이엔 이십팔\nUAN30\t유에이엔 삼십\nUAN32\t유에이엔 삼십이\nUNIDO\t유니도\nUSB-C\t유에스비씨\nUpbit\t업비트\nVance\t밴스\nVolvo\t볼보\nWASDE\t와스디\nWagyu\t와규\nWarsh\t워시\nWaymo\t웨이모\nWells\t웰스\nXPeng\t샤오펑\nXi'an\t시안\nXpeng\t샤오펑\nYIMBY\t임비\nYahoo\t야후\nZeekr\t지커\naespa\t에스파\neVTOL\t이브이톨\nhumic\t휴믹\nhynix\t하이닉스\ni-SMR\t아이에스엠알\nmacOS\t맥오에스\nA100\t에이백\nA220\t에이이이공\nA320\t에이삼이공\nA321\t에이삼이일\nA330\t에이삼삼공\nA350\t에이삼오공\nA380\t에이삼팔공\nADIZ\t아디즈\nAESA\t에이사\nAGCO\t아그코\nAGRA\t아그라\nAGRI\t아그리\nAGRO\t아그로\nAIoT\t에이아이오티\nAMEX\t아멕스\nASEM\t아셈\nASIC\t에이식\nAgro\t아그로\nAmEx\t아멕스\nAmex\t아멕스\nArla\t알라\nAsia\t아시아\nB-1B\t비원비\nB-52\t비오십이\nB200\t비이백\nB300\t비삼백\nBASF\t바스프\nBali\t발리\nBank\t뱅크\nBenz\t벤츠\nBild\t빌트\nBill\t빌\nBose\t보스\nBrin\t브린\nCBAM\t씨밤\nCBOT\t시봇\nCOAT\t코트\nCUDA\t쿠다\nCiti\t씨티\nCook\t쿡\nCorp\t코프\nD.C.\t디씨\nDART\t다트\nDDR4\t디디알포\nDDR5\t디디알파이브\nDINK\t딩크\nDOGE\t도지\nDeFi\t디파이\nDefi\t디파이\nDell\t델\nDoge\t도지\nEBay\t이베이\nEFTA\t에프타\nENSO\t엔소\nElon\t일론\nEmmy\t에미\nEric\t에릭\nF-16\t에프십육\nF-22\t에프이십이\nF-35\t에프삼십오\nFANG\t팡\nFEMA\t피마\nFIBA\t피바\nFIRE\t파이어\nFLUX\t플럭스\nFTSE\t풋시\nFace\t페이스\nFink\t핑크\nFord\t포드\nFund\t펀드\nGMAT\t지맷\nGOAT\t고트\nGaza\t가자\nGenZ\t젠지\nGrab\t그랩\nGrok\t그록\nH100\t에이치백\nH1N1\t에이치일엔일\nH200\t에이치이백\nH3N2\t에이치삼엔이\nH5N1\t에이치오엔일\nH5N6\t에이치오엔육\nH5N8\t에이치오엔팔\nH7N9\t에이치칠엔구\nH9N2\t에이치구엔이\nHBM3\t에이치비엠쓰리\nHBM4\t에이치비엠포\nHang\t항\nHome\t홈\nHuma\t휴마\nICAO\t이카오\nISIS\t아이시스\nITER\t이터\nIger\t아이거\nIkea\t이케아\nIonQ\t아이온큐\nIran\t이란\nJAXA\t작사\nJDAM\t제이댐\nJGAP\t제이갭\nJack\t잭\nJeff\t제프\nJobs\t잡스\nKASA\t카사\nKIKO\t키코\nKOSA\t코사\nKOVO\t코보\nKiev\t키이우\nKimi\t키미\nKoch\t코크\nKyiv\t키이우",
+        "LIFE\t라이프\nLUNA\t루나\nLaos\t라오스\nLego\t레고\nLula\t룰라\nLuna\t루나\nLyft\t리프트\nMAGA\t마가\nMOOC\t무크\nMQ-9\t엠큐나인\nMark\t마크\nMerz\t메르츠\nMeta\t메타\nMets\t메츠\nModi\t모디\nMpox\t엠폭스\nMuse\t뮤즈\nMusk\t머스크\nNAMA\t나마\nNEIS\t나이스\nNICE\t나이스\nNOAA\t노아\nNike\t나이키\nNoem\t놈\nNovo\t노보\nOlam\t올람\nOpus\t오퍼스\nP2O5\t인산\nPISA\t피사\nPM10\t피엠십\nPadi\t파디\nQwen\t큐원\nRAND\t랜드\nRISE\t라이즈\nRQ-4\t알큐포\nRabi\t라비\nSAGA\t사가\nSBTi\t에스비티아이\nSM-3\t에스엠쓰리\nSM-6\t에스엠식스\nSOFA\t소파\nSOFR\t소파\nSPAM\t스팸\nSTEM\t스템\nSaaS\t사스\nSeng\t셍\nSiri\t시리\nSony\t소니\nSora\t소라\nSpam\t스팸\nT-50\t티오십\nTASS\t타스\nTEPS\t텝스\nTIME\t타임\nTemu\t테무\nToss\t토스\nTron\t트론\nUNEP\t유넵\nUSDA\t유에스디에이\nUSIM\t유심\nUber\t우버\nUeda\t우에다\nVale\t발레\nVera\t베라\nVisa\t비자\nWADA\t와다\nWeb3\t웹쓰리\nXBOX\t엑스박스\nXbox\t엑스박스\nYARA\t야라\nYale\t예일\nYara\t야라\nYelp\t옐프\nZara\t자라\nZika\t지카\nZoom\t줌\na16z\t에이식스틴지\naT센터\t에이티센터\ndLLM\t디엘엘엠\neBay\t이베이\neSIM\t이심\niMac\t아이맥\niPad\t아이패드\nmRNA\t엠알엔에이\nmpox\t엠폭스\nsLLM\t에스엘엘엠\nA.X\t에이닷엑스\nACE\t에이스\nArm\t암\nB-2\t비투\nBYD\t비야디\nCH4\t씨에이치포\nCO2\t씨오투\nCO₂\t씨오투\nD.C\t디씨\nDAX\t닥스\nDow\t다우\nEXO\t엑소\nFED\t연준\nFed\t연준\nH20\t에이치이십\nICE\t아이스\nIVE\t아이브\nInc\t인크\nIoT\t아이오티\nJio\t지오\nK+S\t케이플러스에스\nK2O\t케이투오\nKCl\t케이씨엘\nKia\t기아\nLIV\t리브\nLtd\t리미티드\nN2O\t아산화질소\nNH3\t암모니아\nNIO\t니오\nNO2\t이산화질소\nNOx\t녹스\nNio\t니오\nPIM\t핌\nPS5\t피에스파이브\nPS6\t피에스식스\nPSY\t싸이\nPhD\t피에이치디\nPwC\t피더블유씨\nSKY\t스카이\nSO2\t이산화황\nSOx\t속스\nSam\t샘\nSoC\t에스오씨\nTim\t팀\nVIX\t빅스\nVeo\t비오\nWSJ\t월스트리트저널\nWiz\t위즈\niOS\t아이오에스\niPS\t아이피에스\nsLM\t에스엘엠\nxAI\t엑스에이아이\nF1\t에프원\nK2\t케이투\nK9\t케이나인\nXi\t시진핑\naT\t에이티\npH\t피에이치",
     };
     /** 단위: 쓴 글, 숫자 뒤에서 읽는 말, 숫자 없이도 바꿀지("1"), 숫자 앞에 붙는 말(시속·리터당) */
     private static final String[] DICT_UNITS_SRC = {
@@ -142,6 +142,9 @@ final class Pron {
     private static final Pattern CAPS = Pattern.compile("(?<![A-Za-z0-9À-ɏ])[A-Z]{2,5}(?![A-Za-z0-9À-ɏ])(?!-\\d)");
     private static final Pattern CAP_HANGUL = Pattern.compile("(?<![A-Za-z0-9À-ɏ])[A-Z](?=-?[가-힣]|[^A-Za-z0-9À-ɏ]|$)"); // 홀로 선 X·J도 낱자로
 
+    private static final Pattern FLU = Pattern.compile("(?<![A-Za-z0-9])H(\\d{1,2})(?=형)");
+    private static final Pattern MODEL = Pattern.compile("(?<![A-Za-z0-9À-ɏ])([A-Z]{1,3})-?(\\d{1,4})(?![\\d.,]\\d|\\d|[A-Za-z])" + JOSA);
+
     private static String spell(String w) {
         StringBuilder b = new StringBuilder();
         for (int i = 0; i < w.length(); i++) b.append(ABC[w.charAt(i) - 'A']);
@@ -158,6 +161,10 @@ final class Pron {
             lm.appendTail(lb);
             s = lb.toString();
         }
+        // 조류인플루엔자 H5형은 사전의 H5N1(에이치오엔일)처럼 우리말 숫자로 (js/pron.js와 같게, 2026-11-23)
+        s = each(s, FLU, x -> "에이치" + sino(x.group(1)));
+        // 사전에 없는 영문+숫자 모델명: 낱자 + 한 자리는 영어 숫자, 두 자리 이상은 한자어 (S25 에스이십오, EV9 이브이나인, U-20 유이십)
+        s = each(s, MODEL, x -> josa(spell(x.group(1)) + (x.group(2).length() == 1 ? EN[x.group(2).charAt(0) - '0'] : sino(x.group(2))), x.group(3)));
         Matcher dm = DOTTED.matcher(s); // B.C., A.W. → 비씨, 에이더블유
         StringBuffer db = new StringBuffer();
         while (dm.find()) dm.appendReplacement(db, Matcher.quoteReplacement(spell(dm.group(1).replace(".", ""))));
@@ -268,6 +275,32 @@ final class Pron {
     private static final Pattern GENERATION = Pattern.compile("(?<![\\d,.])([1-9])0([1-9])0(?=\\s?(?:세대(?!\\s?(?:규모|입주|단지|아파트|주택|분양))|청년|남녀|직장인|표심))");
     private static final String[] N1 = {"", "한", "두", "세", "네", "다섯", "여섯", "일곱", "여덟", "아홉"};
     private static final String[] N10 = {"", "열", "스물", "서른", "마흔", "쉰", "예순", "일흔", "여든", "아흔"};
+    /** 모델명의 한 자리 숫자는 영어로 (EV9 이브이나인, 아이오닉 5 아이오닉 파이브). js/pron.js의 EN */
+    private static final String[] EN = {"제로", "원", "투", "쓰리", "포", "파이브", "식스", "세븐", "에잇", "나인"};
+
+    /** 전화번호는 한 자리씩, 0은 '공' (js/pron.js의 tel) */
+    private static String tel(String d) {
+        StringBuilder b = new StringBuilder();
+        for (char c : d.toCharArray()) b.append(c == '0' ? "공" : DIG[c - '0']);
+        return b.toString();
+    }
+
+    /** 찾은 곳마다 f의 결과로 바꾼다 (js의 replace(re, fn)) */
+    private static String each(String s, Pattern p, java.util.function.Function<Matcher, String> f) {
+        Matcher m = p.matcher(s);
+        StringBuffer sb = new StringBuffer();
+        while (m.find()) m.appendReplacement(sb, Matcher.quoteReplacement(f.apply(m)));
+        m.appendTail(sb);
+        return sb.toString();
+    }
+
+    // 전화번호·대표번호·모델명 (js/pron.js numbers()와 같게, 2026-11-23)
+    private static final Pattern PHONE = Pattern.compile("(?<![\\d-])(0\\d{1,2})-(\\d{3,4})-(\\d{4})(?![\\d-])");
+    private static final Pattern PHONE_REP = Pattern.compile("(?<![\\d-])(1[5-9]\\d{2})-(\\d{4})(?![\\d-])(?!\\s?(?:년|시즌|학년))");
+    private static final Pattern NO_AREA = Pattern.compile("(국번\\s?없이\\s?)(\\d{3,4})(?![\\d,.])");
+    private static final Pattern SERVICE = Pattern.compile("(?<![\\d,.-])(1\\d{3})(?![\\d,.-])(?=(?:번|으로|로)?\\s?[가-힣]*(?:전화|콜센터|상담센터|헬프라인)(?![가-힣]))");
+    private static final Pattern BOEING = Pattern.compile("(보잉|Boeing)\\s?(7\\d7)(?!\\d)");
+    private static final Pattern EN_MODEL = Pattern.compile("(아이오닉|폴드|플립)\\s?([1-9])(?![\\d.,]\\d|\\d)");
     private static final java.util.Map<String, String> UNITS = new java.util.HashMap<>();
     /** 숫자 앞에 붙여 읽는 말: 리터당 오백 밀리그램, 화씨 백 도 (js/pron.js의 PRE) */
     private static final java.util.Map<String, String> PRE = new java.util.HashMap<>();
@@ -297,7 +330,8 @@ final class Pron {
     private static final String COUNTER = "번째|시간|군데|차례|켤레|송이|그루|마리|가지|사람|그릇|자루|봉지|포기|마디|끼(?!리)|개(?!월|국|사|년|소|항|교|층|조)|명|살|곳|달(?!러)|가구|바퀴|병(?!원|사|력|역|합|행|충|실|무|상|동|과|장|균)"
         + "|권(?!리|한|역|고|자|위)|잔(?!액|고|여)|벌(?!금|써|어)|채(?!권)|척|통(?!화|신|계|합|과|령)|장(?!관|기|애|면)|배(?!럴)"
         + "|번(?!째|지|호|길)(?!\\s?(?:출구|국도|지방도|도로|버스|타자|홀|게이트|트랙|채널|레인|환자|확진자|후보))";
-    private static final Pattern SPACE_BEFORE = Pattern.compile("(?:" + COUNTER + "|원|건|톤|명|곳|회)"); // 한자어로 읽은 숫자 뒤에 띄울 세는 말
+    // 한자어로 읽은 숫자 뒤에 띄울 세는 말. 시·분도 띄운다: 십오 시 삼십 분 (js/pron.js와 같게, 2026-11-23). 삼분의 일·일분기는 그대로
+    private static final Pattern SPACE_BEFORE = Pattern.compile("(?:" + COUNTER + "|원|건|톤|명|곳|회|분(?![의기야석류리노양산할배자위단열쟁란해포업비사신명담출권교과수모진광점당화])|시(?!간|장|즌|청|민|군|의회|의원|도|정|각|점|대|공|설|리즈))");
     private static final Pattern NATIVE = Pattern.compile("^\\s?(?:" + COUNTER + ")");
     private static final Pattern DAE = Pattern.compile("^\\s?대(?=[가를의는도만와씩로]|\\s(?:이상|이하|가량|정도|씩|분)|[,.?!]|$)");
     private static final Pattern CLOCK = Pattern.compile("^\\s?시(?!간|장|즌|청|민|군|의회|의원|도|정|각|점|대|공|설|리즈)");
@@ -453,6 +487,17 @@ final class Pron {
     static String numbers(String s) {
         s = plain(s).replaceAll("(?<![A-Za-z])No\\.\\s?(\\d{1,3})(?![\\d.])", "$1위") // 순위: No. 4 → 사위 (2026-11-09)
                 .replaceAll("코로나\\s?-?19", "코로나 일구").replaceAll("영하\\s?-(?=\\d)", "영하 ").replaceAll("(\\d)\\s?a당", "$1아르당").replaceAll("시속\\s?(\\d[\\d,.]*)\\s?km/h", "$1km/h");
+        // 전화번호는 한 자리씩, 0은 '공', 묶음 사이는 쉼: 02-123-4567 → 공이, 일이삼, 사오육칠 (js/pron.js와 같게, 2026-11-23)
+        s = each(s, PHONE, m -> tel(m.group(1)) + ", " + tel(m.group(2)) + ", " + tel(m.group(3)));
+        s = each(s, PHONE_REP, m -> { // 대표번호 1588-1234. 1950-1960년 같은 해 범위는 두지 않는다
+            int a = Integer.parseInt(m.group(1)), b = Integer.parseInt(m.group(2));
+            return b > a && b - a <= 100 ? m.group() : tel(m.group(1)) + ", " + tel(m.group(2));
+        });
+        s = each(s, NO_AREA, m -> m.group(1) + tel(m.group(2))); // 국번 없이 1345
+        s = each(s, SERVICE, m -> tel(m.group(1))); // 1330 관광통역안내전화 (1500건 전화 상담은 수)
+        s = each(s, BOEING, m -> m.group(1) + " " + digits1(m.group(2))); // 보잉 737 → 칠삼칠
+        s = each(s, EN_MODEL, m -> m.group(1) + " " + EN[m.group(2).charAt(0) - '0']); // 아이오닉 5 → 아이오닉 파이브
+        s = s.replaceAll("(\\d)시(?=\\d)", "$1시 "); // 9시30분 → 9시 30분
         // 긴급 전화번호는 한 자리씩: 119 → 일일구 (js/pron.js와 같게, 2026-11-21).
         // 뒤에 신고·구조대 같은 말이 오거나, 신고 이야기인 문장에서 조사(에·로)·쉼표·끝이 올 때만 (114석·119조 원·112달러는 수)
         Matcher em = EMERGENCY.matcher(s);
