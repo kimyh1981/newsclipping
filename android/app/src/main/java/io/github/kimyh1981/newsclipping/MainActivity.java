@@ -85,6 +85,8 @@ public class MainActivity extends Activity {
     private boolean updating;
     /** '이 출처 허용'을 켜러 설정에 갔다 오면 업데이트를 이어서 한다 */
     private boolean resumeInstall;
+    /** 받기 전 보안 안내를 이번에 이미 보여 줬다 (보안 설정에 다녀와 띠를 다시 누르면 바로 받는다) */
+    private boolean securityWarned;
     private long updateChecked;
 
     // 아이폰 설정 앱의 색 (밝은 화면 / 어두운 화면)
@@ -474,6 +476,21 @@ public class MainActivity extends Activity {
                             + "켜는 칸이 회색으로 막혀 있으면 갤럭시의 '자동 차단'이 켜진 것입니다. 설정 › 보안 및 개인정보 보호 › 자동 차단을 먼저 끄세요.")
                     .setPositiveButton("설정 열기", (d, w) -> { resumeInstall = true; Updater.openAllowSettings(this); })
                     .setNeutralButton("보안 설정 열기", (d, w) -> openSettings(Settings.ACTION_SECURITY_SETTINGS))
+                    .setNegativeButton("나중에", null)
+                    .show();
+            return;
+        }
+        // 이 버전에서 보안 설정(자동 차단·Play 프로텍트)에 한 번 막혔으면 받기 전에 안내부터 (주인 2026-11-24)
+        if (!securityWarned && Updater.warnFirst(prefs.installBlockedAt(), BuildConfig.VERSION_NAME)) {
+            new Sheet(this)
+                    .setTitle("받기 전에 보안 설정을 확인해 주세요")
+                    .setMessage("지난번 업데이트를 휴대폰 보안 설정이 막았습니다.\n\n"
+                            + "1. 아래 '보안 설정 열기'를 누릅니다.\n"
+                            + "2. 갤럭시는 '자동 차단'을 끕니다 (설정 › 보안 및 개인정보 보호 › 자동 차단).\n"
+                            + "3. 앱으로 돌아와 초록색 업데이트 띠를 다시 누릅니다.\n\n"
+                            + "이미 껐으면 '계속 받기'를 누르세요. 'Play 프로텍트' 경고가 뜨면 '세부정보 더보기' › '무시하고 설치'를 누릅니다.")
+                    .setPositiveButton("보안 설정 열기", (d, w) -> { securityWarned = true; openSettings(Settings.ACTION_SECURITY_SETTINGS); })
+                    .setNeutralButton("계속 받기", (d, w) -> { securityWarned = true; installUpdate(); })
                     .setNegativeButton("나중에", null)
                     .show();
             return;
