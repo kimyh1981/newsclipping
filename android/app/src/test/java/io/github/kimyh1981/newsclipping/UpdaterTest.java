@@ -57,4 +57,12 @@ public class UpdaterTest {
         assertEquals(Updater.HELP_REINSTALL, Updater.helpFor(android.content.pm.PackageInstaller.STATUS_FAILURE_CONFLICT));
         assertEquals(Updater.HELP_OTHER, Updater.helpFor(android.content.pm.PackageInstaller.STATUS_FAILURE_STORAGE));
     }
+
+    // 보안 설정에 한 번 막힌 폰은 다음 업데이트를 받기 전에 안내부터 (주인 2026-11-24). 업데이트에 성공해 버전이 바뀌면 다시 묻지 않는다
+    @Test public void warnsBeforeDownloadOnlyAfterABlockOnThisVersion() {
+        assertFalse(Updater.warnFirst("", "1.96"));        // 막힌 적 없음
+        assertTrue(Updater.warnFirst("1.96", "1.96"));     // 이 버전에서 막힘 → 받기 전에 안내
+        assertFalse(Updater.warnFirst("1.95", "1.96"));    // 막힌 뒤 업데이트에 성공함
+        assertFalse(Updater.warnFirst(null, "1.96"));
+    }
 }

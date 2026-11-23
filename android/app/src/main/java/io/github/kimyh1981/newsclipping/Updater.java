@@ -117,6 +117,14 @@ final class Updater {
         a.startActivity(new Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:" + a.getPackageName())));
     }
 
+    /**
+     * 다운로드 전에 보안 안내부터 띄울지. 갤럭시 '자동 차단'·Play 프로텍트는 앱이 미리 알 수 없어 설치에서야 막힌다:
+     * 이 버전에서 한 번 막혔으면(blockedAt == 지금 버전) 다음에는 받기 전에 알려 준다. 업데이트에 성공해 버전이 바뀌면 다시 묻지 않는다 (2026-11-24)
+     */
+    static boolean warnFirst(String blockedAt, String current) {
+        return blockedAt != null && !blockedAt.isEmpty() && blockedAt.equals(current);
+    }
+
     /** 설치가 막혔을 때 사람에게 보여 줄 안내 종류 */
     static final int HELP_NONE = 0, HELP_SECURITY = 1, HELP_REINSTALL = 2, HELP_OTHER = 3;
 
@@ -186,7 +194,9 @@ final class Updater {
                 String msg = intent.getStringExtra(PackageInstaller.EXTRA_STATUS_MESSAGE);
                 Log.w(TAG, "업데이트 설치 실패 " + status + ": " + msg);
                 // 앱 화면으로 돌아오면 방법을 팝업으로 알려 준다 (뒤에서 화면을 바로 띄우는 것은 막힐 수 있어 저장해 둔다)
-                new Prefs(c).setInstallError(status, msg == null ? "" : msg);
+                Prefs prefs = new Prefs(c);
+                prefs.setInstallError(status, msg == null ? "" : msg);
+                if (helpFor(status) == HELP_SECURITY) prefs.setInstallBlockedAt(BuildConfig.VERSION_NAME); // 다음에는 받기 전에 안내
                 try {
                     c.startActivity(new Intent(c, MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP));
                 } catch (Exception ignored) { }

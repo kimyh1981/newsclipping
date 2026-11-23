@@ -171,6 +171,9 @@ final class Prefs {
     String installErrorMessage() { return p.getString("installErrorMessage", ""); }
     void setInstallError(int status, String message) { p.edit().putInt("installErrorStatus", status).putString("installErrorMessage", message).apply(); }
     void clearInstallError() { p.edit().remove("installErrorStatus").remove("installErrorMessage").apply(); }
+    /** 보안 설정(자동 차단·Play 프로텍트)에 설치가 막혔던 앱 버전. 같은 버전이면 다음 업데이트를 받기 전에 안내한다 (Updater.warnFirst) */
+    String installBlockedAt() { return p.getString("installBlockedAt", ""); }
+    void setInstallBlockedAt(String version) { p.edit().putString("installBlockedAt", version).apply(); }
     void setUpdateNotified(int code) { p.edit().putInt("updateNotified", code).apply(); }
     void setCaptions(boolean v) { p.edit().putBoolean("captions", v).apply(); }
 
