@@ -143,7 +143,6 @@ final class Pron {
     private static final Pattern CAP_HANGUL = Pattern.compile("(?<![A-Za-z0-9À-ɏ])[A-Z](?=-?[가-힣]|[^A-Za-z0-9À-ɏ]|$)"); // 홀로 선 X·J도 낱자로
 
     private static final Pattern FLU = Pattern.compile("(?<![A-Za-z0-9])H(\\d{1,2})(?=형)");
-    private static final Pattern MODEL = Pattern.compile("(?<![A-Za-z0-9À-ɏ])([A-Z]{1,3})-?(\\d{1,4})(?![\\d.,]\\d|\\d|[A-Za-z])" + JOSA);
 
     private static String spell(String w) {
         StringBuilder b = new StringBuilder();
@@ -353,6 +352,8 @@ final class Pron {
     private static final java.util.Map<String, String> MONEY_NAME = new java.util.HashMap<>();
     private static final String AMOUNT = "((?:\\d{1,3}(?:,\\d{3})+|\\d+)(?:\\.\\d+)?)(\\s?[조억만천])?";
     private static final String JOSA = "(으로|로|을|를|은|는|과|와|이(?![가-힣])|가(?![가-힣]))?";
+    /** 영문+숫자 모델명 (latin()이 쓴다). JOSA보다 뒤에 두어야 한다: 앞에 두면 자바가 '앞선 참조'로 거절한다 */
+    private static final Pattern MODEL = Pattern.compile("(?<![A-Za-z0-9À-ɏ])([A-Z]{1,3})-?(\\d{1,4})(?![\\d.,]\\d|\\d|[A-Za-z])" + JOSA);
     private static final Pattern SIGN_RE, CODE_AFTER, CODE_BEFORE, PER, PRE_BIG;
     private static final Pattern CHINA = Pattern.compile("중국|위안|인민폐|China|Chinese|CNY|RMB");
     static {
