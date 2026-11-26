@@ -87,15 +87,17 @@ public class F1TextTest {
         assertEquals(1, F1Text.chunks("짧은 문장입니다. 둘째 문장입니다.", 120).size());
     }
 
-    // 빠르기 상한: 초당 6음절보다 빠르게 만들지 않는다 (빠르게 130에서 '덧붙였다'가 사라졌다, 2026-11-26 받아쓰기)
-    @Test public void neverFasterThanSixSyllablesPerSecond() {
+    // 빠르기 상한: 초당 4.5음절보다 빠르게 만들지 않는다 ('송산농협 도농상생'이 5.0에서 사라졌다, 2026-11-27 받아쓰기)
+    @Test public void neverFasterThanFourAndAHalfSyllablesPerSecond() {
         assertEquals(13, F1Text.syllables("연합뉴스 소식입니다, A1 하나."));
-        // 모델 예측 3초, 30음절: 보통 빠르기(1.05)면 예측대로 2.86초, 빠르게(1.365)면 2.2초가 아니라 상한 5초
-        String thirty = "가".repeat(30);
-        assertEquals(3f / 1.05f, F1Text.duration(3f, "가".repeat(15), 1.05f), 0.001f);
-        assertEquals(5f, F1Text.duration(3f, thirty, 1.365f), 0.001f);
-        // 말 빠르기를 줄이면 상한과 상관없이 예측보다 길어진다
-        assertEquals(3f / 0.89f, F1Text.duration(3f, "가".repeat(15), 0.89f), 0.001f);
+        // 영어는 글자가 아니라 모음 덩이로 센다: good 1 · morning 2 · farmers 2
+        assertEquals(5, F1Text.syllables("Good morning, farmers."));
+        // 모델 예측 3초: 12음절이면 예측대로 2.86초, 30음절이면 상한에 걸려 30 / 4.5 = 6.67초
+        assertEquals(3f / 1.05f, F1Text.duration(3f, "가".repeat(12), 1.05f), 0.001f);
+        assertEquals(30f / 4.5f, F1Text.duration(3f, "가".repeat(30), 1.05f), 0.001f);
+        // 영어 한 줄(12음절)이 글자 수(50자 넘음)로 늘어나지 않는다
+        String en = "Biostimulants help crops grow stronger roots today.";
+        assertEquals(3f / 1.05f, F1Text.duration(3f, en, 1.05f), 0.001f);
     }
 
     // F1이 '삼천사백오십육억'을 '삼천 사 오십육'처럼 한 글자 건너뛰어 읽었다 (주인 폰, 2026-10-17): 단위마다 띄워 넘긴다

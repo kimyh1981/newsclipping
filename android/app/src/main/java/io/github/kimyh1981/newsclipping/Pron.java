@@ -180,7 +180,7 @@ final class Pron {
         // 조류인플루엔자 H5형은 사전의 H5N1(에이치오엔일)처럼 우리말 숫자로 (js/pron.js와 같게, 2026-11-23)
         s = each(s, FLU, x -> "에이치" + sino(x.group(1)));
         // 사전에 없는 영문+숫자 모델명: 낱자 + 한 자리는 영어 숫자, 두 자리 이상은 한자어 (S25 에스이십오, EV9 이브이나인, U-20 유이십)
-        s = each(s, MODEL, x -> josa(spell(x.group(1)) + (x.group(2).length() == 1 ? EN[x.group(2).charAt(0) - '0'] : sino(x.group(2))), x.group(3)));
+        s = each(s, MODEL, x -> josa(modelSound(x.group(1), x.group(2)), x.group(3)));
         Matcher dm = DOTTED.matcher(s); // B.C., A.W. → 비씨, 에이더블유
         StringBuffer db = new StringBuffer();
         while (dm.find()) dm.appendReplacement(db, Matcher.quoteReplacement(spell(dm.group(1).replace(".", ""))));
@@ -358,7 +358,7 @@ final class Pron {
         + "|권(?!리|한|역|고|자|위)|잔(?!액|고|여)|벌(?!금|써|어)|채(?!권)|척|통(?!화|신|계|합|과|령)|장(?!관|기|애|면)|배(?!럴)"
         + "|번(?!째|지|호|길)(?!\\s?(?:출구|국도|지방도|도로|버스|타자|홀|게이트|트랙|채널|레인|환자|확진자|후보))";
     // 한자어로 읽은 숫자 뒤에 띄울 세는 말. 시·분도 띄운다: 십오 시 삼십 분 (js/pron.js와 같게, 2026-11-23). 삼분의 일·일분기는 그대로
-    private static final Pattern SPACE_BEFORE = Pattern.compile("(?:" + COUNTER + "|원|건|톤|명|곳|회|분(?![의기야석류리노양산할배자위단열쟁란해포업비사신명담출권교과수모진광점당화])|시(?!간|장|즌|청|민|군|의회|의원|도|정|각|점|대|공|설|리즈))");
+    private static final Pattern SPACE_BEFORE = Pattern.compile("(?:" + COUNTER + "|원|건|톤|명|곳|회|분(?![의기야석류리노양산할배자위단열쟁란해포업비사신명담출권교과수모진광점당화])|시(?!간|장|즌|청|민|군|의회|의원|도|정|각|점|대|공|설|리즈)|헥타르|킬로그램|킬로미터|미터|리터|에이커|배럴|그램)"); // 한글로 쓴 단위도 띄운다 (2026-11-27)
     private static final Pattern NATIVE = Pattern.compile("^\\s?(?:" + COUNTER + ")");
     private static final Pattern DAE = Pattern.compile("^\\s?대(?=[가를의는도만와씩로에]|\\s(?:이상|이하|가량|정도|씩|분)|[,.?!]|$)");
     private static final Pattern CLOCK = Pattern.compile("^\\s?시(?!간|장|즌|청|민|군|의회|의원|도|정|각|점|대|공|설|리즈)");
@@ -381,7 +381,15 @@ final class Pron {
     private static final String AMOUNT = "((?:\\d{1,3}(?:,\\d{3})+|\\d+)(?:\\.\\d+)?)(\\s?[조억만천])?";
     private static final String JOSA = "(으로|로|을|를|은|는|과|와|이(?![가-힣])|가(?![가-힣]))?";
     /** 영문+숫자 모델명 (latin()이 쓴다). JOSA보다 뒤에 두어야 한다: 앞에 두면 자바가 '앞선 참조'로 거절한다 */
-    private static final Pattern MODEL = Pattern.compile("(?<![A-Za-z0-9À-ɏ])([A-Z]{1,3})-?(\\d{1,4})(?![\\d.,]\\d|\\d|[A-Za-z])" + JOSA);
+    private static final Pattern MODEL = Pattern.compile("(?<![A-Za-z0-9À-ɏ])([A-Z]{1,3})-?(\\d{1,4}(?:\\.\\d)?)(?![\\d.,]\\d|\\d|[A-Za-z])" + JOSA);
+
+    /** 모델명 숫자: 한 자리는 영어(EV9), 두세 자리는 한자어로 붙여(S25), 소수(GPT-6.2)·네 자리(FY2026)는 띄어서 (js/pron.js의 modelSound, 2026-11-27) */
+    private static String modelSound(String a, String b) {
+        int dot = b.indexOf('.');
+        if (dot >= 0) return spell(a) + " " + sino(b.substring(0, dot)) + "쩜" + DIG[b.charAt(dot + 1) - '0'];
+        if (b.length() == 1) return spell(a) + EN[b.charAt(0) - '0'];
+        return b.length() >= 4 ? spell(a) + " " + sino(b) : spell(a) + sino(b);
+    }
     private static final Pattern SIGN_RE, CODE_AFTER, CODE_BEFORE, PER, PRE_BIG;
     private static final Pattern CHINA = Pattern.compile("중국|위안|인민폐|China|Chinese|CNY|RMB");
     static {
@@ -700,7 +708,7 @@ final class Pron {
         s = s.replaceAll("(?<=\\S)[ \\t]+[-–—][ \\t]+(?=\\S)", ", "); // 띄어 쓴 줄표는 쉼: '뚝 - 머니투데이'가 붙어 들렸다
         s = s.replaceAll("[“”\"‘’'`「」『』《》〈〉<>\\[\\]【】※\\u1100-\\u11ff]", "").replaceAll("[()]", ", ").replaceAll("…|\\.{2,}", ", ");
         s = s.replaceAll("[ \\t]*↑", " 상승").replaceAll("[ \\t]*↓", " 하락").replaceAll("[▲▼△▽▶▷►◀◁◆◇■□●○◎★☆→←↔⇒⇨▸▪]", ", ").replaceAll("\\b[vV][sS]\\b\\.?", " 대 ");
-        s = s.replaceAll("[ \\t]*[|/·][ \\t]*", ", ").replace("&", " 앤 ").replace("%", " 퍼센트").replaceAll("[#*=^_~+@]", " ").replaceAll("(?<=\\S)[ \\t]*-[ \\t]*(?=\\S)", " ");
+        s = s.replaceAll("[ \\t]*[|/·丨｜][ \\t]*", ", ").replace("&", " 앤 ").replace("%", " 퍼센트").replaceAll("[#*=^_~+@]", " ").replaceAll("(?<=\\S)[ \\t]*-[ \\t]*(?=\\S)", " ");
         s = s.replaceAll("[ \\t]*,(?:[ \\t]*,)*[ \\t]*", ", ").replaceAll(",[ \\t]*([.?!])", "$1").replaceAll("([?!])[ \\t]*,", "$1").replaceAll("[ \\t]{2,}", " ").replaceAll("(?m)^[ \\t,]+|[ \\t,]+$", "");
         return s;
     }

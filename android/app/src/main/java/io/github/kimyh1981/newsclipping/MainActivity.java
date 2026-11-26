@@ -1712,7 +1712,8 @@ public class MainActivity extends Activity {
                 F1Engine e = F1Voice.engine(this);
                 if (e == null) throw new IllegalStateException(F1Voice.error);
                 long t = System.currentTimeMillis();
-                float[] pcm = F1Voice.synth(this, e, Pron.say(Voices.SAMPLE), "ko", F1Voice.speed(rate));
+                // 앱이 읽을 때와 같이: 늘 같은 빠르기로 만들고 말 빠르기는 재생 빠르기로 (2026-11-27)
+                float[] pcm = F1Text.tidyAudio(F1Voice.synth(this, e, F1Text.hangulize(Pron.say(Voices.SAMPLE)), "ko", F1Voice.speed(100)), e.sampleRate, F1Engine.LEAD_SEC);
                 float x = pcm.length / (float) e.sampleRate / Math.max(0.001f, (System.currentTimeMillis() - t) / 1000f);
                 prefs.setF1Speed(x);
                 java.io.File f = new java.io.File(getCacheDir(), "f1-preview.wav");
@@ -1722,6 +1723,7 @@ public class MainActivity extends Activity {
                     f1Player = new android.media.MediaPlayer();
                     f1Player.setDataSource(f.getPath());
                     f1Player.prepare();
+                    if (rate != 100) f1Player.setPlaybackParams(f1Player.getPlaybackParams().setSpeed(rate / 100f));
                     f1Player.start();
                 }
                 msg = null;

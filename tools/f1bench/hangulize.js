@@ -3,7 +3,7 @@
 const ABC = ['에이', '비', '씨', '디', '이', '에프', '지', '에이치', '아이', '제이', '케이', '엘', '엠', '엔', '오', '피', '큐', '알', '에스', '티', '유', '브이', '더블유', '엑스', '와이', '제트'];
 // 자주 나오는 영어 낱말 (외래어 표기). 규칙으로는 틀리기 쉬운 것 위주
 const WORDS = {
-  agri: '애그리', agro: '애그로', bio: '바이오', tech: '테크', crop: '크롭', life: '라이프', stack: '스택', more: '모어', people: '피플',
+  ag: '애그', agri: '애그리', agro: '애그로', bio: '바이오', tech: '테크', crop: '크롭', life: '라이프', stack: '스택', more: '모어', people: '피플',
   stone: '스톤', global: '글로벌', money: '머니', club: '클럽', shorts: '쇼츠', news: '뉴스', farm: '팜', farms: '팜스', group: '그룹',
   india: '인디아', solutions: '솔루션스', solution: '솔루션', market: '마켓', markets: '마켓츠', capital: '캐피털', partners: '파트너스',
   international: '인터내셔널', holdings: '홀딩스', energy: '에너지', power: '파워', bank: '뱅크', food: '푸드', foods: '푸즈', science: '사이언스',

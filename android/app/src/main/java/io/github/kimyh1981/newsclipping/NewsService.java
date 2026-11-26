@@ -714,8 +714,16 @@ public class NewsService extends Service {
             if (playF1(s, gen, System.currentTimeMillis())) return;
         }
         File f = clips.get(s.text);
-        if (f != null && playClip(f)) return;
+        if (f != null && playClip(f, playSpeed(s))) return;
         speakPhone(s);
+    }
+
+    /**
+     * 이 차례를 틀 빠르기: 사용자의 빠르기(설정, 100 = 보통) × 비료시장 브리핑 1.2배.
+     * 서버 녹음(제목·농업영어)도 F1도 폰 음성과 같은 빠르기로 (예전에는 서버 녹음이 늘 1배라 영어만 빠르기가 달랐다, 주인 2026-11-27)
+     */
+    private float playSpeed(Step s) {
+        return new Prefs(this).rate() / 100f * (reportStep(s) ? REPORT_SPEED : 1f);
     }
 
     /** 폰 음성으로 한 차례 */
@@ -769,7 +777,7 @@ public class NewsService extends Service {
             noticeJobs.put(t, out.length() > 44 ? java.util.concurrent.CompletableFuture.completedFuture(out) : f1Pool.submit(() -> {
                 F1Engine e = F1Voice.engine(this);
                 if (e == null || stopped) return null;
-                float[] pcm = F1Text.tidyAudio(F1Voice.synth(this, e, F1Text.hangulize(Pron.say(t)), "ko", Math.min(F1_MAX_SPEED, F1Voice.speed(new Prefs(this).rate()))), e.sampleRate, F1Engine.LEAD_SEC);
+                float[] pcm = F1Text.tidyAudio(F1Voice.synth(this, e, F1Text.hangulize(Pron.say(t)), "ko", F1_GEN_SPEED), e.sampleRate, F1Engine.LEAD_SEC);
                 F1Engine.writeWav(pcm, e.sampleRate, out);
                 return out;
             }));
@@ -780,9 +788,9 @@ public class NewsService extends Service {
     private final Map<String, Future<File>> noticeJobs = new ConcurrentHashMap<>();
     private MediaPlayer noticePlayer;
 
-    /** 기다림 안내 F1 소리 파일 (빠르기·앱 판이 바뀌면 새로 만든다) */
+    /** 기다림 안내 F1 소리 파일 (앱 판이 바뀌면 새로 만든다. 빠르기는 재생할 때 준다) */
     private File noticeFile(String text) {
-        return new File(keepDir(), Brief.audioId(BuildConfig.VERSION_NAME + "|notice|" + new Prefs(this).rate() + "|" + text) + ".wav");
+        return new File(keepDir(), Brief.audioId(BuildConfig.VERSION_NAME + "|notice|" + text) + ".wav");
     }
 
     /** 기다림 안내: F1으로 만들어 둔 소리가 있으면 그것을, 없으면 폰 음성으로. 읽는 차례(gen)와 상관없이 따로 튼다 */
@@ -798,6 +806,8 @@ public class NewsService extends Service {
                 mp.setDataSource(clip.getPath());
                 mp.setOnCompletionListener(p -> { if (noticePlayer == p) releaseNotice(); });
                 mp.prepare();
+                float sp = new Prefs(this).rate() / 100f;
+                if (sp != 1f) mp.setPlaybackParams(mp.getPlaybackParams().setSpeed(sp));
                 mp.start();
                 noticePlayer = mp;
                 return;
@@ -818,9 +828,8 @@ public class NewsService extends Service {
     private Future<File> f1Job(Step s) {
         if (s.silence > 0 || s.text.isEmpty() || f1Pool == null || f1Pool.isShutdown()) return null;
         boolean en = isEnglish(s);
-        int base = new Prefs(this).rate(); // 듣는 중에 빠르기를 바꾸면 미리 만든 소리 대신 새 빠르기로 다시 만든다
-        int rate = reportStep(s) ? Math.round(base * REPORT_SPEED) : base; // 비료시장 브리핑은 1.2배
-        String key = rate + "|" + (en ? "en|" : "ko|") + s.text;
+        // F1은 늘 같은 빠르기로 만든다: 사용자의 빠르기(비료시장 브리핑 1.2배 포함)는 재생 빠르기로 준다(playSpeed). 빠르기를 바꿔도 다시 만들 필요가 없다
+        String key = (en ? "en|" : "ko|") + s.text;
         boolean keep = lessonStep(s); // 제품 공부·농업영어는 내용이 그대로라 한 번 만든 소리를 폰에 남겨 둔다: 다음엔 기다림 없이 (주인 요청 2026-10-21)
         if (keep) { File kept = new File(keepDir(), Brief.audioId(BuildConfig.VERSION_NAME + "|" + key) + ".wav"); if (kept.length() > 44) return f1Jobs.computeIfAbsent(key, k -> java.util.concurrent.CompletableFuture.completedFuture(kept)); }
         return f1Jobs.computeIfAbsent(key, k -> f1Pool.submit(() -> {
@@ -830,10 +839,9 @@ public class NewsService extends Service {
             if (out.exists() && out.length() > 44) return out;
             long t = System.currentTimeMillis();
             String said = en ? s.text : F1Text.hangulize(Pron.say(s.text)); // F1은 우리말 속 영문을 건너뛴다: 남은 영문은 한글 소리로 (2026-11-26)
-            // 빠르기는 모든 줄에 하나: 줄마다 바꾸니(숫자 줄 느리게, 짧은 줄 상한) 한 기사 안에서 고무줄처럼 들렸다 (주인 2026-11-26).
-            // 너무 빠를 때 낱말·끝 글자를 삼키는 것은 F1Text.duration의 초당 음절 상한이 모든 덩이에 똑같이 막는다
-            float speed = F1Voice.speed(rate);
-            float[] pcm = F1Text.tidyAudio(F1Voice.synth(this, e, said, en ? "en" : "ko", Math.min(F1_MAX_SPEED, speed)), e.sampleRate, F1Engine.LEAD_SEC);
+            // 모든 줄을 같은 빠르기로 만든다 (줄마다 바꾸니 한 기사 안에서 고무줄처럼 들렸다, 2026-11-26).
+            // 모델에게 빨리 말하게 하면 고유명사가 몰린 줄부터 낱말을 삼켰다: 빠르게 듣기는 재생 빠르기로 한다 (2026-11-27)
+            float[] pcm = F1Text.tidyAudio(F1Voice.synth(this, e, said, en ? "en" : "ko", F1_GEN_SPEED), e.sampleRate, F1Engine.LEAD_SEC);
             F1Engine.writeWav(pcm, e.sampleRate, out);
             if (keep) pruneKeep();
             float x = pcm.length / (float) e.sampleRate / Math.max(0.001f, (System.currentTimeMillis() - t) / 1000f);
@@ -875,7 +883,7 @@ public class NewsService extends Service {
         endWait();
         try {
             File f = job.get();
-            return f != null && playClip(f);
+            return f != null && playClip(f, playSpeed(s));
         } catch (Exception e) {
             Log.w(TAG, "F1 만들기 실패, 폰 음성으로: " + e);
             return false;
@@ -921,8 +929,11 @@ public class NewsService extends Service {
         }
     }
 
-    /** 녹음 파일을 앱에서 직접 튼다 (치찰음 줄이기와 스테레오는 서버가 녹음할 때 해 둔다) */
-    private boolean playClip(File f) {
+    /** 지금 트는 소리의 빠르기 (빨리 듣기 배수를 곱하기 전) */
+    private float clipSpeed = 1f;
+
+    /** 녹음 파일을 앱에서 직접 튼다 (치찰음 줄이기와 스테레오는 서버가 녹음할 때 해 둔다). speed: 높낮이는 그대로 두고 빠르기만 */
+    private boolean playClip(File f, float speed) {
         int g = gen;
         MediaPlayer mp = new MediaPlayer();
         try {
@@ -931,7 +942,8 @@ public class NewsService extends Service {
             mp.setOnCompletionListener(p -> done(g + ":"));
             mp.setOnErrorListener((p, what, extra) -> { new Prefs(this).noteAudio("재생 오류 " + what + "/" + extra); done(g + ":"); return true; });
             mp.prepare();
-            if (boost != 1f) mp.setPlaybackParams(mp.getPlaybackParams().setSpeed(boost));
+            clipSpeed = speed;
+            if (speed * boost != 1f) mp.setPlaybackParams(mp.getPlaybackParams().setSpeed(speed * boost));
             mp.start();
             player = mp;
             main.removeCallbacks(sampleExtra);
@@ -997,8 +1009,8 @@ public class NewsService extends Service {
     }
 
     private static final float REPORT_SPEED = 1.2f;
-    /** F1 빠르기 값의 위 끝 (제조사 권장 0.9~1.5: 넘기면 소리가 뭉개진다) */
-    private static final float F1_MAX_SPEED = 1.5f;
+    /** F1을 만드는 빠르기: 늘 '보통'. 사용자의 빠르기는 재생 빠르기로 준다 (playSpeed, 2026-11-27) */
+    private static final float F1_GEN_SPEED = F1Voice.speed(100);
 
     private boolean inLesson() { return current < lines.size() && lines.get(current).lesson > 0; }
 
@@ -1187,7 +1199,7 @@ public class NewsService extends Service {
 
     private void applyBoost() {
         if (player != null) {
-            try { player.setPlaybackParams(player.getPlaybackParams().setSpeed(boost)); } catch (Exception e) { Log.w(TAG, "배속 실패: " + e); }
+            try { player.setPlaybackParams(player.getPlaybackParams().setSpeed(clipSpeed * boost)); } catch (Exception e) { Log.w(TAG, "배속 실패: " + e); }
         }
         if (tts != null) tts.setSpeechRate(new Prefs(this).rate() / 100f * boost);
         stateChanged(); // 자막 화면의 배속 표시

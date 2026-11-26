@@ -9,7 +9,7 @@
   else root.Pron = factory();
 })(typeof self !== 'undefined' ? self : this, function () {
   // 규칙을 바꾸면 올린다: 서버가 예전 규칙으로 녹음해 둔 파일을 다시 녹음한다
-  const VERSION = 10;
+  const VERSION = 11;
 
   // [쓴 글, 소리, 뒤에 오면 바꾸지 않는 말]. 낱말 첫머리에서만 찾는다 (재평가처럼 앞에 붙은 말은 그대로)
   // 제26·28항 경음화(한자어 ㄹ 뒤 ㄷㅅㅈ, 사이시옷 없는 사잇소리), 제29항 ㄴ첨가
@@ -458,7 +458,7 @@
     + '|번(?!째|지|호|길)(?!\\s?(?:출구|국도|지방도|도로|버스|타자|홀|게이트|트랙|채널|레인|환자|확진자|후보))';
   const NATIVE = new RegExp(`^\\s?(?:${COUNTER})`);
   // 한자어로 읽은 숫자 뒤에 띄울 세는 말. 시·분도 띄운다: 십오 시 삼십 분 (붙이면 '십오시삼십분'처럼 뭉개졌다, 2026-11-23). 삼분의 일·일분기는 그대로
-  const SPACE_BEFORE = new RegExp(`^(?:${COUNTER}|원|건|톤|명|곳|회|분(?![의기야석류리노양산할배자위단열쟁란해포업비사신명담출권교과수모진광점당화])|시(?!간|장|즌|청|민|군|의회|의원|도|정|각|점|대|공|설|리즈))`);
+  const SPACE_BEFORE = new RegExp(`^(?:${COUNTER}|원|건|톤|명|곳|회|분(?![의기야석류리노양산할배자위단열쟁란해포업비사신명담출권교과수모진광점당화])|시(?!간|장|즌|청|민|군|의회|의원|도|정|각|점|대|공|설|리즈)|헥타르|킬로그램|킬로미터|미터|리터|에이커|배럴|그램)`); // 한글로 쓴 단위도 띄운다: 삼천오백구십일 헥타르 (2026-11-27)
   // 차량·기계를 세는 '대' (5대 그룹·20대 남성은 한자어)
   const DAE = /^\s?대(?=[가를의는도만와씩로에]|\s(?:이상|이하|가량|정도|씩|분)|[,.?!]|$)/;
   const CLOCK = /^\s?시(?!간|장|즌|청|민|군|의회|의원|도|정|각|점|대|공|설|리즈)/;
@@ -661,7 +661,8 @@
     s = s.replace(/(?<=\S)[ \t]+[-–—][ \t]+(?=\S)/g, ', '); // 띄어 쓴 줄표는 쉼: '뚝 - 머니투데이'가 한 문장처럼 붙어 들렸다 (2026-11-26)
     s = s.replace(/[“”"‘’'`「」『』《》〈〉<>\[\]【】※\u1100-\u11ff]/g, '').replace(/[()]/g, ', ').replace(/…|\.{2,}/g, ', ');
     s = s.replace(/[ \t]*↑/g, ' 상승').replace(/[ \t]*↓/g, ' 하락').replace(/[▲▼△▽▶▷►◀◁◆◇■□●○◎★☆→←↔⇒⇨▸▪]/g, ', ').replace(/\b[vV][sS]\b\.?/g, ' 대 ');
-    s = s.replace(/[ \t]*[|/·][ \t]*/g, ', ').replace(/&/g, ' 앤 ').replace(/%/g, ' 퍼센트').replace(/[#*=^_~+@]/g, ' ').replace(/(?<=\S)[ \t]*-[ \t]*(?=\S)/g, ' ');
+    // 丨｜: 중국·대만 기사의 구분 기호도 쉼 (브이로그丨우루무치, 2026-11-27)
+    s = s.replace(/[ \t]*[|/·丨｜][ \t]*/g, ', ').replace(/&/g, ' 앤 ').replace(/%/g, ' 퍼센트').replace(/[#*=^_~+@]/g, ' ').replace(/(?<=\S)[ \t]*-[ \t]*(?=\S)/g, ' ');
     s = s.replace(/[ \t]*,(?:[ \t]*,)*[ \t]*/g, ', ').replace(/,[ \t]*([.?!])/g, '$1').replace(/([?!])[ \t]*,/g, '$1').replace(/[ \t]{2,}/g, ' ').replace(/^[ \t,]+|[ \t,]+$/gm, '');
     return s;
   }
@@ -675,7 +676,13 @@
   })();
   const LATIN_RES = LATIN_ALL.map(([w, sound]) => [new RegExp(`(?<![A-Za-z0-9À-ɏ])${escape(w)}(?![A-Za-z0-9À-ɏ]|[.-]\\d)${JOSA}`, 'g'), sound]);
   const spell = (w) => w.split('').map((c) => ABC[c.charCodeAt(0) - 65]).join('');
-  const MODEL = new RegExp(`(?<![A-Za-z0-9À-ɏ])([A-Z]{1,3})-?(\\d{1,4})(?![\\d.,]\\d|\\d|[A-Za-z])${JOSA}`, 'g');
+  const MODEL = new RegExp(`(?<![A-Za-z0-9À-ɏ])([A-Z]{1,3})-?(\\d{1,4}(?:\\.\\d)?)(?![\\d.,]\\d|\\d|[A-Za-z])${JOSA}`, 'g');
+  // 모델명 숫자: 한 자리는 영어(EV9 이브이나인), 두세 자리는 한자어로 붙여(S25 에스이십오), 소수(GPT-6.2)·네 자리(FY2026)는 띄어서 (2026-11-27)
+  const modelSound = (a, b) => {
+    if (b.includes('.')) { const [i, f] = b.split('.'); return `${spell(a)} ${sino(i)}쩜${DIG[f]}`; }
+    if (b.length === 1) return spell(a) + EN[b];
+    return b.length >= 4 ? `${spell(a)} ${sino(b)}` : spell(a) + sino(b);
+  };
   // 대문자로만 쓴 이름도 사전대로 (PETRONAS → Petronas 페트로나스). 여섯 글자 이상만: 다섯 글자까지는 약어라 낱자로 읽는다
   const DICT_LOWER = new Map();
   for (const [w, sound] of LATIN_ALL) if (!DICT_LOWER.has(w.toLowerCase())) DICT_LOWER.set(w.toLowerCase(), sound);
@@ -691,7 +698,7 @@
     // 사전에 없는 영문+숫자 모델명: 낱자 + 한 자리는 영어 숫자, 두 자리 이상은 한자어 (S25 에스이십오, EV9 이브이나인, U-20 유이십, 2026-11-23)
     // 조류인플루엔자 H5형은 사전의 H5N1(에이치오엔일)처럼 우리말 숫자로
     s = s.replace(/(?<![A-Za-z0-9])H(\d{1,2})(?=형)/g, (m, a) => `에이치${sino(a)}`);
-    s = s.replace(MODEL, (m, a, b, j) => josa(spell(a) + (b.length === 1 ? EN[b] : sino(b)), j));
+    s = s.replace(MODEL, (m, a, b, j) => josa(modelSound(a, b), j));
     s = s.replace(/(?<![A-Za-z0-9])((?:[A-Z]\.){2,}[A-Z]?)(?![A-Za-z])/g, (m) => spell(m.replace(/\./g, ''))); // B.C., A.W. → 비씨, 에이더블유
     s = s.replace(/(?<![A-Za-z0-9])([A-Z]{1,3})\s?&\s?([A-Z]{1,3})(?![A-Za-z])/g, (m, a, b) => `${spell(a)}앤${spell(b)}`); // R&D, S&P, AT&T
     s = s.replace(/(?<![A-Za-z0-9À-ɏ])[A-Z]{2,5}(?![A-Za-z0-9À-ɏ])(?!-\d)/g, spell); // 사전에 없는 대문자 약어는 낱자로 (USDA가 영문 그대로 남았다, 2026-10-26)
