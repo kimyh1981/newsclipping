@@ -13,10 +13,10 @@ public final class F1Live {
             System.out.println("엔진 준비 " + (System.currentTimeMillis() - t0) + "ms");
             StringBuilder all = new StringBuilder();
             for (int i = 2; i < args.length; i++) all.append(i > 2 ? " " : "").append(args[i]);
-            String said = Pron.say(all.toString());
+            String said = F1Text.hangulize(Pron.say(all.toString())); // 앱과 같이: 남은 영문은 한글 소리로
             System.out.println("읽을 글: " + said);
             long t = System.currentTimeMillis();
-            float[] pcm = e.synth(said, "ko", F1Text.clearSpeed(said, 1.05f));
+            float[] pcm = e.synth(said, "ko", 1.05f);
             double sec = pcm.length / (double) e.sampleRate, took = (System.currentTimeMillis() - t) / 1000.0;
             double rms = 0;
             for (float x : pcm) rms += x * x;
@@ -27,9 +27,13 @@ public final class F1Live {
             // 말 빠르기: 앱의 '조금 느리게'(85)·'빠르게'(130)를 F1Voice.speed와 같은 식(1.05 × 빠르기 ÷ 100)으로 넣어 길이를 잰다
             double slow = e.synth(said, "ko", 1.05f * 85 / 100).length / (double) e.sampleRate;
             double fast = e.synth(said, "ko", 1.05f * 130 / 100).length / (double) e.sampleRate;
-            double normal = e.synth(said, "ko", 1.05f).length / (double) e.sampleRate; // 받아쓰기용 소리(sec)는 숫자 줄이라 12% 천천히 만든 것일 수 있다
-            System.out.printf("말 빠르기: 조금 느리게 %.1f초 · 보통 %.1f초 · 빠르게 %.1f초 (보통 대비 빠르게 %.0f%%) · 받아쓰기용 %.1f초%n", slow, normal, fast, fast / normal * 100, sec);
-            if (fast > normal * 0.9 || slow < normal * 1.05) throw new IllegalStateException("말 빠르기가 F1 길이에 거의 반영되지 않는다");
+            double normal = e.synth(said, "ko", 1.05f).length / (double) e.sampleRate;
+            int syl = F1Text.syllables(said);
+            System.out.printf("말 빠르기: 조금 느리게 %.1f초 · 보통 %.1f초(초당 %.1f음절) · 빠르게 %.1f초(초당 %.1f음절, 상한 %.1f) (보통 대비 빠르게 %.0f%%)%n",
+                    slow, normal, syl / normal, fast, syl / fast, F1Text.MAX_SPS, fast / normal * 100);
+            // 빠르게는 초당 음절 상한에 걸려 보통보다 조금만 빠르다 (그보다 빠르면 낱말을 삼킨다, 2026-11-26)
+            if (fast > normal * 0.97 || slow < normal * 1.05) throw new IllegalStateException("말 빠르기가 F1 길이에 거의 반영되지 않는다");
+            if (syl / fast > F1Text.MAX_SPS + 0.3) throw new IllegalStateException("초당 음절 상한을 넘었다");
         }
     }
 }

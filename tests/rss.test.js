@@ -212,3 +212,16 @@ test('언론사 이름뿐인 제목·분류 목록 화면은 고르지 않는다
   const got = pick({ limit: 9 }, [{ source: src, items: list }], now).map((x) => x.title);
   assert.deepEqual(got, ['Why farm loans just got pricier', 'Урожай зерновых превысил 141 млн тонн']);
 });
+
+// 모음 피드 제목 끝의 언론사 이름 (2026-11-26 '…로 뚝 - 머니투데이'를 그대로 읽었다)
+test('제목 끝의 언론사 이름은 떼고, 날짜 같은 꼬리는 둔다', () => {
+  const { pick } = require('../tools/rss.js');
+  const now = Date.parse('2026-11-26T00:00:00Z');
+  const at = new Date(now - 3600e3).toISOString();
+  const list = [
+    { title: '주가 급등 하루만에 뚝 - 머니투데이', link: 'https://a/1', publishedAt: at },
+    { title: '나이트라인 다시보기 - 2026년 11월 26일', link: 'https://a/2', publishedAt: at },
+  ];
+  const got = pick({ limit: 5 }, [{ source: { id: 'b', name: '경제 주요 뉴스', take: 5 }, items: list }], now).map((x) => x.title);
+  assert.deepEqual(got, ['주가 급등 하루만에 뚝', '나이트라인 다시보기 - 2026년 11월 26일']);
+});

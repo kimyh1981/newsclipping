@@ -9,6 +9,22 @@ import org.junit.Test;
 
 /** F1에 넣는 글 다듬기·덩이 나누기 (개발사 예제와 같은 규칙) */
 public class F1TextTest {
+    // 영문을 한글 소리로: tests/fixtures/hangulize.json은 _f1bench/hangulize.js(같은 규칙의 자바스크립트판)가 만든 기대값 (2026-11-26)
+    @Test public void englishWordsBecomeHangulForF1() throws Exception {
+        java.nio.file.Path f = null;
+        for (java.nio.file.Path p = java.nio.file.Paths.get("").toAbsolutePath(); p != null && f == null; p = p.getParent())
+            if (java.nio.file.Files.exists(p.resolve("tests/fixtures/hangulize.json"))) f = p.resolve("tests/fixtures/hangulize.json");
+        org.json.JSONArray cases = new org.json.JSONArray(new String(java.nio.file.Files.readAllBytes(f), java.nio.charset.StandardCharsets.UTF_8));
+        for (int i = 0; i < cases.length(); i++) {
+            org.json.JSONArray c = cases.getJSONArray(i);
+            assertEquals(c.getString(0), c.getString(1), F1Text.hangulize(c.getString(0)));
+        }
+        // 오늘(11/26) 원고에서 F1이 건너뛰거나 뭉갠 낱말
+        assertEquals("핀센", F1Text.hangulize("FinCEN"));
+        assertEquals("크롭 라이프", F1Text.hangulize("CropLife"));
+        assertEquals("페트로나스", F1Text.hangulize("PETRONAS"));
+    }
+
     @Test public void koreanIsSplitIntoJamoAndWrapped() {
         // 한글은 자모(ㄱ U+1100 + ㅏ U+1161)로 풀고(NFKD), 끝에 마침표, 언어 표시로 감싼다
         assertEquals("<ko>가.</ko>", F1Text.prepare("가", "ko"));
@@ -71,15 +87,22 @@ public class F1TextTest {
         assertEquals(1, F1Text.chunks("짧은 문장입니다. 둘째 문장입니다.", 120).size());
     }
 
+    // 빠르기 상한: 초당 6음절보다 빠르게 만들지 않는다 (빠르게 130에서 '덧붙였다'가 사라졌다, 2026-11-26 받아쓰기)
+    @Test public void neverFasterThanSixSyllablesPerSecond() {
+        assertEquals(13, F1Text.syllables("연합뉴스 소식입니다, A1 하나."));
+        // 모델 예측 3초, 30음절: 보통 빠르기(1.05)면 예측대로 2.86초, 빠르게(1.365)면 2.2초가 아니라 상한 5초
+        String thirty = "가".repeat(30);
+        assertEquals(3f / 1.05f, F1Text.duration(3f, "가".repeat(15), 1.05f), 0.001f);
+        assertEquals(5f, F1Text.duration(3f, thirty, 1.365f), 0.001f);
+        // 말 빠르기를 줄이면 상한과 상관없이 예측보다 길어진다
+        assertEquals(3f / 0.89f, F1Text.duration(3f, "가".repeat(15), 0.89f), 0.001f);
+    }
+
     // F1이 '삼천사백오십육억'을 '삼천 사 오십육'처럼 한 글자 건너뛰어 읽었다 (주인 폰, 2026-10-17): 단위마다 띄워 넘긴다
     @Test public void longKoreanNumbersAreSpacedByUnit() {
         assertEquals("삼천 사백 오십 육억 원", F1Text.spaceNumbers("삼천사백오십육억 원"));
         assertEquals("육십 육억 달러", F1Text.spaceNumbers("육십육억 달러")); // '유억 달러'로 얼버무렸다 (2026-11-23)
         assertEquals("이십삼명, 오십 대", F1Text.spaceNumbers("이십삼명, 오십 대")); // 억·만·조 앞이 아니면 그대로
-        assertTrue(F1Text.numberHeavy("보조금으로 육십육억 달러를 승인했다"));
-        assertTrue(F1Text.numberHeavy("한 달 새 삼 퍼센트 올랐다"));
-        assertTrue(!F1Text.numberHeavy("연합뉴스 소식입니다"));
-        assertEquals(0.88f, F1Text.clearSpeed("삼 퍼센트", 1f), 0.001f);
         assertEquals("이천 이십육년", F1Text.spaceNumbers("이천이십육년"));
         assertEquals("만 이천 삼백 사십오", F1Text.spaceNumbers("만 이천삼백사십오"));
         assertEquals("천이백 삼십사명", F1Text.spaceNumbers("천이백삼십사명"));

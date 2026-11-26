@@ -177,12 +177,10 @@ final class Abroad {
         for (int i = 0; i < todo.size(); i++) {
             try {
                 List<Brief.Item> got = results.get(i).get(Math.max(1, until - System.currentTimeMillis()), TimeUnit.MILLISECONDS);
-                if (got.isEmpty()) {
-                    String line = noArticle(todo.get(i)[0], todo.get(i)[1]);
-                    out.items.add(new Brief.Item(line, line, todo.get(i)[0] + " 뉴스", "none-" + i, "", "", Collections.<String>emptyList(), true));
-                } else {
-                    out.items.addAll(got);
-                }
+                // 기사가 없으면 읽지 않고 넘어간다: '태국은 오늘자 … 검색된 기사가 없습니다'를 차에서 읽자 제미나이가
+                // 이틀 연달아 3번씩 깨어 내비 장소 검색까지 열었다 (주인 2026-11-24·26). 새 소식이 없는 줄이라 빼도 잃는 것이 없다
+                if (got.isEmpty()) Log.i(TAG, noArticle(todo.get(i)[0], todo.get(i)[1]));
+                else out.items.addAll(got);
             } catch (Exception e) {
                 Log.w(TAG, "해외 키워드 검색 실패 " + todo.get(i)[0] + " " + todo.get(i)[1] + ": " + e); // 인터넷 문제: 없다고 말하지 않고 넘어간다
             }
