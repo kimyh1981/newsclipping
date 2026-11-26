@@ -102,7 +102,7 @@ final class F1Engine implements AutoCloseable {
             float duration;
             try (OrtSession.Result r = dp.run(in)) {
                 Object v = r.get(0).getValue();
-                duration = (v instanceof float[][] ? ((float[][]) v)[0] : (float[]) v)[0] / speed;
+                duration = F1Text.duration((v instanceof float[][] ? ((float[][]) v)[0] : (float[]) v)[0], chunk, speed); // 너무 빠르면 낱말·끝 글자를 삼킨다: 초당 음절 상한
             }
             in.clear();
             in.put("text_ids", idsT);

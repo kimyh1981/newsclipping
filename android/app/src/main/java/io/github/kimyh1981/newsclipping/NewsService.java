@@ -769,7 +769,7 @@ public class NewsService extends Service {
             noticeJobs.put(t, out.length() > 44 ? java.util.concurrent.CompletableFuture.completedFuture(out) : f1Pool.submit(() -> {
                 F1Engine e = F1Voice.engine(this);
                 if (e == null || stopped) return null;
-                float[] pcm = F1Text.tidyAudio(F1Voice.synth(this, e, Pron.say(t), "ko", Math.min(F1_MAX_SPEED, F1Voice.speed(new Prefs(this).rate()))), e.sampleRate, F1Engine.LEAD_SEC);
+                float[] pcm = F1Text.tidyAudio(F1Voice.synth(this, e, F1Text.hangulize(Pron.say(t)), "ko", Math.min(F1_MAX_SPEED, F1Voice.speed(new Prefs(this).rate()))), e.sampleRate, F1Engine.LEAD_SEC);
                 F1Engine.writeWav(pcm, e.sampleRate, out);
                 return out;
             }));
@@ -829,9 +829,10 @@ public class NewsService extends Service {
             File out = keep ? new File(keepDir(), Brief.audioId(BuildConfig.VERSION_NAME + "|" + k) + ".wav") : new File(f1Dir, Brief.audioId(k) + ".wav");
             if (out.exists() && out.length() > 44) return out;
             long t = System.currentTimeMillis();
-            String said = en ? s.text : Pron.say(s.text);
-            // 짧은 줄(언론사 이름·연결 말)은 빠르기를 누른다: 가장 빠르게에서 '연합뉴스 소식입니다'를 건너뛰듯 읽었다 (2026-11-21)
-            float speed = F1Text.clearSpeed(said, said.replaceAll("\\s", "").length() <= 14 ? Math.min(F1Voice.speed(rate), SHORT_MAX_SPEED) : F1Voice.speed(rate));
+            String said = en ? s.text : F1Text.hangulize(Pron.say(s.text)); // F1은 우리말 속 영문을 건너뛴다: 남은 영문은 한글 소리로 (2026-11-26)
+            // 빠르기는 모든 줄에 하나: 줄마다 바꾸니(숫자 줄 느리게, 짧은 줄 상한) 한 기사 안에서 고무줄처럼 들렸다 (주인 2026-11-26).
+            // 너무 빠를 때 낱말·끝 글자를 삼키는 것은 F1Text.duration의 초당 음절 상한이 모든 덩이에 똑같이 막는다
+            float speed = F1Voice.speed(rate);
             float[] pcm = F1Text.tidyAudio(F1Voice.synth(this, e, said, en ? "en" : "ko", Math.min(F1_MAX_SPEED, speed)), e.sampleRate, F1Engine.LEAD_SEC);
             F1Engine.writeWav(pcm, e.sampleRate, out);
             if (keep) pruneKeep();
@@ -996,8 +997,6 @@ public class NewsService extends Service {
     }
 
     private static final float REPORT_SPEED = 1.2f;
-    /** 짧은 줄을 F1으로 만들 때 넘지 않을 빠르기 (보통 1.05) */
-    private static final float SHORT_MAX_SPEED = 1.15f;
     /** F1 빠르기 값의 위 끝 (제조사 권장 0.9~1.5: 넘기면 소리가 뭉개진다) */
     private static final float F1_MAX_SPEED = 1.5f;
 

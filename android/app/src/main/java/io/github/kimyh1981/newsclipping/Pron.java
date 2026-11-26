@@ -143,6 +143,16 @@ final class Pron {
     private static final Pattern CAP_HANGUL = Pattern.compile("(?<![A-Za-z0-9À-ɏ])[A-Z](?=-?[가-힣]|[^A-Za-z0-9À-ɏ]|$)"); // 홀로 선 X·J도 낱자로
 
     private static final Pattern FLU = Pattern.compile("(?<![A-Za-z0-9])H(\\d{1,2})(?=형)");
+    // 대문자로만 쓴 이름도 사전대로 (PETRONAS → Petronas 페트로나스). 여섯 글자 이상만 (js/pron.js의 DICT_LOWER·CAPS_WORD, 2026-11-26)
+    private static final java.util.Map<String, String> DICT_LOWER = new java.util.HashMap<>();
+    static {
+        for (String[] x : LATIN_ALL) DICT_LOWER.putIfAbsent(x[0].toLowerCase(java.util.Locale.ROOT), x[1]);
+    }
+    private static final Pattern CAPS_WORD = Pattern.compile("(?<![A-Za-z0-9À-ɏ])([A-Z]{6,})(?![A-Za-z0-9À-ɏ])" + Pron.JOSA); // JOSA는 아래에 있어 이름을 앞에 붙인다
+    // 나라 이름에 붙은 영문 약어는 띄어 읽는다: 미국FCC → 미국 FCC. LG전자·MZ세대·KTX역은 붙인 채로 (js/pron.js의 COUNTRY_CAPS)
+    private static final Pattern COUNTRY_CAPS = Pattern.compile("(미국|한국|중국|일본|영국|독일|프랑스|인도|베트남|러시아|대만|호주|캐나다|유럽|북한|태국|브라질|인도네시아|필리핀|말레이시아)([A-Z]{2,})(?![A-Za-z0-9])");
+    private static final Pattern MIG = Pattern.compile("(?<![A-Za-z])MiG-?(\\d{1,3})(?!\\d)");
+    private static final Pattern SU = Pattern.compile("(?<![A-Za-z])Su-(\\d{2})(?!\\d)");
 
     private static String spell(String w) {
         StringBuilder b = new StringBuilder();
@@ -151,6 +161,9 @@ final class Pron {
     }
 
     static String latin(String s) {
+        s = COUNTRY_CAPS.matcher(s).replaceAll("$1 $2");
+        s = each(s, MIG, x -> "미그" + sino(x.group(1))); // 전투기
+        s = each(s, SU, x -> "수호이" + sino(x.group(1)));
         for (int i = 0; i < LATIN_ALL.length; i++) {
             Matcher lm = LATIN_RES[i].matcher(s);
             if (!lm.find()) continue;
@@ -160,6 +173,10 @@ final class Pron {
             lm.appendTail(lb);
             s = lb.toString();
         }
+        s = each(s, CAPS_WORD, x -> {
+            String hit = DICT_LOWER.get(x.group(1).toLowerCase(java.util.Locale.ROOT));
+            return hit == null ? x.group() : josa(hit, x.group(2));
+        });
         // 조류인플루엔자 H5형은 사전의 H5N1(에이치오엔일)처럼 우리말 숫자로 (js/pron.js와 같게, 2026-11-23)
         s = each(s, FLU, x -> "에이치" + sino(x.group(1)));
         // 사전에 없는 영문+숫자 모델명: 낱자 + 한 자리는 영어 숫자, 두 자리 이상은 한자어 (S25 에스이십오, EV9 이브이나인, U-20 유이십)
@@ -298,7 +315,18 @@ final class Pron {
     private static final Pattern PHONE_REP = Pattern.compile("(?<![\\d-])(1[5-9]\\d{2})-(\\d{4})(?![\\d-])(?!\\s?(?:년|시즌|학년))");
     private static final Pattern NO_AREA = Pattern.compile("(국번\\s?없이\\s?)(\\d{3,4})(?![\\d,.])");
     private static final Pattern SERVICE = Pattern.compile("(?<![\\d,.-])(1\\d{3})(?![\\d,.-])(?=(?:번|으로|로)?\\s?[가-힣]*(?:전화|콜센터|상담센터|헬프라인)(?![가-힣]))");
-    private static final Pattern BOEING = Pattern.compile("(보잉|Boeing)\\s?(7\\d7)(?!\\d)");
+    // 해외 단위 (js/pron.js numbers()와 같게, 2026-11-26)
+    private static final Pattern CRORE = Pattern.compile("(₹|Rs\\.?\\s?|INR\\s?)?(\\d[\\d,]*(?:\\.\\d+)?)\\s?(?:crores?|cr)(?![A-Za-z])");
+    private static final Pattern MILLION = Pattern.compile("(?:(RM|US\\$|\\$|€|£)\\s?)?(\\d+(?:\\.\\d+)?)\\s?(?:mil|million|mn)(?![A-Za-z])");
+    private static final Pattern BILLION = Pattern.compile("(?:(US\\$|\\$|€|£)\\s?)?(\\d+(?:\\.\\d+)?)\\s?(?:bn|billion)(?![A-Za-z])");
+    private static final Pattern PENCE = Pattern.compile("(\\d+(?:\\.\\d+)?)p(?![A-Za-z0-9])");
+    private static final Pattern PENCE_TOPIC = Pattern.compile("영국|파운드|£|펜스");
+
+    /** n × k를 소수 둘째 자리까지, 끝의 0은 떼고 (js의 +(n * k).toFixed(2)) */
+    private static String times(String n, int k) {
+        return new java.math.BigDecimal(n).multiply(java.math.BigDecimal.valueOf(k)).setScale(2, java.math.RoundingMode.HALF_UP).stripTrailingZeros().toPlainString();
+    }
+    private static final Pattern BOEING =Pattern.compile("(보잉|Boeing)\\s?(7\\d7)(?!\\d)");
     private static final Pattern EN_MODEL = Pattern.compile("(아이오닉|폴드|플립)\\s?([1-9])(?![\\d.,]\\d|\\d)");
     private static final java.util.Map<String, String> UNITS = new java.util.HashMap<>();
     /** 숫자 앞에 붙여 읽는 말: 리터당 오백 밀리그램, 화씨 백 도 (js/pron.js의 PRE) */
@@ -332,7 +360,7 @@ final class Pron {
     // 한자어로 읽은 숫자 뒤에 띄울 세는 말. 시·분도 띄운다: 십오 시 삼십 분 (js/pron.js와 같게, 2026-11-23). 삼분의 일·일분기는 그대로
     private static final Pattern SPACE_BEFORE = Pattern.compile("(?:" + COUNTER + "|원|건|톤|명|곳|회|분(?![의기야석류리노양산할배자위단열쟁란해포업비사신명담출권교과수모진광점당화])|시(?!간|장|즌|청|민|군|의회|의원|도|정|각|점|대|공|설|리즈))");
     private static final Pattern NATIVE = Pattern.compile("^\\s?(?:" + COUNTER + ")");
-    private static final Pattern DAE = Pattern.compile("^\\s?대(?=[가를의는도만와씩로]|\\s(?:이상|이하|가량|정도|씩|분)|[,.?!]|$)");
+    private static final Pattern DAE = Pattern.compile("^\\s?대(?=[가를의는도만와씩로에]|\\s(?:이상|이하|가량|정도|씩|분)|[,.?!]|$)");
     private static final Pattern CLOCK = Pattern.compile("^\\s?시(?!간|장|즌|청|민|군|의회|의원|도|정|각|점|대|공|설|리즈)");
     private static final String[] ROUGH = {"", "한두", "두세", "서너", "네다섯", "대여섯", "예닐곱", "일고여덟"};
     private static final Pattern RANGE = Pattern.compile("(?<![\\d.,])(\\d{1,2})\\s*(?:~|-|에서\\s?)(\\d{1,2})(\\s?)(" + COUNTER + "|대(?=[가를의는도만와씩로\\s,.]|$))");
@@ -499,6 +527,16 @@ final class Pron {
         s = each(s, BOEING, m -> m.group(1) + " " + digits1(m.group(2))); // 보잉 737 → 칠삼칠
         s = each(s, EN_MODEL, m -> m.group(1) + " " + EN[m.group(2).charAt(0) - '0']); // 아이오닉 5 → 아이오닉 파이브
         s = s.replaceAll("(\\d)시(?=\\d)", "$1시 "); // 9시30분 → 9시 30분
+        // 오늘(2026-11-26) 원고 점검: 줄임말·띄어쓰기·해외 단위·읽지 않을 번호 (js/pron.js와 같게)
+        s = s.replaceAll("(?<=[가-힣])지법(?=[^가-힣]|$|[은는이가을를의에도과와로])", "지방법원").replaceAll("(?<=[가-힣])고법(?=[^가-힣]|$|[은는이가을를의에도과와로])", "고등법원") // 엔진이 '지뻡'으로 읽었다
+                .replaceAll("(^|[\\s,(])러(?=\\s|,|$|군|측|정부|외무부|국방부|대통령|산\\s)", "$1러시아").replaceAll("우크라(?!이)", "우크라이나") // 러 도발, 우크라 접경
+                .replaceAll("(하루|이틀|사흘|나흘|닷새|열흘|보름|\\d+\\s?(?:년|개월|일|주|시간|분))만에", "$1 만에").replaceAll("(다음|이번)달(?![가-힣])", "$1 달") // 하루 만에, 다음 달
+                .replaceAll("(?:,\\s*)?(?<![\\d,.])\\d{9,}(?![\\d,.])", ""); // 채용 공고 번호 같은 긴 일련번호는 읽지 않는다
+        s = each(s, CRORE, m -> m.group(2) + " 크로르" + (m.group(1) != null ? " 루피" : "")); // 인도 크로르(천만)
+        s = each(s, MILLION, m -> times(m.group(2), 100) + "만" + (m.group(1) != null ? " " + MONEY_NAME.get(m.group(1)) : "")); // 93.32mil → 9332만
+        s = each(s, BILLION, m -> times(m.group(2), 10) + "억" + (m.group(1) != null ? " " + MONEY_NAME.get(m.group(1)) : "")); // 2.5bn → 25억
+        final String whole = s;
+        s = each(s, PENCE, m -> PENCE_TOPIC.matcher(whole).find() ? m.group(1) + " 펜스" : m.group()); // 43.5p (영국 이야기일 때만)
         // 긴급 전화번호는 한 자리씩: 119 → 일일구 (js/pron.js와 같게, 2026-11-21).
         // 뒤에 신고·구조대 같은 말이 오거나, 신고 이야기인 문장에서 조사(에·로)·쉼표·끝이 올 때만 (114석·119조 원·112달러는 수)
         Matcher em = EMERGENCY.matcher(s);
@@ -658,6 +696,8 @@ final class Pron {
         s = QUOTE_NEXT.matcher(s).replaceAll("$1, ");
         s = dotList(s);
         s = TILDE.matcher(s).replaceAll("에서 ");
+        s = s.replaceAll("(^|[ \\t])#[^\\s#]+", "$1"); // 해시태그(#shorts)는 읽지 않는다 (js/pron.js와 같게, 2026-11-26)
+        s = s.replaceAll("(?<=\\S)[ \\t]+[-–—][ \\t]+(?=\\S)", ", "); // 띄어 쓴 줄표는 쉼: '뚝 - 머니투데이'가 붙어 들렸다
         s = s.replaceAll("[“”\"‘’'`「」『』《》〈〉<>\\[\\]【】※\\u1100-\\u11ff]", "").replaceAll("[()]", ", ").replaceAll("…|\\.{2,}", ", ");
         s = s.replaceAll("[ \\t]*↑", " 상승").replaceAll("[ \\t]*↓", " 하락").replaceAll("[▲▼△▽▶▷►◀◁◆◇■□●○◎★☆→←↔⇒⇨▸▪]", ", ").replaceAll("\\b[vV][sS]\\b\\.?", " 대 ");
         s = s.replaceAll("[ \\t]*[|/·][ \\t]*", ", ").replace("&", " 앤 ").replace("%", " 퍼센트").replaceAll("[#*=^_~+@]", " ").replaceAll("(?<=\\S)[ \\t]*-[ \\t]*(?=\\S)", " ");

@@ -80,6 +80,13 @@ function splitGoogleSource(title, source) {
   return title.replace(/ - [^-]{1,20}$/, '').trim();
 }
 
+// 구글 검색이 아닌 모음 피드도 제목 끝에 언론사 이름을 붙인다: '…로 뚝 - 머니투데이'를 그대로 읽었다 (2026-11-26).
+// 언론사 이름꼴(…투데이·일보·신문·뉴스·경제·방송·미디어·타임스·데일리·TV·닷컴)일 때만 뗀다: '다시보기 - 2026년 11월 26일'은 그대로
+const OUTLET_TAIL = / [-–—] [^-–—]{1,14}(?:투데이|일보|신문|뉴스|경제|방송|미디어|타임스|데일리|TV|닷컴|저널|포스트)$/;
+function stripOutletTail(title) {
+  return title.replace(OUTLET_TAIL, '').trim();
+}
+
 // 제목에 흔한 한자 약칭: 음성이 '날 일'처럼 읽지 않게 우리말로 바꾼다
 const HANJA = [['與野', '여야'], ['秋', '추'], ['尹', '윤'], ['李', '이'], ['文', '문'], ['朴', '박'], ['日', '일본'], ['美', '미국'], ['中', '중국'], ['北', '북한'], ['韓', '한국'], ['英', '영국'], ['獨', '독일'], ['佛', '프랑스'], ['露', '러시아'], ['印', '인도'], ['濠', '호주'], ['與', '여당'], ['野', '야당'], ['靑', '청와대'], ['檢', '검찰'], ['軍', '군'], ['銀', '은행'], ['株', '주식'], ['百', '백화점'], ['女', '여성'], ['男', '남성'], ['前', '전'], ['現', '현'], ['新', '신'], ['故', '고'], ['弗', '달러'], ['來', '래'], ['兆', '조'], ['億', '억'], ['比', '비'], ['對', '대'], ['稅', '세'], ['車', '차'], ['證', '증권'], ['社', '사'], ['黨', '당'], ['號', '호']];
 
@@ -185,7 +192,7 @@ function pick(section, fetched, now, seen = []) {
     const need = source.must ? new RegExp(source.must, 'i') : must; // 출처마다 따로 줄 수도 있다
     for (const it of list) {
       if (taken >= (source.take || 3) || items.length >= section.limit) break;
-      const title = (it.viaGoogle ? splitGoogleSource(it.title, it.source) : it.title).normalize('NFC');
+      const title = stripOutletTail((it.viaGoogle ? splitGoogleSource(it.title, it.source) : it.title).normalize('NFC'));
       if (skip(title, lang) || !fresh(it, now, source.hours || hours) || !spoken(title) || (need && !need.test(title))) continue;
       // 지정 언론사(site:) 검색에 섞여 드는 사이트 화면: 언론사 이름뿐이거나 빈 제목 ('Farm Progress - Farm Progress')
       const bare = title.replace(/^[\s\-–—|:]+/, '');
