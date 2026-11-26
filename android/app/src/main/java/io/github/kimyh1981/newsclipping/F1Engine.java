@@ -64,9 +64,12 @@ final class F1Engine implements AutoCloseable {
 
     static final float LEAD_SEC = 0.2f;
 
-    /** 한 줄을 소리(-1~1, 한 채널)로. 우리말은 한 덩이 120자까지, 덩이 사이는 0.2초 쉰다 (개발사 기본 0.3초: 덩이가 쉼표로 끝나 한 문장 안 쉼이라 줄임, 2026-10-27) */
+    /**
+     * 한 줄을 소리(-1~1, 한 채널)로. 우리말은 한 덩이 80자까지, 덩이 사이는 0.2초 쉰다 (개발사 기본 0.3초: 덩이가 쉼표로 끝나 한 문장 안 쉼이라 줄임, 2026-10-27).
+     * 120자였을 때 70음절짜리 한 덩이의 끝 낱말('발생했다')을 가끔 빼먹었다: 긴 문장 6개×3번에서 120자 끝 빠짐 1/18, 80자 0/18 (2026-11-27 받아쓰기)
+     */
     float[] synth(String text, String lang, float speed) throws OrtException {
-        List<String> chunks = F1Text.chunks(text, "ko".equals(lang) ? 120 : 300);
+        List<String> chunks = F1Text.chunks(text, "ko".equals(lang) ? 80 : 300);
         int silence = (int) (0.2f * sampleRate);
         int lead = (int) (LEAD_SEC * sampleRate); // 앞을 비워 둔다: 차 스피커가 소리를 받기 시작하며 첫소리를 먹었다 (2026-10-19 출근길, 영어 단어가 통째로 빠짐)
         List<float[]> parts = new ArrayList<>();

@@ -74,14 +74,26 @@ final class F1Text {
      * 보통(100) 초당 5.0음절 → 빠진 음절 1.6%·끝 잘림 0/45, 빠르게(130) 초당 6.6음절 → 빠진 음절 4.0%·끝 잘림 2/45('덧붙였다'가 사라짐),
      * 빠르게 + 상한 6.0 → 빠진 음절 1.9%·끝 잘림 0/45. 이보다 빠르면 모델이 낱말·끝 글자를 삼킨다
      */
-    static final float MAX_SPS = 6.0f;
+    // 2026-11-27 다시 잼: 본문은 6.0까지 버텼지만 제목처럼 고유명사가 몰린 줄('서울경기양돈농협 송산농협 도농상생')은
+    // 초당 5.0음절부터 '송산농협 도농상생'이 통째로 사라졌다(3번 중 3번). 4.5에서는 3번 모두 온전했다. 모델의 제 빠르기는 초당 4.1~4.4음절.
+    // 그래서 F1은 늘 이 빠르기 안에서 만들고, 빠르게 듣기는 재생 빠르기(높낮이 그대로 늘이고 줄이기)로 한다: 1.15·1.3배로 틀어도 12번 모두 온전했다
+    static final float MAX_SPS = 4.5f;
 
-    /** 읽는 음절 수: 한글 음절, 숫자·영문 글자는 하나씩 */
+    private static final Pattern EN_VOWELS = Pattern.compile("[aeiouy]+", Pattern.CASE_INSENSITIVE);
+
+    /** 읽는 음절 수: 한글 음절, 숫자 하나씩, 영어 낱말은 모음 덩이 수(최소 1). 영어 줄을 글자 수로 세면 터무니없이 느려진다 */
     static int syllables(String s) {
         int n = 0;
         for (int i = 0; i < s.length(); i++) {
             char c = s.charAt(i);
-            if ((c >= '가' && c <= '힣') || (c >= '0' && c <= '9') || (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z')) n++;
+            if ((c >= '가' && c <= '힣') || (c >= '0' && c <= '9')) n++;
+        }
+        Matcher w = Pattern.compile("[A-Za-z]+").matcher(s);
+        while (w.find()) {
+            int v = 0;
+            Matcher m = EN_VOWELS.matcher(w.group());
+            while (m.find()) v++;
+            n += Math.max(1, v);
         }
         return n;
     }
@@ -89,7 +101,7 @@ final class F1Text {
     /**
      * 한 덩이의 소리 길이(초): 모델이 예측한 길이를 빠르기로 나누되, 초당 MAX_SPS음절보다 빠르지 않게.
      * 예전에는 줄마다 빠르기를 바꿨다(숫자 줄 12% 느리게, 짧은 줄 상한): 한 기사 안에서 빨라졌다 느려졌다 했다 (주인 2026-11-26 '고무줄').
-     * 이제 빠르기는 하나, 너무 빠를 때만 이 상한이 모든 덩이를 같은 빠르기로 묶는다
+     * 앱은 늘 같은 빠르기(F1Voice.speed(100))로 만들고, 사용자의 빠르기는 재생 빠르기로 준다 (NewsService)
      */
     static float duration(float predicted, String chunk, float speed) {
         return Math.max(predicted / speed, syllables(chunk) / MAX_SPS);
@@ -118,7 +130,7 @@ final class F1Text {
     private static final java.util.Map<String, String> EN_WORDS = new java.util.HashMap<>();
     static {
         String[] w = {
-            "agri", "애그리", "agro", "애그로", "bio", "바이오", "tech", "테크", "crop", "크롭", "life", "라이프", "stack", "스택", "more", "모어", "people", "피플",
+            "ag", "애그", "agri", "애그리", "agro", "애그로", "bio", "바이오", "tech", "테크", "crop", "크롭", "life", "라이프", "stack", "스택", "more", "모어", "people", "피플",
             "stone", "스톤", "global", "글로벌", "money", "머니", "club", "클럽", "shorts", "쇼츠", "news", "뉴스", "farm", "팜", "farms", "팜스", "group", "그룹",
             "india", "인디아", "solutions", "솔루션스", "solution", "솔루션", "market", "마켓", "markets", "마켓츠", "capital", "캐피털", "partners", "파트너스",
             "international", "인터내셔널", "holdings", "홀딩스", "energy", "에너지", "power", "파워", "bank", "뱅크", "food", "푸드", "foods", "푸즈", "science", "사이언스",

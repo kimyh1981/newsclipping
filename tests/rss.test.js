@@ -221,7 +221,8 @@ test('제목 끝의 언론사 이름은 떼고, 날짜 같은 꼬리는 둔다',
   const list = [
     { title: '주가 급등 하루만에 뚝 - 머니투데이', link: 'https://a/1', publishedAt: at },
     { title: '나이트라인 다시보기 - 2026년 11월 26일', link: 'https://a/2', publishedAt: at },
+    { title: '제주경찰청장에 직접 요구-사회ᅵ한국일보', link: 'https://a/3', publishedAt: at },
   ];
   const got = pick({ limit: 5 }, [{ source: { id: 'b', name: '경제 주요 뉴스', take: 5 }, items: list }], now).map((x) => x.title);
-  assert.deepEqual(got, ['주가 급등 하루만에 뚝', '나이트라인 다시보기 - 2026년 11월 26일']);
+  assert.deepEqual(got, ['주가 급등 하루만에 뚝', '나이트라인 다시보기 - 2026년 11월 26일', '제주경찰청장에 직접 요구']);
 });

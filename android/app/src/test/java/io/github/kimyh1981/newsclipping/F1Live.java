@@ -24,16 +24,13 @@ public final class F1Live {
             System.out.printf("소리 %.1f초 · 만든 시간 %.1f초 · 실시간의 %.1f배 · 크기(RMS) %.3f%n", sec, took, sec / took, rms);
             F1Engine.writeWav(pcm, e.sampleRate, new File(args[1]));
             if (sec < 2 || rms < 0.01) throw new IllegalStateException("소리가 너무 짧거나 작다");
-            // 말 빠르기: 앱의 '조금 느리게'(85)·'빠르게'(130)를 F1Voice.speed와 같은 식(1.05 × 빠르기 ÷ 100)으로 넣어 길이를 잰다
-            double slow = e.synth(said, "ko", 1.05f * 85 / 100).length / (double) e.sampleRate;
-            double fast = e.synth(said, "ko", 1.05f * 130 / 100).length / (double) e.sampleRate;
-            double normal = e.synth(said, "ko", 1.05f).length / (double) e.sampleRate;
+            // 앱은 늘 보통 빠르기(1.05)로 만들고 말 빠르기는 재생 빠르기로 준다 (2026-11-27). 여기서는 만든 소리가 상한(초당 MAX_SPS음절)을 넘지 않는지 본다
             int syl = F1Text.syllables(said);
-            System.out.printf("말 빠르기: 조금 느리게 %.1f초 · 보통 %.1f초(초당 %.1f음절) · 빠르게 %.1f초(초당 %.1f음절, 상한 %.1f) (보통 대비 빠르게 %.0f%%)%n",
-                    slow, normal, syl / normal, fast, syl / fast, F1Text.MAX_SPS, fast / normal * 100);
-            // 빠르게는 초당 음절 상한에 걸려 보통보다 조금만 빠르다 (그보다 빠르면 낱말을 삼킨다, 2026-11-26)
-            if (fast > normal * 0.97 || slow < normal * 1.05) throw new IllegalStateException("말 빠르기가 F1 길이에 거의 반영되지 않는다");
-            if (syl / fast > F1Text.MAX_SPS + 0.3) throw new IllegalStateException("초당 음절 상한을 넘었다");
+            double sps = syl / sec;
+            // 앞뒤 무음(덩이 사이 쉼 포함)이 들어 있어 실제 말하는 빠르기는 이보다 조금 빠르다
+            System.out.printf("만든 빠르기: 초당 %.1f음절 (상한 %.1f) · 앱의 '빠르게'(130)는 이 소리를 1.3배로 튼다%n", sps, F1Text.MAX_SPS);
+            if (sps > F1Text.MAX_SPS + 0.3) throw new IllegalStateException("초당 음절 상한을 넘었다");
+            if (sps < 3.0) throw new IllegalStateException("너무 느리다 (상한 계산이 영문 글자 수를 세는 것 같은)");
         }
     }
 }
