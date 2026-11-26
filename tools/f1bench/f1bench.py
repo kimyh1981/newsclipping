@@ -59,7 +59,7 @@ def cut_long(s, mx, out):
         if not re.match(r'(?s).*[,.!?]$', left): left += ','
         out.append(left); s = re.sub(r'^[,\s]+', '', s[best:])
     if s: out.append(s)
-def chunks(text, mx=120):
+def chunks(text, mx=80):
     text = text.strip(); out = []
     for para in re.split(r'\n\s*\n', text):
         para = para.strip()
